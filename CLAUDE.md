@@ -83,6 +83,14 @@ make typecheck  # no TypeScript errors (tsc --noEmit)
 - `internal/` for non-exported packages
 - HTTP handlers thin — business logic in service layer
 - Context threading: always pass `context.Context` as first arg
+- **Error wrapping:** Use `fmt.Errorf("doing X: %w", err)` — always wrap with context describing the operation
+- **Dependency injection:** No global state; pass all dependencies via constructors (e.g., `NewLeadService(db, rbac)`)
+
+### API
+
+- **Versioning:** All endpoints under `/api/v1/...` — increment version on breaking changes
+- **Error responses:** Structured JSON: `{"error": {"code": "NOT_FOUND", "message": "lead not found"}}`
+- **List endpoints:** Support pagination (`?page=`, `?limit=`) and filtering (`?status=`, `?assignee=`) on all collection routes
 
 ### TypeScript / Web Components
 
@@ -90,6 +98,7 @@ make typecheck  # no TypeScript errors (tsc --noEmit)
 - No build-time framework (no React, Vue, Angular)
 - Bundler: TBD (likely `esbuild` or native ES modules)
 - Strict TypeScript (`"strict": true` in tsconfig)
+- **Component naming:** All custom elements use the `pbl-` prefix (e.g., `<pbl-lead-card>`, `<pbl-rep-badge>`)
 
 ### Kubernetes / Helm
 
@@ -119,11 +128,12 @@ pebblr/
 │   ├── auth/          # Azure AD OIDC middleware
 │   ├── leads/         # Lead domain logic
 │   └── rbac/          # Row-level access control
-├── frontend/          # TypeScript / Web Components
+├── web/               # TypeScript / Web Components
 │   ├── src/
 │   └── tsconfig.json
-├── charts/            # Helm 4 charts
-│   └── pebblr/
+├── deploy/
+│   └── helm/          # Helm 4 charts
+│       └── pebblr/
 ├── scripts/           # Shell scripts called by Makefile
 ├── Makefile
 └── README.md

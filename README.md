@@ -68,7 +68,7 @@ make secrets-up
 make dev-api
 
 # Run frontend (watches for changes)
-make dev-frontend
+make dev-web
 ```
 
 ### Quality gates
@@ -86,7 +86,7 @@ All CI/CD pipelines call `make` targets only. Do not run `go test` or `tsc` dire
 Pebblr ships as a Helm 4 chart. Each customer gets a dedicated namespace and values file.
 
 ```bash
-helm install pebblr ./charts/pebblr \
+helm install pebblr ./deploy/helm/pebblr \
   --namespace <customer-ns> \
   --values ./deploy/<customer>.values.yaml
 ```
