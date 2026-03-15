@@ -24,8 +24,11 @@ Pebblr is a self-hosted CRM for field sales lead management. Customers deploy it
 
 ### Frontend
 
-- **Language:** TypeScript
-- **Component model:** Web Components (standard browser APIs, no framework)
+- **Language:** TypeScript (strict mode)
+- **Framework:** React + TypeScript (.tsx)
+- **Bundler:** Vite
+- **Server state:** TanStack Query
+- **Data grids:** TanStack Table
 - **UI inspiration:** [Twenty CRM](https://github.com/twentyhq/twenty) — clean, dense, data-forward
 - **Live updates:** SSE or WebSocket (nice-to-have, not MVP-blocking)
 
@@ -92,13 +95,15 @@ make typecheck  # no TypeScript errors (tsc --noEmit)
 - **Error responses:** Structured JSON: `{"error": {"code": "NOT_FOUND", "message": "lead not found"}}`
 - **List endpoints:** Support pagination (`?page=`, `?limit=`) and filtering (`?status=`, `?assignee=`) on all collection routes
 
-### TypeScript / Web Components
+### TypeScript / React
 
-- Use `customElements.define()` with class-based components
-- No build-time framework (no React, Vue, Angular)
-- Bundler: TBD (likely `esbuild` or native ES modules)
-- Strict TypeScript (`"strict": true` in tsconfig)
-- **Component naming:** All custom elements use the `pbl-` prefix (e.g., `<pbl-lead-card>`, `<pbl-rep-badge>`)
+- **Framework:** React with functional components and hooks only — no class components
+- **Bundler:** Vite
+- **Strict TypeScript:** `"strict": true` in tsconfig; no implicit `any`
+- **Server state:** TanStack Query (`@tanstack/react-query`) for all API data fetching and caching
+- **Data grids:** TanStack Table (`@tanstack/react-table`) for tabular data
+- **Component files:** `.tsx` extension for all React components
+- **No global state:** Prefer React context or TanStack Query cache; avoid Redux or other state managers
 
 ### Kubernetes / Helm
 
@@ -112,7 +117,7 @@ make typecheck  # no TypeScript errors (tsc --noEmit)
 | Decision | Choice | Reason |
 |---|---|---|
 | Backend language | Go | Performance, simplicity, strong stdlib |
-| Frontend model | Web Components | No framework lock-in, standards-based |
+| Frontend model | React + TypeScript | Team velocity, ecosystem maturity, TanStack Query/Table integration |
 | Auth provider | Azure AD (Entra ID) | Customer requirement, enterprise SSO |
 | Secret delivery | File mounts via ESO | Security posture; avoids env var leakage |
 | Deployment | AKS + Helm 4 | Customer's existing Azure investment |
@@ -128,8 +133,10 @@ pebblr/
 │   ├── auth/          # Azure AD OIDC middleware
 │   ├── leads/         # Lead domain logic
 │   └── rbac/          # Row-level access control
-├── web/               # TypeScript / Web Components
+├── web/               # React + TypeScript frontend
 │   ├── src/
+│   │   └── components/  # React .tsx components
+│   ├── vite.config.ts
 │   └── tsconfig.json
 ├── deploy/
 │   └── helm/          # Helm 4 charts
@@ -145,5 +152,6 @@ pebblr/
 - Always check `Makefile` targets before suggesting build/test commands.
 - Secrets are **never** in env vars. If you see `os.Getenv` for a secret value, flag it.
 - Per-row RBAC is a core invariant. Any data access must respect it.
-- Web Components only — do not introduce React or other frameworks.
+- Frontend is React + TypeScript — do not introduce other frameworks or Web Components.
+- Use TanStack Query for server state; avoid ad-hoc fetch calls outside of query/mutation hooks.
 - AKS + Helm 4 is the deployment target; local dev uses Kind.

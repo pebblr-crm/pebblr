@@ -15,7 +15,7 @@ A self-hosted CRM for field sales lead management. Built for teams where reps vi
 | Layer | Technology |
 |---|---|
 | Backend | Go — clean REST API |
-| Frontend | TypeScript + Web Components |
+| Frontend | React + TypeScript (Vite, TanStack Query, TanStack Table) |
 | Auth | Azure AD (Entra ID) via OIDC |
 | Secrets | External Secrets Operator → Azure KeyVault |
 | Deployment | AKS + Helm 4 |
@@ -27,7 +27,7 @@ A self-hosted CRM for field sales lead management. Built for teams where reps vi
 
 ```
 ┌─────────────────────────────────────┐
-│  Browser (Web Components + TS)      │
+│  Browser (React + TypeScript)       │
 └────────────┬────────────────────────┘
              │ REST / SSE
 ┌────────────▼────────────────────────┐
@@ -105,7 +105,7 @@ Secrets are delivered via `ExternalSecret` resources pointing to Azure KeyVault.
 - **TDD:** Write tests before or alongside code
 - **Makefile convention:** CI calls make targets; targets delegate to `scripts/` for anything non-trivial
 - **Secrets hygiene:** `os.Getenv` for secret values is a bug; use file reads
-- **No framework lock-in:** Web Components only on the frontend
+- **React + TypeScript:** Functional components and hooks; TanStack Query for server state
 
 ## Project status
 

@@ -1,4 +1,4 @@
-Scaffold a new Pebblr Web Component.
+Scaffold a new Pebblr React component.
 
 ## Usage
 
@@ -6,82 +6,63 @@ Scaffold a new Pebblr Web Component.
 /new-component <name>
 ```
 
-Where `<name>` is the component name **without** the `pbl-` prefix (e.g., `lead-card` → `<pbl-lead-card>`).
+Where `<name>` is the component name in PascalCase (e.g., `LeadCard`, `RepBadge`).
 
 ## Instructions
 
-Given the component name `$ARGUMENTS`, scaffold a new Web Component following Pebblr conventions:
+Given the component name `$ARGUMENTS`, scaffold a new React component following Pebblr conventions:
 
 1. **Determine paths:**
-   - Component file: `web/src/components/pbl-$ARGUMENTS.ts`
-   - Test file: `web/src/components/pbl-$ARGUMENTS.test.ts`
+   - Component file: `web/src/components/$ARGUMENTS.tsx`
+   - Test file: `web/src/components/$ARGUMENTS.test.tsx`
 
-2. **Create the component file** at `web/src/components/pbl-$ARGUMENTS.ts`:
+2. **Create the component file** at `web/src/components/$ARGUMENTS.tsx`:
 
-```typescript
-/**
- * <pbl-$ARGUMENTS>
- *
- * [Brief description of what this component does]
- */
-export class Pbl$PascalName extends HTMLElement {
-  static readonly tag = 'pbl-$ARGUMENTS' as const;
+```tsx
+import React from 'react';
 
-  connectedCallback(): void {
-    this.render();
-  }
-
-  private render(): void {
-    this.innerHTML = `
-      <div class="pbl-$ARGUMENTS">
-        <!-- TODO: implement -->
-      </div>
-    `;
-  }
+interface $ArgumentsProps {
+  // TODO: define props
 }
 
-customElements.define(Pbl$PascalName.tag, Pbl$PascalName);
+export function $Arguments({ }: $ArgumentsProps): React.ReactElement {
+  return (
+    <div className="$kebab-name">
+      {/* TODO: implement */}
+    </div>
+  );
+}
 ```
 
-Where `$PascalName` is the component name converted to PascalCase (e.g., `lead-card` → `LeadCard`).
+Where `$kebab-name` is the component name converted to kebab-case (e.g., `LeadCard` → `lead-card`).
 
-3. **Create the test file** at `web/src/components/pbl-$ARGUMENTS.test.ts`:
+3. **Create the test file** at `web/src/components/$ARGUMENTS.test.tsx`:
 
-```typescript
-import './pbl-$ARGUMENTS';
-import { Pbl$PascalName } from './pbl-$ARGUMENTS';
+```tsx
+import React from 'react';
+import { render, screen } from '@testing-library/react';
+import { describe, it, expect } from 'vitest';
+import { $Arguments } from './$Arguments';
 
-describe('pbl-$ARGUMENTS', () => {
-  let el: Pbl$PascalName;
-
-  beforeEach(() => {
-    el = document.createElement(Pbl$PascalName.tag) as Pbl$PascalName;
-    document.body.appendChild(el);
-  });
-
-  afterEach(() => {
-    el.remove();
-  });
-
-  it('registers as a custom element', () => {
-    expect(customElements.get(Pbl$PascalName.tag)).toBeDefined();
-  });
-
+describe('$Arguments', () => {
   it('renders without errors', () => {
-    expect(el).toBeInstanceOf(HTMLElement);
+    render(<$Arguments />);
+    // TODO: add assertions
   });
 });
 ```
 
 4. **Conventions to follow:**
-   - Tag name MUST start with `pbl-` — this is a hard requirement
-   - Class name MUST be `Pbl` + PascalCase of the name (e.g., `PblLeadCard`)
-   - Export a `static readonly tag` string constant for use in `customElements.define()`
-   - Use `connectedCallback` for initialization (not constructors with DOM access)
-   - Keep components self-contained — no framework imports, no global state
-   - TypeScript strict mode is enforced — no implicit `any`
+   - Functional components only — no class components
+   - Props interface named `${ComponentName}Props`
+   - Strict TypeScript — no implicit `any`
+   - Use TanStack Query (`useQuery`, `useMutation`) for any server state
+   - Use TanStack Table for tabular data components
+   - No global state — prefer props, React context, or TanStack Query cache
+   - Tests use Vitest + React Testing Library
 
 5. After creating both files, remind the user to:
-   - Fill in the component implementation in `render()`
-   - Add the component to `web/src/index.ts` if there's a barrel export
+   - Fill in the props interface and component implementation
+   - Add the component to `web/src/components/index.ts` if there's a barrel export
    - Run `make typecheck` to verify TypeScript is satisfied
+   - Run `bun test` to verify tests pass
