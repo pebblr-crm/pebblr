@@ -27,7 +27,7 @@ build: ## Build Go binary and React frontend
 	@cd $(WEB_DIR) && bun install --frozen-lockfile && bun run build
 
 test: ## Run Go tests and frontend tests
-	@go test ./... && cd $(WEB_DIR) && bun test
+	@go test ./... && cd $(WEB_DIR) && bun run test
 
 lint: ## Run golangci-lint and ESLint
 	@golangci-lint run ./... && cd $(WEB_DIR) && bun run lint
