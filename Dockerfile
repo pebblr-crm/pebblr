@@ -24,7 +24,7 @@ COPY web/ ./
 RUN bun run build
 
 # ── Stage 3: Runtime ──────────────────────────────────────────────────────────
-FROM alpine:3.19
+FROM alpine:3.23
 
 RUN addgroup -S pebblr && adduser -S pebblr -G pebblr
 
