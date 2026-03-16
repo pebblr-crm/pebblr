@@ -7,10 +7,20 @@ import (
 	"net/http"
 	"os"
 	"os/signal"
+	"strings"
 	"syscall"
 	"time"
 
+	"github.com/golang-migrate/migrate/v4"
+	_ "github.com/golang-migrate/migrate/v4/database/postgres"
+	_ "github.com/golang-migrate/migrate/v4/source/file"
+
 	"github.com/pebblr/pebblr/internal/api"
+)
+
+const (
+	defaultDSNFile        = "/run/secrets/db-dsn"
+	defaultMigrationsPath = "./migrations"
 )
 
 func main() {
@@ -22,6 +32,10 @@ func main() {
 
 func run() error {
 	logger := slog.New(slog.NewJSONHandler(os.Stdout, nil))
+
+	if err := runMigrations(logger); err != nil {
+		return fmt.Errorf("migrations: %w", err)
+	}
 
 	router := api.NewRouter(api.RouterConfig{
 		Logger: logger,
@@ -58,4 +72,39 @@ func run() error {
 
 	fmt.Println("server stopped")
 	return nil
+}
+
+func runMigrations(logger *slog.Logger) error {
+	dsn, err := readSecretFile(defaultDSNFile)
+	if err != nil {
+		return fmt.Errorf("reading dsn: %w", err)
+	}
+
+	m, err := migrate.New("file://"+defaultMigrationsPath, dsn)
+	if err != nil {
+		return fmt.Errorf("creating migrator: %w", err)
+	}
+	defer func() {
+		_, _ = m.Close()
+	}()
+
+	before, _, _ := m.Version()
+	logger.Info("running migrations", "current_version", before)
+
+	if err := m.Up(); err != nil && err != migrate.ErrNoChange {
+		return fmt.Errorf("applying migrations: %w", err)
+	}
+
+	after, _, _ := m.Version()
+	logger.Info("migrations complete", "version", after)
+
+	return nil
+}
+
+func readSecretFile(path string) (string, error) {
+	data, err := os.ReadFile(path)
+	if err != nil {
+		return "", fmt.Errorf("reading secret file %s: %w", path, err)
+	}
+	return strings.TrimSpace(string(data)), nil
 }

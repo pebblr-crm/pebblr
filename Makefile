@@ -60,7 +60,7 @@ deploy: ## Build and deploy to local Kind cluster via Skaffold
 	@skaffold run --default-repo=""
 
 migrate: ## Run database migrations
-	@go run ./$(GO_CMD) migrate
+	@go run ./cmd/migrate
 
 helm-validate: ## Validate Helm chart against a running Kind cluster (dry-run)
 	@scripts/helm-ci-install.sh
