@@ -1,7 +1,7 @@
 version: "2"
 
 run:
-  go: "1.22"
+  go: "1.26"
 
 linters:
   default: none
@@ -48,9 +48,9 @@ linters:
 
 output:
   formats:
-    colored-line-number:
+    text:
       path: stderr
-  sort-results: true
+      colorize: true
   sort-order:
     - linter
     - severity
