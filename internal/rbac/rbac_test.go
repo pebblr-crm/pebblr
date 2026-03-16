@@ -9,6 +9,7 @@ import (
 )
 
 func TestRepCanOnlySeeOwnLeads(t *testing.T) {
+	t.Parallel()
 	enforcer := rbac.NewEnforcer()
 	ctx := context.Background()
 
@@ -25,6 +26,7 @@ func TestRepCanOnlySeeOwnLeads(t *testing.T) {
 }
 
 func TestManagerCanSeeTeamLeads(t *testing.T) {
+	t.Parallel()
 	enforcer := rbac.NewEnforcer()
 	ctx := context.Background()
 
@@ -41,6 +43,7 @@ func TestManagerCanSeeTeamLeads(t *testing.T) {
 }
 
 func TestAdminCanSeeAllLeads(t *testing.T) {
+	t.Parallel()
 	enforcer := rbac.NewEnforcer()
 	ctx := context.Background()
 
@@ -53,6 +56,7 @@ func TestAdminCanSeeAllLeads(t *testing.T) {
 }
 
 func TestScopeLeadQueryForRep(t *testing.T) {
+	t.Parallel()
 	enforcer := rbac.NewEnforcer()
 	ctx := context.Background()
 
@@ -68,6 +72,7 @@ func TestScopeLeadQueryForRep(t *testing.T) {
 }
 
 func TestContextUserRoundtrip(t *testing.T) {
+	t.Parallel()
 	user := &domain.User{ID: "user-1", Role: domain.RoleRep}
 	ctx := rbac.WithUser(context.Background(), user)
 

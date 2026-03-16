@@ -8,6 +8,7 @@ import (
 )
 
 func TestPipelineStatsStructure(t *testing.T) {
+	t.Parallel()
 	// Verify the struct can be constructed and fields are accessible.
 	stats := &metrics.PipelineStats{
 		TotalLeads: 10,

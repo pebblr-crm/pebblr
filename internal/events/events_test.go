@@ -7,6 +7,7 @@ import (
 )
 
 func TestEventTypeValid(t *testing.T) {
+	t.Parallel()
 	valid := []events.EventType{
 		events.EventTypeCreated,
 		events.EventTypeAssigned,
@@ -16,9 +17,13 @@ func TestEventTypeValid(t *testing.T) {
 		events.EventTypeClosed,
 	}
 	for _, et := range valid {
-		if !et.Valid() {
-			t.Errorf("expected %q to be valid", et)
-		}
+		et := et
+		t.Run(string(et), func(t *testing.T) {
+			t.Parallel()
+			if !et.Valid() {
+				t.Errorf("expected %q to be valid", et)
+			}
+		})
 	}
 
 	if events.EventType("unknown").Valid() {

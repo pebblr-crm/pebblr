@@ -15,6 +15,13 @@ import (
 )
 
 func main() {
+	if err := run(); err != nil {
+		slog.Error("migration failed", "err", err)
+		os.Exit(1)
+	}
+}
+
+func run() error {
 	dsnFile := flag.String("dsn-file", "/run/secrets/db-dsn", "path to file containing the database DSN")
 	migrationsPath := flag.String("migrations-path", "./migrations", "path to migrations directory")
 	flag.Parse()
@@ -26,34 +33,33 @@ func main() {
 
 	dsn, err := readSecret(*dsnFile)
 	if err != nil {
-		slog.Error("reading dsn", "err", err)
-		os.Exit(1)
+		return fmt.Errorf("reading dsn: %w", err)
 	}
 
 	m, err := migrate.New("file://"+*migrationsPath, dsn)
 	if err != nil {
-		slog.Error("creating migrator", "err", err)
-		os.Exit(1)
+		return fmt.Errorf("creating migrator: %w", err)
 	}
-	defer m.Close()
+	defer func() {
+		_, _ = m.Close()
+	}()
 
 	switch direction {
 	case "up":
 		if err := m.Up(); err != nil && err != migrate.ErrNoChange {
-			slog.Error("running up migrations", "err", err)
-			os.Exit(1)
+			return fmt.Errorf("running up migrations: %w", err)
 		}
 		slog.Info("migrations applied")
 	case "down":
 		if err := m.Down(); err != nil && err != migrate.ErrNoChange {
-			slog.Error("running down migrations", "err", err)
-			os.Exit(1)
+			return fmt.Errorf("running down migrations: %w", err)
 		}
 		slog.Info("migrations rolled back")
 	default:
-		fmt.Fprintf(os.Stderr, "unknown direction %q (use 'up' or 'down')\n", direction)
-		os.Exit(1)
+		return fmt.Errorf("unknown direction %q (use 'up' or 'down')", direction)
 	}
+
+	return nil
 }
 
 func readSecret(path string) (string, error) {
