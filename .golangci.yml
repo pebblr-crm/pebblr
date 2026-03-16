@@ -50,7 +50,6 @@ output:
   formats:
     text:
       path: stderr
-      colorize: true
   sort-order:
     - linter
     - severity
