@@ -18,9 +18,12 @@ Pebblr is a self-hosted CRM for field sales lead management. Customers deploy it
 - **Language:** Go
 - **Style:** Clean REST API (designed to support future mobile clients)
 - **Auth:** Azure AD (Entra ID) via OIDC
+- **Database:** PostgreSQL 16
 - **Secrets:** File mounts only — never environment variables
   - External Secrets Operator → Azure KeyVault → mounted files
-- **RBAC:** Row/document-level; enforced in the data layer
+- **RBAC:** Row/document-level; enforced in the data layer + PostgreSQL RLS as defense-in-depth
+- **Event log:** `lead_events` table captures all lead lifecycle events for audit and telemetry
+- **Roles:** `rep` (own leads only), `manager` (team leads), `admin` (all leads)
 
 ### Frontend
 
@@ -122,17 +125,26 @@ make typecheck  # no TypeScript errors (tsc --noEmit)
 | Secret delivery | File mounts via ESO | Security posture; avoids env var leakage |
 | Deployment | AKS + Helm 4 | Customer's existing Azure investment |
 | Local dev | Kind + federated creds | Mirrors prod auth without static secrets |
+| Database | PostgreSQL 16 | Mature, RLS support, pgx driver |
+| DB migrations | golang-migrate, `migrations/` directory | Simple, widely used, file-based |
+| RBAC enforcement | Application layer + PostgreSQL RLS | Defense-in-depth: app enforces first, Postgres as safety net |
 
-## Project Layout (planned)
+## Project Layout
 
 ```
 pebblr/
 ├── cmd/               # Go binaries (main packages)
 │   └── api/           # REST API server
 ├── internal/          # Go internal packages
-│   ├── auth/          # Azure AD OIDC middleware
-│   ├── leads/         # Lead domain logic
-│   └── rbac/          # Row-level access control
+│   ├── api/           # HTTP router, handlers, request middleware
+│   ├── auth/          # Azure AD OIDC Authenticator interface + middleware
+│   ├── domain/        # Business entities: Lead, Customer, User, Team, Role, enums
+│   ├── events/        # Lead lifecycle event types, recorder/querier interfaces
+│   ├── metrics/       # Business telemetry interfaces and response types
+│   ├── rbac/          # RBAC Enforcer interface, policy implementation, context helpers
+│   └── store/         # Repository interfaces (LeadRepository, UserRepository, etc.)
+│       └── postgres/  # PostgreSQL implementations (pgx/v5)
+├── migrations/        # golang-migrate SQL files (NNN_description.sql)
 ├── web/               # React + TypeScript frontend
 │   ├── src/
 │   │   └── components/  # React .tsx components
