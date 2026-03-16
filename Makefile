@@ -66,7 +66,7 @@ helm-validate: ## Validate Helm chart against a running Kind cluster (dry-run)
 	@scripts/helm-ci-install.sh
 
 e2e: ## Run E2E tests against a running Kind cluster
-	@scripts/e2e.sh
+	@go test -v -tags=e2e -count=1 -timeout=10m ./e2e/...
 
 clean: ## Clean build artifacts
 	@rm -rf bin/ web/dist/ web/node_modules/.vite
