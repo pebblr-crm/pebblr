@@ -1,7 +1,7 @@
 version: "2"
 
 run:
-  go: "1.22"
+  go: "1.26"
 
 linters:
   default: none
@@ -15,6 +15,10 @@ linters:
     - revive
     - tparallel
     - paralleltest
+
+  exclusions:
+    paths:
+      - web/node_modules
 
   settings:
     gocritic:
@@ -48,9 +52,8 @@ linters:
 
 output:
   formats:
-    colored-line-number:
+    text:
       path: stderr
-  sort-results: true
   sort-order:
     - linter
     - severity

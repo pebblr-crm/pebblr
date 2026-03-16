@@ -34,7 +34,7 @@ function LeadsPage() {
         <h1 className="page-title">Leads</h1>
       </div>
       <div className="page-body">
-        <DataTable columns={columns} data={data?.leads ?? []} />
+        <DataTable columns={columns} data={data?.items ?? []} />
       </div>
     </div>
   )

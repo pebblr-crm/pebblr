@@ -14,7 +14,7 @@ COPY internal/ internal/
 RUN CGO_ENABLED=0 GOOS=linux go build -ldflags="-w -s" -o /bin/api ./cmd/api
 
 # ── Stage 2: Frontend builder ─────────────────────────────────────────────────
-FROM node:20-alpine AS web-builder
+FROM node:25-alpine AS web-builder
 
 WORKDIR /app/web
 COPY web/package.json web/bun.lockb* ./
