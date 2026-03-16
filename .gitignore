@@ -1,0 +1,59 @@
+# Go
+bin/
+*.exe
+*.exe~
+*.dll
+*.so
+*.dylib
+*.test
+*.out
+vendor/
+go.work.sum
+
+# Node / Bun
+node_modules/
+web/node_modules/
+web/dist/
+web/.vite/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+bun.lockb
+
+# Build artifacts
+dist/
+build/
+
+# Docker
+.docker/
+
+# Helm
+*.tgz
+
+# Kind / Kubernetes
+kubeconfig
+*.kubeconfig
+
+# Secrets (never commit)
+/run/
+*.pem
+*.key
+*.crt
+secrets/
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Air (Go hot reload)
+tmp/
+.air/
+
+# Overstory (worktree management — not in canonical repo)
+.overstory/

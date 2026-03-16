@@ -1,0 +1,28 @@
+# Docker Compose — local postgres for development outside Kind.
+# Credentials are passed via file mounts, not env vars.
+# Usage: docker compose up -d
+services:
+  postgres:
+    image: postgres:16-alpine
+    restart: unless-stopped
+    ports:
+      - "5432:5432"
+    environment:
+      POSTGRES_USER_FILE: /run/secrets/db-user
+      POSTGRES_PASSWORD_FILE: /run/secrets/db-password
+      POSTGRES_DB: pebblr
+    volumes:
+      - postgres-data:/var/lib/postgresql/data
+      - ./local/secrets/db-user:/run/secrets/db-user:ro
+      - ./local/secrets/db-password:/run/secrets/db-password:ro
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U $(cat /run/secrets/db-user) -d pebblr"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+volumes:
+  postgres-data:
+
+# NOTE: Create local/secrets/db-user and local/secrets/db-password files
+# before starting. These are gitignored and never committed.

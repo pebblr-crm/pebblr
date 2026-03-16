@@ -1,0 +1,102 @@
+# Default values for pebblr.
+# Secrets are delivered via ExternalSecret / file mounts — never env vars.
+
+replicaCount: 1
+
+image:
+  repository: pebblr-api
+  pullPolicy: IfNotPresent
+  tag: "latest"
+
+serviceAccount:
+  create: true
+  annotations:
+    # Azure Workload Identity — set clientId for your managed identity
+    azure.workload.identity/client-id: ""
+  name: ""
+
+podAnnotations:
+  azure.workload.identity/use: "true"
+
+service:
+  type: ClusterIP
+  port: 8080
+
+ingress:
+  enabled: false
+  className: ""
+  annotations: {}
+  hosts:
+    - host: pebblr.local
+      paths:
+        - path: /
+          pathType: Prefix
+  tls: []
+
+resources:
+  requests:
+    cpu: 100m
+    memory: 128Mi
+  limits:
+    cpu: 500m
+    memory: 256Mi
+
+# Secret mount configuration
+# Secrets are mounted as files — never passed as env vars
+secrets:
+  mountPath: /run/secrets
+  # Azure KeyVault secret names → mounted filenames
+  dbPasswordKey: db-password
+  dbUrlKey: db-url
+  jwtSecretKey: jwt-secret
+
+# Database connection (non-secret parts)
+database:
+  host: postgres
+  port: 5432
+  name: pebblr
+  user: pebblr
+  sslMode: require
+
+# External Secrets Operator
+externalSecrets:
+  enabled: true
+  secretStoreName: pebblr-keyvault
+  vaultUrl: ""  # Set to your Azure KeyVault URL
+
+# Azure AD / OIDC
+auth:
+  tenantId: ""
+  clientId: ""
+  audience: "api://pebblr"
+  issuerUrl: ""  # https://login.microsoftonline.com/<tenantId>/v2.0
+
+# Non-secret config passed via ConfigMap
+config:
+  apiPort: "8080"
+  logLevel: "info"
+  webDistPath: "/app/web/dist"
+
+livenessProbe:
+  httpGet:
+    path: /healthz
+    port: http
+  initialDelaySeconds: 10
+  periodSeconds: 30
+
+readinessProbe:
+  httpGet:
+    path: /readyz
+    port: http
+  initialDelaySeconds: 5
+  periodSeconds: 10
+
+autoscaling:
+  enabled: false
+  minReplicas: 1
+  maxReplicas: 3
+  targetCPUUtilizationPercentage: 80
+
+nodeSelector: {}
+tolerations: []
+affinity: {}
