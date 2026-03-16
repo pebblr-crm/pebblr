@@ -52,7 +52,13 @@ Write tests before or alongside implementation. Do not merge untested code.
 
 ### Makefile convention
 
-CI/CD pipelines call **Makefile targets only**. Every target is either a one-liner or delegates to a shell script in `scripts/`. Never put multi-step logic directly in a `Makefile` recipe — extract it.
+CI/CD pipelines call **Makefile targets only**. Follow these rules:
+
+- Simple, single-command targets belong directly in the `Makefile` — do not create a shell script just to wrap one line.
+- Multi-step or complex logic (more than ~2 commands) must be extracted into a script under `scripts/`, then called from the Makefile target.
+- Never inline multi-step logic directly in a `Makefile` recipe — extract it.
+
+When in doubt: if it fits on one line and has no branching or loops, put it in the Makefile. If it needs error handling, loops, or multiple steps, make it a script.
 
 ### Languages
 

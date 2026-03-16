@@ -2,7 +2,7 @@
 # CI/CD pipelines call these targets only.
 
 .DEFAULT_GOAL := help
-.PHONY: help build test lint typecheck dev-api dev-web cluster-up deploy migrate clean
+.PHONY: help build test lint typecheck dev-api dev-web cluster-up deploy migrate clean helm-validate e2e
 
 # ── Pinned versions ───────────────────────────────────────────────────────────
 ESO_VERSION           := 0.12.1
@@ -61,6 +61,12 @@ deploy: ## Build and deploy to local Kind cluster via Skaffold
 
 migrate: ## Run database migrations
 	@go run ./$(GO_CMD) migrate
+
+helm-validate: ## Validate Helm chart against a running Kind cluster (dry-run)
+	@scripts/helm-ci-install.sh
+
+e2e: ## Run E2E tests against a running Kind cluster
+	@go test -v -tags=e2e -count=1 -timeout=10m ./e2e/...
 
 clean: ## Clean build artifacts
 	@rm -rf bin/ web/dist/ web/node_modules/.vite
