@@ -1,0 +1,14 @@
+DROP POLICY IF EXISTS rep_lead_events_policy ON lead_events;
+DROP POLICY IF EXISTS rep_leads_policy ON leads;
+
+ALTER TABLE lead_events DISABLE ROW LEVEL SECURITY;
+ALTER TABLE leads       DISABLE ROW LEVEL SECURITY;
+
+DROP TABLE IF EXISTS lead_events;
+DROP TABLE IF EXISTS leads;
+DROP TABLE IF EXISTS customers;
+DROP TABLE IF EXISTS team_members;
+DROP TABLE IF EXISTS teams;
+DROP TABLE IF EXISTS users;
+
+DROP EXTENSION IF EXISTS "pgcrypto";
