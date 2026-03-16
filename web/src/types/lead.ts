@@ -1,3 +1,5 @@
+
+
 /**
  * Lead domain types — mirror the Go backend domain model.
  */
@@ -12,19 +14,14 @@ export type LeadStatus =
 
 export interface Lead {
   id: string
-  /** Display name for the lead / prospect */
-  name: string
-  /** Company or organisation */
-  company: string
-  /** Primary contact email */
-  email: string
+  companyName: string
+  contactName: string
+  contactEmail: string
   /** Primary contact phone */
   phone?: string
   status: LeadStatus
-  /** ID of the rep assigned to this lead */
   assigneeId: string
-  /** Free-form notes */
-  notes?: string
+  notes: string
   /** Physical address of the customer site */
   address?: string
   createdAt: string
@@ -32,9 +29,9 @@ export interface Lead {
 }
 
 export interface CreateLeadInput {
-  name: string
-  company: string
-  email: string
+  companyName: string
+  contactName: string
+  contactEmail: string
   phone?: string
   status?: LeadStatus
   assigneeId: string
@@ -42,8 +39,22 @@ export interface CreateLeadInput {
   address?: string
 }
 
-export interface UpdateLeadInput extends Partial<CreateLeadInput> {
-  id: string
+export interface UpdateLeadInput {
+  companyName?: string
+  contactName?: string
+  contactEmail?: string
+  phone?: string
+  status?: LeadStatus
+  assigneeId?: string
+  notes?: string
+  address?: string
+}
+
+export interface LeadsListResponse {
+  leads: Lead[]
+  total: number
+  page: number
+  limit: number
 }
 
 export interface LeadListParams {

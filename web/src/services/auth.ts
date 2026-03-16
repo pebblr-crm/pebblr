@@ -1,3 +1,5 @@
+
+
 /**
  * Azure AD (Entra ID) MSAL authentication placeholder.
  *
@@ -24,6 +26,12 @@ export interface AuthConfig {
   redirectUri: string
   /** API scope to request (e.g. "api://<client-id>/Leads.Read") */
   apiScope: string
+}
+
+export interface AuthAccount {
+  oid: string
+  email: string
+  displayName: string
 }
 
 // ---------------------------------------------------------------------------
@@ -56,6 +64,28 @@ export function getCurrentUser(): AuthenticatedUser | null {
 }
 
 /**
+ * Retrieve the current MSAL account info.
+ *
+ * TODO: Implement with msalInstance.getActiveAccount().
+ */
+export async function getAccount(): Promise<AuthAccount | null> {
+  return null
+}
+
+/**
+ * Silently acquire a fresh access token.
+ * Returns null if the user is not authenticated.
+ *
+ * TODO: implement with msalInstance.acquireTokenSilent().
+ */
+export async function getAccessToken(): Promise<string> {
+  if (_currentUser?.accessToken) {
+    return _currentUser.accessToken
+  }
+  throw new Error('Auth not yet implemented')
+}
+
+/**
  * Trigger interactive login.
  *
  * TODO: implement with msalInstance.loginRedirect() or loginPopup().
@@ -75,8 +105,7 @@ export async function logout(): Promise<void> {
 }
 
 /**
- * Silently acquire a fresh access token.
- * Returns null if the user is not authenticated.
+ * Silently acquire a fresh access token (returns null if unauthenticated).
  *
  * TODO: implement with msalInstance.acquireTokenSilent().
  */

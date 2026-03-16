@@ -1,3 +1,5 @@
+
+
 /**
  * API error structure matching backend convention:
  * {"error": {"code": "NOT_FOUND", "message": "..."}}
@@ -12,14 +14,13 @@ export interface ApiErrorResponse {
 }
 
 export class ApiError extends Error {
-  readonly code: string
-  readonly status: number
-
-  constructor(code: string, message: string, status: number) {
+  constructor(
+    public readonly code: string,
+    message: string,
+    public readonly status: number,
+  ) {
     super(message)
     this.name = 'ApiError'
-    this.code = code
-    this.status = status
   }
 }
 

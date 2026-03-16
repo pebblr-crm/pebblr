@@ -1,4 +1,4 @@
-import { ApiError, ApiErrorResponse } from '@/types/api'
+import { ApiError, type ApiErrorResponse } from '../types/api'
 
 /**
  * Base URL for all API calls. Vite dev server proxies /api → Go backend.
@@ -46,7 +46,7 @@ async function parseError(response: Response): Promise<ApiError> {
  * - Parses structured error responses
  * - Throws ApiError on non-2xx
  */
-export async function apiFetch<T>(
+async function request<T>(
   path: string,
   options?: RequestInit,
 ): Promise<T> {
@@ -70,24 +70,13 @@ export async function apiFetch<T>(
   return response.json() as Promise<T>
 }
 
-export function apiGet<T>(path: string): Promise<T> {
-  return apiFetch<T>(path, { method: 'GET' })
-}
-
-export function apiPost<T>(path: string, body: unknown): Promise<T> {
-  return apiFetch<T>(path, {
-    method: 'POST',
-    body: JSON.stringify(body),
-  })
-}
-
-export function apiPatch<T>(path: string, body: unknown): Promise<T> {
-  return apiFetch<T>(path, {
-    method: 'PATCH',
-    body: JSON.stringify(body),
-  })
-}
-
-export function apiDelete(path: string): Promise<void> {
-  return apiFetch<void>(path, { method: 'DELETE' })
+export const api = {
+  get: <T>(path: string) => request<T>(path),
+  post: <T>(path: string, body: unknown) =>
+    request<T>(path, { method: 'POST', body: JSON.stringify(body) }),
+  patch: <T>(path: string, body: unknown) =>
+    request<T>(path, { method: 'PATCH', body: JSON.stringify(body) }),
+  put: <T>(path: string, body: unknown) =>
+    request<T>(path, { method: 'PUT', body: JSON.stringify(body) }),
+  delete: <T>(path: string) => request<T>(path, { method: 'DELETE' }),
 }
