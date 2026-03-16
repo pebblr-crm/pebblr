@@ -1,0 +1,46 @@
+apiVersion: skaffold/v4beta11
+kind: Config
+metadata:
+  name: pebblr
+
+build:
+  artifacts:
+    - image: pebblr-api
+      docker:
+        dockerfile: Dockerfile
+  local:
+    push: false
+    useBuildkit: true
+
+manifests:
+  helm:
+    releases:
+      - name: pebblr
+        chartPath: deploy/helm/pebblr
+        namespace: pebblr
+        createNamespace: true
+        setValueTemplates:
+          image.repository: "{{.IMAGE_REPO_pebblr_api}}"
+          image.tag: "{{.IMAGE_TAG_pebblr_api}}"
+
+# 'kind' profile: activated automatically when kubeContext is kind-pebblr-local.
+# Overrides resource limits to dev-appropriate values.
+profiles:
+  - name: kind
+    activation:
+      - kubeContext: kind-pebblr-local
+    manifests:
+      helm:
+        releases:
+          - name: pebblr
+            chartPath: deploy/helm/pebblr
+            namespace: pebblr
+            createNamespace: true
+            setValueTemplates:
+              image.repository: "{{.IMAGE_REPO_pebblr_api}}"
+              image.tag: "{{.IMAGE_TAG_pebblr_api}}"
+            setValues:
+              resources.requests.cpu: "50m"
+              resources.requests.memory: "64Mi"
+              resources.limits.cpu: "200m"
+              resources.limits.memory: "256Mi"
