@@ -40,6 +40,7 @@ export interface CreateLeadInput {
 }
 
 export interface UpdateLeadInput {
+  id: string
   companyName?: string
   contactName?: string
   contactEmail?: string

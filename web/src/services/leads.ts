@@ -5,7 +5,7 @@ import {
   type UseQueryResult,
   type UseMutationResult,
 } from '@tanstack/react-query'
-import { apiGet, apiPost, apiPatch, apiDelete } from './api'
+import { api } from './api'
 import type {
   Lead,
   CreateLeadInput,
@@ -39,23 +39,23 @@ function buildLeadPath(params: LeadListParams): string {
 export function fetchLeads(
   params: LeadListParams = {},
 ): Promise<PaginatedResponse<Lead>> {
-  return apiGet<PaginatedResponse<Lead>>(buildLeadPath(params))
+  return api.get<PaginatedResponse<Lead>>(buildLeadPath(params))
 }
 
 export function fetchLead(id: string): Promise<Lead> {
-  return apiGet<Lead>(`/leads/${id}`)
+  return api.get<Lead>(`/leads/${id}`)
 }
 
 export function createLead(input: CreateLeadInput): Promise<Lead> {
-  return apiPost<Lead>('/leads', input)
+  return api.post<Lead>('/leads', input)
 }
 
 export function updateLead({ id, ...input }: UpdateLeadInput): Promise<Lead> {
-  return apiPatch<Lead>(`/leads/${id}`, input)
+  return api.patch<Lead>(`/leads/${id}`, input)
 }
 
 export function deleteLead(id: string): Promise<void> {
-  return apiDelete(`/leads/${id}`)
+  return api.delete(`/leads/${id}`)
 }
 
 // ── TanStack Query hooks ──────────────────────────────────────────────────────
