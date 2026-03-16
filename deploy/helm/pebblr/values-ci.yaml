@@ -1,0 +1,18 @@
+# CI-specific Helm values — used for chart validation in CI only.
+# Not for production use. Disables Azure-specific features that are unavailable in CI.
+
+externalSecrets:
+  enabled: false
+
+serviceAccount:
+  annotations: {}
+
+podAnnotations: {}
+
+database:
+  sslMode: disable
+
+auth:
+  tenantId: "ci-placeholder"
+  clientId: "ci-placeholder"
+  issuerUrl: "https://login.microsoftonline.com/ci-placeholder/v2.0"
