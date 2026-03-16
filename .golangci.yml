@@ -2,8 +2,6 @@ version: "2"
 
 run:
   go: "1.26"
-  skip-dirs:
-    - web/node_modules
 
 linters:
   default: none
@@ -17,6 +15,10 @@ linters:
     - revive
     - tparallel
     - paralleltest
+
+  exclusions:
+    paths:
+      - web/node_modules
 
   settings:
     gocritic:
