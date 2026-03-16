@@ -5,8 +5,8 @@ import (
 	"time"
 )
 
-// MetricsService provides business telemetry aggregations.
-type MetricsService interface {
+// Service provides business telemetry aggregations.
+type Service interface {
 	// PipelineStats returns aggregate lead statistics for the given time window.
 	PipelineStats(ctx context.Context, from, to time.Time) (*PipelineStats, error)
 

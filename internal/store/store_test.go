@@ -8,6 +8,7 @@ import (
 )
 
 func TestSentinelErrors(t *testing.T) {
+	t.Parallel()
 	if !errors.Is(store.ErrNotFound, store.ErrNotFound) {
 		t.Error("ErrNotFound should match itself")
 	}

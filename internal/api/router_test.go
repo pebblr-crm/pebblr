@@ -11,11 +11,12 @@ import (
 )
 
 func TestHealthEndpoint(t *testing.T) {
+	t.Parallel()
 	router := api.NewRouter(api.RouterConfig{
 		Logger: slog.New(slog.NewTextHandler(os.Stdout, nil)),
 	})
 
-	req := httptest.NewRequest(http.MethodGet, "/api/v1/health", nil)
+	req := httptest.NewRequest(http.MethodGet, "/api/v1/health", http.NoBody)
 	// Health check bypasses auth middleware
 	req.Header.Set("Authorization", "Bearer test-token")
 	w := httptest.NewRecorder()
@@ -30,11 +31,12 @@ func TestHealthEndpoint(t *testing.T) {
 }
 
 func TestNotFoundReturns404(t *testing.T) {
+	t.Parallel()
 	router := api.NewRouter(api.RouterConfig{
 		Logger: slog.New(slog.NewTextHandler(os.Stdout, nil)),
 	})
 
-	req := httptest.NewRequest(http.MethodGet, "/api/v1/nonexistent", nil)
+	req := httptest.NewRequest(http.MethodGet, "/api/v1/nonexistent", http.NoBody)
 	req.Header.Set("Authorization", "Bearer test-token")
 	w := httptest.NewRecorder()
 

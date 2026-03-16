@@ -14,6 +14,13 @@ import (
 )
 
 func main() {
+	if err := run(); err != nil {
+		slog.Error("server error", "err", err)
+		os.Exit(1)
+	}
+}
+
+func run() error {
 	logger := slog.New(slog.NewJSONHandler(os.Stdout, nil))
 
 	router := api.NewRouter(api.RouterConfig{
@@ -46,9 +53,9 @@ func main() {
 	defer shutdownCancel()
 
 	if err := srv.Shutdown(shutdownCtx); err != nil {
-		logger.Error("shutdown error", "err", err)
-		os.Exit(1)
+		return fmt.Errorf("shutdown: %w", err)
 	}
 
 	fmt.Println("server stopped")
+	return nil
 }

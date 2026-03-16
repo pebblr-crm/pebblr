@@ -7,6 +7,7 @@ import (
 )
 
 func TestLeadStatusValid(t *testing.T) {
+	t.Parallel()
 	valid := []domain.LeadStatus{
 		domain.LeadStatusNew,
 		domain.LeadStatusAssigned,
@@ -16,9 +17,13 @@ func TestLeadStatusValid(t *testing.T) {
 		domain.LeadStatusClosedLost,
 	}
 	for _, s := range valid {
-		if !s.Valid() {
-			t.Errorf("expected %q to be valid", s)
-		}
+		s := s
+		t.Run(string(s), func(t *testing.T) {
+			t.Parallel()
+			if !s.Valid() {
+				t.Errorf("expected %q to be valid", s)
+			}
+		})
 	}
 
 	if domain.LeadStatus("unknown").Valid() {
@@ -27,6 +32,7 @@ func TestLeadStatusValid(t *testing.T) {
 }
 
 func TestLeadStatusTerminal(t *testing.T) {
+	t.Parallel()
 	if !domain.LeadStatusClosedWon.Terminal() {
 		t.Error("closed_won should be terminal")
 	}
@@ -39,6 +45,7 @@ func TestLeadStatusTerminal(t *testing.T) {
 }
 
 func TestCustomerTypeValid(t *testing.T) {
+	t.Parallel()
 	valid := []domain.CustomerType{
 		domain.CustomerTypeRetail,
 		domain.CustomerTypeWholesale,
@@ -47,17 +54,26 @@ func TestCustomerTypeValid(t *testing.T) {
 		domain.CustomerTypeOther,
 	}
 	for _, ct := range valid {
-		if !ct.Valid() {
-			t.Errorf("expected %q to be valid", ct)
-		}
+		ct := ct
+		t.Run(string(ct), func(t *testing.T) {
+			t.Parallel()
+			if !ct.Valid() {
+				t.Errorf("expected %q to be valid", ct)
+			}
+		})
 	}
 }
 
 func TestRoleValid(t *testing.T) {
+	t.Parallel()
 	for _, r := range []domain.Role{domain.RoleRep, domain.RoleManager, domain.RoleAdmin} {
-		if !r.Valid() {
-			t.Errorf("expected role %q to be valid", r)
-		}
+		r := r
+		t.Run(string(r), func(t *testing.T) {
+			t.Parallel()
+			if !r.Valid() {
+				t.Errorf("expected role %q to be valid", r)
+			}
+		})
 	}
 	if domain.Role("superuser").Valid() {
 		t.Error("unknown role should be invalid")
@@ -65,6 +81,7 @@ func TestRoleValid(t *testing.T) {
 }
 
 func TestRolePermissions(t *testing.T) {
+	t.Parallel()
 	repPerms := domain.RoleRep.Permissions()
 	if len(repPerms) == 0 {
 		t.Error("rep should have permissions")

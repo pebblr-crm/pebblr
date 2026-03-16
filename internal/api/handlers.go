@@ -19,26 +19,8 @@ type errorDetail struct {
 func writeError(w http.ResponseWriter, status int, code, message string) {
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(status)
-	json.NewEncoder(w).Encode(errorResponse{ //nolint:errcheck
+	//nolint:errcheck // writing to http.ResponseWriter never returns a meaningful error
+	json.NewEncoder(w).Encode(errorResponse{
 		Error: errorDetail{Code: code, Message: message},
 	})
-}
-
-// writeJSON writes a JSON-encoded value with the given status code.
-func writeJSON(w http.ResponseWriter, status int, v any) error {
-	w.Header().Set("Content-Type", "application/json")
-	w.WriteHeader(status)
-	return json.NewEncoder(w).Encode(v)
-}
-
-// listResponse wraps paginated list results.
-type listResponse[T any] struct {
-	Data       []T        `json:"data"`
-	Pagination pagination `json:"pagination"`
-}
-
-type pagination struct {
-	Page  int `json:"page"`
-	Limit int `json:"limit"`
-	Total int `json:"total"`
 }

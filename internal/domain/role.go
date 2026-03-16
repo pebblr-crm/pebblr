@@ -44,15 +44,16 @@ func (r Role) Permissions() []Permission {
 // Permission is a named capability within the system.
 type Permission string
 
+// Permission constants enumerate all capabilities that can be granted to a role.
 const (
-	PermViewOwnLeads   Permission = "view:own_leads"
-	PermUpdateOwnLeads Permission = "update:own_leads"
-	PermAddNote        Permission = "add:note"
-	PermViewTeamLeads  Permission = "view:team_leads"
-	PermAssignLeads    Permission = "assign:leads"
+	PermViewOwnLeads    Permission = "view:own_leads"
+	PermUpdateOwnLeads  Permission = "update:own_leads"
+	PermAddNote         Permission = "add:note"
+	PermViewTeamLeads   Permission = "view:team_leads"
+	PermAssignLeads     Permission = "assign:leads"
 	PermViewTeamMetrics Permission = "view:team_metrics"
-	PermViewAllLeads   Permission = "view:all_leads"
-	PermManageUsers    Permission = "manage:users"
-	PermManageTeams    Permission = "manage:teams"
-	PermViewAllMetrics Permission = "view:all_metrics"
+	PermViewAllLeads    Permission = "view:all_leads"
+	PermManageUsers     Permission = "manage:users"
+	PermManageTeams     Permission = "manage:teams"
+	PermViewAllMetrics  Permission = "view:all_metrics"
 )

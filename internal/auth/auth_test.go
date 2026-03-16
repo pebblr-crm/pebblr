@@ -20,6 +20,7 @@ func (s *stubAuthenticator) ValidateToken(_ context.Context, _ string) (*auth.Us
 }
 
 func TestMiddlewareAttachesClaims(t *testing.T) {
+	t.Parallel()
 	want := &auth.UserClaims{
 		Sub:   "user-oid-123",
 		Email: "rep@example.com",
@@ -34,7 +35,7 @@ func TestMiddlewareAttachesClaims(t *testing.T) {
 		w.WriteHeader(http.StatusOK)
 	}))
 
-	req := httptest.NewRequest(http.MethodGet, "/", nil)
+	req := httptest.NewRequest(http.MethodGet, "/", http.NoBody)
 	req.Header.Set("Authorization", "Bearer some-valid-token")
 	w := httptest.NewRecorder()
 
@@ -52,13 +53,14 @@ func TestMiddlewareAttachesClaims(t *testing.T) {
 }
 
 func TestMiddlewareRejectsNoBearerToken(t *testing.T) {
+	t.Parallel()
 	mw := auth.Middleware(&stubAuthenticator{})
 
 	handler := mw(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(http.StatusOK)
 	}))
 
-	req := httptest.NewRequest(http.MethodGet, "/", nil)
+	req := httptest.NewRequest(http.MethodGet, "/", http.NoBody)
 	w := httptest.NewRecorder()
 
 	handler.ServeHTTP(w, req)
