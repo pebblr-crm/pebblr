@@ -2,7 +2,7 @@
 # Multi-stage build for Pebblr CRM
 
 # ── Stage 1: Go builder ──────────────────────────────────────────────────────
-FROM golang:1.22-alpine AS go-builder
+FROM golang:1.26-alpine AS go-builder
 
 WORKDIR /app
 COPY go.mod go.sum ./
