@@ -1,0 +1,250 @@
+/* ── App Layout ─────────────────────────────────────────────────────────────── */
+/* Sidebar + main content area grid, inspired by Twenty CRM's dense layout */
+
+/* Root shell — full viewport */
+.app-shell {
+  display: grid;
+  grid-template-columns: var(--sidebar-width) 1fr;
+  grid-template-rows: 1fr;
+  min-height: 100dvh;
+  height: 100dvh;
+  overflow: hidden;
+}
+
+/* ── Sidebar ────────────────────────────────────────────────────────────────── */
+
+.sidebar {
+  grid-column: 1;
+  display: flex;
+  flex-direction: column;
+  background-color: var(--color-brand);
+  color: var(--color-text-on-brand);
+  overflow-y: auto;
+  overflow-x: hidden;
+  border-right: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.sidebar__logo {
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-3);
+  padding: var(--spacing-4) var(--spacing-4);
+  height: var(--header-height);
+  font-size: var(--text-base);
+  font-weight: 700;
+  letter-spacing: -0.02em;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+  flex-shrink: 0;
+}
+
+.sidebar__nav {
+  flex: 1;
+  padding: var(--spacing-3) var(--spacing-2);
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-1);
+}
+
+.sidebar__nav-item {
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-3);
+  padding: var(--spacing-2) var(--spacing-3);
+  border-radius: var(--radius-md);
+  font-size: var(--text-sm);
+  font-weight: 500;
+  color: rgba(255, 255, 255, 0.7);
+  text-decoration: none;
+  transition: background-color var(--transition-fast),
+    color var(--transition-fast);
+  cursor: pointer;
+}
+
+.sidebar__nav-item:hover {
+  background-color: rgba(255, 255, 255, 0.08);
+  color: var(--color-text-on-brand);
+  text-decoration: none;
+}
+
+.sidebar__nav-item--active {
+  background-color: rgba(255, 255, 255, 0.12);
+  color: var(--color-text-on-brand);
+}
+
+.sidebar__nav-section {
+  margin-top: var(--spacing-4);
+  padding-top: var(--spacing-3);
+  border-top: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.sidebar__nav-label {
+  padding: var(--spacing-1) var(--spacing-3);
+  font-size: var(--text-xs);
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: rgba(255, 255, 255, 0.4);
+  margin-bottom: var(--spacing-1);
+}
+
+.sidebar__footer {
+  padding: var(--spacing-3) var(--spacing-2);
+  border-top: 1px solid rgba(255, 255, 255, 0.08);
+  flex-shrink: 0;
+}
+
+/* ── Main content area ─────────────────────────────────────────────────────── */
+
+.main {
+  grid-column: 2;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  background-color: var(--color-background);
+}
+
+/* Page header bar */
+.page-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0 var(--spacing-6);
+  height: var(--header-height);
+  background-color: var(--color-surface);
+  border-bottom: 1px solid var(--color-border);
+  flex-shrink: 0;
+}
+
+.page-header__title {
+  font-size: var(--text-base);
+  font-weight: 600;
+  color: var(--color-text-primary);
+}
+
+.page-header__actions {
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-2);
+}
+
+/* Scrollable page body */
+.page-body {
+  flex: 1;
+  overflow-y: auto;
+  overflow-x: hidden;
+  padding: var(--spacing-6);
+}
+
+/* Content cards / panels */
+.panel {
+  background-color: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-lg);
+  overflow: hidden;
+}
+
+/* ── Data Table container ───────────────────────────────────────────────────── */
+
+.data-table-container {
+  overflow-x: auto;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-lg);
+  background-color: var(--color-surface);
+}
+
+.data-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: var(--text-sm);
+}
+
+.data-table thead {
+  background-color: var(--color-surface-alt);
+  border-bottom: 1px solid var(--color-border);
+}
+
+.data-table th {
+  padding: var(--spacing-3) var(--spacing-4);
+  text-align: left;
+  font-weight: 600;
+  font-size: var(--text-xs);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--color-text-secondary);
+  white-space: nowrap;
+  user-select: none;
+}
+
+.data-table th.sortable {
+  cursor: pointer;
+}
+
+.data-table th.sortable:hover {
+  color: var(--color-text-primary);
+}
+
+.data-table tbody tr {
+  border-bottom: 1px solid var(--color-border);
+  transition: background-color var(--transition-fast);
+}
+
+.data-table tbody tr:last-child {
+  border-bottom: none;
+}
+
+.data-table tbody tr:hover {
+  background-color: var(--color-surface-alt);
+}
+
+.data-table td {
+  padding: var(--spacing-3) var(--spacing-4);
+  color: var(--color-text-primary);
+  vertical-align: middle;
+}
+
+/* ── Status badges ──────────────────────────────────────────────────────────── */
+
+.status-badge {
+  display: inline-flex;
+  align-items: center;
+  padding: 2px var(--spacing-2);
+  border-radius: var(--radius-sm);
+  font-size: var(--text-xs);
+  font-weight: 600;
+  text-transform: capitalize;
+}
+
+.status-badge--new        { background: #dbeafe; color: var(--color-status-new); }
+.status-badge--contacted  { background: #ede9fe; color: var(--color-status-contacted); }
+.status-badge--qualified  { background: #fef3c7; color: var(--color-status-qualified); }
+.status-badge--proposal   { background: #cffafe; color: var(--color-status-proposal); }
+.status-badge--won        { background: #dcfce7; color: var(--color-status-won); }
+.status-badge--lost       { background: #f3f4f6; color: var(--color-status-lost); }
+
+/* ── Responsive ─────────────────────────────────────────────────────────────── */
+
+@media (max-width: 768px) {
+  .app-shell {
+    grid-template-columns: 1fr;
+    grid-template-rows: auto 1fr;
+  }
+
+  .sidebar {
+    grid-column: 1;
+    grid-row: 1;
+    flex-direction: row;
+    height: var(--header-height);
+    overflow: hidden;
+  }
+
+  .sidebar__nav {
+    flex-direction: row;
+    padding: 0 var(--spacing-2);
+    align-items: center;
+  }
+
+  .main {
+    grid-column: 1;
+    grid-row: 2;
+  }
+}
