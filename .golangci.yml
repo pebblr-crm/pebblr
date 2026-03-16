@@ -2,6 +2,8 @@ version: "2"
 
 run:
   go: "1.26"
+  skip-dirs:
+    - web/node_modules
 
 linters:
   default: none
