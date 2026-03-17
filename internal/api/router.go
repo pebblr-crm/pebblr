@@ -10,7 +10,8 @@ import (
 
 // RouterConfig holds dependencies for the HTTP router.
 type RouterConfig struct {
-	Logger *slog.Logger
+	Logger      *slog.Logger
+	LeadHandler *LeadHandler
 }
 
 // NewRouter constructs and returns the application HTTP router.
@@ -28,13 +29,18 @@ func NewRouter(cfg RouterConfig) http.Handler {
 
 		r.Get("/health", healthHandler)
 
-		// Lead routes — placeholder
+		// Lead routes
 		r.Route("/leads", func(r chi.Router) {
-			r.Get("/", notImplementedHandler)
-			r.Post("/", notImplementedHandler)
-			r.Get("/{id}", notImplementedHandler)
-			r.Put("/{id}", notImplementedHandler)
-			r.Delete("/{id}", notImplementedHandler)
+			if cfg.LeadHandler != nil {
+				r.Mount("/", NewLeadRouter(cfg.LeadHandler))
+			} else {
+				r.Get("/", notImplementedHandler)
+				r.Post("/", notImplementedHandler)
+				r.Get("/{id}", notImplementedHandler)
+				r.Put("/{id}", notImplementedHandler)
+				r.Delete("/{id}", notImplementedHandler)
+				r.Patch("/{id}/status", notImplementedHandler)
+			}
 		})
 
 		// User routes — placeholder
@@ -64,13 +70,11 @@ func NewRouter(cfg RouterConfig) http.Handler {
 func healthHandler(w http.ResponseWriter, _ *http.Request) {
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(http.StatusOK)
-	//nolint:errcheck // writing to http.ResponseWriter never returns a meaningful error
-	w.Write([]byte(`{"status":"ok"}`))
+	_, _ = w.Write([]byte(`{"status":"ok"}`))
 }
 
 func notImplementedHandler(w http.ResponseWriter, _ *http.Request) {
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(http.StatusNotImplemented)
-	//nolint:errcheck // writing to http.ResponseWriter never returns a meaningful error
-	w.Write([]byte(`{"error":{"code":"NOT_IMPLEMENTED","message":"endpoint not yet implemented"}}`))
+	_, _ = w.Write([]byte(`{"error":{"code":"NOT_IMPLEMENTED","message":"endpoint not yet implemented"}}`))
 }

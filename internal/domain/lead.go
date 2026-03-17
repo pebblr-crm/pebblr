@@ -14,4 +14,6 @@ type Lead struct {
 	CustomerType CustomerType
 	CreatedAt    time.Time
 	UpdatedAt    time.Time
+	// DeletedAt is set when the lead is soft-deleted. Nil means active.
+	DeletedAt *time.Time
 }
