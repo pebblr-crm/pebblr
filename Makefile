@@ -78,11 +78,11 @@ cluster-up: ## Recreate local Kind cluster; install cert-manager, ESO, and ingre
 
 dev-certs: ## Apply cert-manager issuers and certificates for local TLS
 	$(AKS_GUARD)
-	@kubectl apply -f deploy/k8s/cert-manager/selfsigned-issuer.yaml
-	@kubectl apply -f deploy/k8s/cert-manager/ca-certificate.yaml
-	@kubectl apply -f deploy/k8s/cert-manager/ca-issuer.yaml
+	@kubectl apply -f deploy/k8s/local-tls/selfsigned-issuer.yaml
+	@kubectl apply -f deploy/k8s/local-tls/ca-certificate.yaml
+	@kubectl apply -f deploy/k8s/local-tls/ca-issuer.yaml
 	@kubectl create namespace pebblr --dry-run=client -o yaml | kubectl apply -f -
-	@kubectl apply -f deploy/k8s/cert-manager/pebblr-local-cert.yaml
+	@kubectl apply -f deploy/k8s/local-tls/pebblr-cert.yaml
 
 deploy: ## Build and deploy to local Kind cluster via Skaffold
 	$(AKS_GUARD)
