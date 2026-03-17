@@ -1,0 +1,33 @@
+# Local Kind cluster values — TLS via cert-manager self-signed CA.
+# Not for production use.
+
+externalSecrets:
+  enabled: false
+
+serviceAccount:
+  annotations: {}
+
+podAnnotations: {}
+
+database:
+  sslMode: disable
+
+auth:
+  tenantId: local-placeholder
+  clientId: local-placeholder
+  issuerUrl: https://login.microsoftonline.com/local-placeholder/v2.0
+
+ingress:
+  enabled: true
+  className: nginx
+  annotations:
+    nginx.ingress.kubernetes.io/ssl-redirect: "true"
+  hosts:
+    - host: pebblr.local
+      paths:
+        - path: /
+          pathType: Prefix
+  tls:
+    - secretName: pebblr-local-tls
+      hosts:
+        - pebblr.local

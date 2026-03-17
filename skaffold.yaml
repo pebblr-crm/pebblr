@@ -36,6 +36,9 @@ profiles:
             chartPath: deploy/helm/pebblr
             namespace: pebblr
             createNamespace: true
+            valuesFiles:
+              - deploy/helm/pebblr/values.yaml
+              - deploy/helm/pebblr/values-local.yaml
             setValueTemplates:
               image.repository: "{{.IMAGE_REPO_pebblr_api}}"
               image.tag: "{{.IMAGE_TAG_pebblr_api}}"
