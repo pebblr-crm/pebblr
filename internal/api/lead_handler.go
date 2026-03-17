@@ -136,8 +136,7 @@ func (h *LeadHandler) List(w http.ResponseWriter, r *http.Request) {
 
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(http.StatusOK)
-	//nolint:errcheck
-	json.NewEncoder(w).Encode(leadListResponse{
+	_ = json.NewEncoder(w).Encode(leadListResponse{
 		Leads: leads,
 		Total: result.Total,
 		Page:  result.Page,
@@ -189,8 +188,7 @@ func (h *LeadHandler) Create(w http.ResponseWriter, r *http.Request) {
 
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(http.StatusCreated)
-	//nolint:errcheck
-	json.NewEncoder(w).Encode(leadResponse{Lead: created})
+	_ = json.NewEncoder(w).Encode(leadResponse{Lead: created})
 }
 
 // Get handles GET /api/v1/leads/{id}
@@ -210,8 +208,7 @@ func (h *LeadHandler) Get(w http.ResponseWriter, r *http.Request) {
 
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(http.StatusOK)
-	//nolint:errcheck
-	json.NewEncoder(w).Encode(leadResponse{Lead: lead})
+	_ = json.NewEncoder(w).Encode(leadResponse{Lead: lead})
 }
 
 // Update handles PUT /api/v1/leads/{id}
@@ -254,8 +251,7 @@ func (h *LeadHandler) Update(w http.ResponseWriter, r *http.Request) {
 
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(http.StatusOK)
-	//nolint:errcheck
-	json.NewEncoder(w).Encode(leadResponse{Lead: updated})
+	_ = json.NewEncoder(w).Encode(leadResponse{Lead: updated})
 }
 
 // Delete handles DELETE /api/v1/leads/{id}
@@ -299,6 +295,5 @@ func (h *LeadHandler) PatchStatus(w http.ResponseWriter, r *http.Request) {
 
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(http.StatusOK)
-	//nolint:errcheck
-	json.NewEncoder(w).Encode(leadResponse{Lead: updated})
+	_ = json.NewEncoder(w).Encode(leadResponse{Lead: updated})
 }
