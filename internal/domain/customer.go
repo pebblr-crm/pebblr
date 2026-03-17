@@ -2,23 +2,23 @@ package domain
 
 // Customer represents a business or individual that a sales rep visits.
 type Customer struct {
-	ID      string
-	Name    string
-	Type    CustomerType
-	Address Address
+	ID      string       `json:"id"`
+	Name    string       `json:"name"`
+	Type    CustomerType `json:"type"`
+	Address Address      `json:"address"`
 	// Phone is the primary contact phone number.
-	Phone string
+	Phone string `json:"phone"`
 	// Email is the primary contact email address.
-	Email string
+	Email string `json:"email"`
 	// Notes holds free-form notes about the customer.
-	Notes string
+	Notes string `json:"notes"`
 }
 
 // Address holds the physical location of a customer.
 type Address struct {
-	Street  string
-	City    string
-	State   string
-	Country string
-	Zip     string
+	Street  string `json:"street"`
+	City    string `json:"city"`
+	State   string `json:"state"`
+	Country string `json:"country"`
+	Zip     string `json:"zip"`
 }
