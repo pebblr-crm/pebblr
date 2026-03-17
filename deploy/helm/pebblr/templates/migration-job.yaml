@@ -31,7 +31,12 @@ spec:
         - name: migrate
           image: "{{ .Values.image.repository }}:{{ .Values.image.tag | default .Chart.AppVersion }}"
           imagePullPolicy: {{ .Values.image.pullPolicy }}
-          command: ["/app/api", "migrate"]
+          command:
+            - /app/migrate
+            - -dsn-file
+            - {{ .Values.secrets.mountPath }}/{{ .Values.secrets.dbUrlKey }}
+            - -migrations-path
+            - /app/migrations
           envFrom:
             - configMapRef:
                 name: {{ include "pebblr.fullname" . }}-config
