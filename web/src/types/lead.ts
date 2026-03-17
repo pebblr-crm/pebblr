@@ -6,49 +6,44 @@
 
 export type LeadStatus =
   | 'new'
-  | 'contacted'
-  | 'qualified'
-  | 'proposal'
-  | 'won'
-  | 'lost'
+  | 'assigned'
+  | 'in_progress'
+  | 'visited'
+  | 'closed_won'
+  | 'closed_lost'
 
 export interface Lead {
   id: string
-  companyName: string
-  contactName: string
-  contactEmail: string
-  /** Primary contact phone */
-  phone?: string
+  title: string
+  description: string
   status: LeadStatus
   assigneeId: string
-  notes: string
-  /** Physical address of the customer site */
-  address?: string
+  teamId: string
+  customerId: string
+  customerType: string
   createdAt: string
   updatedAt: string
 }
 
 export interface CreateLeadInput {
-  companyName: string
-  contactName: string
-  contactEmail: string
-  phone?: string
+  title: string
+  description?: string
   status?: LeadStatus
   assigneeId: string
-  notes?: string
-  address?: string
+  teamId: string
+  customerId: string
+  customerType: string
 }
 
 export interface UpdateLeadInput {
   id: string
-  companyName?: string
-  contactName?: string
-  contactEmail?: string
-  phone?: string
+  title?: string
+  description?: string
   status?: LeadStatus
   assigneeId?: string
-  notes?: string
-  address?: string
+  teamId?: string
+  customerId?: string
+  customerType?: string
 }
 
 export interface LeadsListResponse {

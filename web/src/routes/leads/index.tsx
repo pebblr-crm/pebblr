@@ -9,10 +9,9 @@ import type { Lead } from '../../types/lead'
 const columnHelper = createColumnHelper<Lead>()
 
 const columns = [
-  columnHelper.accessor('companyName', { header: 'Company' }),
-  columnHelper.accessor('contactName', { header: 'Contact' }),
-  columnHelper.accessor('contactEmail', { header: 'Email' }),
+  columnHelper.accessor('title', { header: 'Title' }),
   columnHelper.accessor('status', { header: 'Status' }),
+  columnHelper.accessor('customerType', { header: 'Customer Type' }),
 ]
 
 export const Route = createRoute({
