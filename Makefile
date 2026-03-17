@@ -2,7 +2,7 @@
 # CI/CD pipelines call these targets only.
 
 .DEFAULT_GOAL := help
-.PHONY: help build test lint typecheck dev-api dev-web cluster-up deploy migrate clean helm-validate e2e
+.PHONY: help build test lint typecheck dev-api dev-web dev-db dev-db-stop dev-db-reset cluster-up deploy migrate clean helm-validate e2e
 
 # ── Pinned versions ───────────────────────────────────────────────────────────
 ESO_VERSION           := 0.12.1
@@ -40,6 +40,15 @@ dev-api: ## Run Go API server locally with hot reload
 
 dev-web: ## Run Vite dev server
 	@cd $(WEB_DIR) && bun run dev
+
+dev-db: ## Start local PostgreSQL 16 container, run migrations, and seed data
+	@scripts/dev-db.sh up
+
+dev-db-stop: ## Stop and remove the local PostgreSQL container
+	@scripts/dev-db.sh stop
+
+dev-db-reset: ## Destroy and recreate the local PostgreSQL container with fresh seed data
+	@scripts/dev-db.sh reset
 
 cluster-up: ## Recreate local Kind cluster; install ESO and ingress-nginx (pinned versions)
 	$(AKS_GUARD)
