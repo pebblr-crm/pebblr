@@ -41,6 +41,9 @@ kubeconfig
 *.crt
 secrets/
 
+# Local dev secrets and state (never commit)
+.local/
+
 # IDE
 .vscode/
 .idea/
