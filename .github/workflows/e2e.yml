@@ -39,14 +39,27 @@ jobs:
           cluster_name: pebblr-local
           config: deploy/kind/kind-config.yaml
 
-      - name: Deploy PostgreSQL
+      # ── Parallel track: Docker build runs in the background while the
+      #    cluster is prepared with PostgreSQL, migrations, and secrets. ──
+      - name: "Parallel: Docker build (background) + cluster setup (foreground)"
         run: |
+          set -euo pipefail
+
+          # ── Background: build Docker image ──────────────────────────
+          echo "==> Starting Docker build in background..."
+          docker build -t pebblr-api:e2e . &
+          DOCKER_PID=$!
+
+          # ── Foreground: prepare cluster ─────────────────────────────
+
+          # Deploy PostgreSQL
+          echo "==> Deploying PostgreSQL..."
           kubectl apply -f deploy/k8s/e2e/postgres.yaml
           kubectl rollout status deployment/postgres -n pebblr-e2e --timeout=120s
           kubectl wait pod -l app=postgres -n pebblr-e2e --for=condition=Ready --timeout=120s
 
-      - name: Run migrations and seed data
-        run: |
+          # Run migrations and seed data
+          echo "==> Running migrations..."
           kubectl create configmap e2e-migrations \
             --from-file=migrations/ \
             --from-file=scripts/seed-data.sql \
@@ -108,8 +121,8 @@ jobs:
 
           kubectl wait job/e2e-migrate-seed -n pebblr-e2e --for=condition=Complete --timeout=120s
 
-      - name: Create app secrets
-        run: |
+          # Create app secrets
+          echo "==> Creating app secrets..."
           kubectl create secret generic pebblr-e2e-pebblr-secrets \
             --from-literal=db-dsn="postgres://pebblr:pebblr-e2e-password@postgres.pebblr-e2e.svc.cluster.local:5432/pebblr?sslmode=disable" \
             --from-literal=db-url="postgres://pebblr:pebblr-e2e-password@postgres.pebblr-e2e.svc.cluster.local:5432/pebblr?sslmode=disable" \
@@ -117,10 +130,13 @@ jobs:
             --from-literal=jwt-secret="e2e-jwt-secret-not-for-production" \
             -n pebblr-e2e
 
-      - name: Build and load Docker image
-        run: |
-          docker build -t pebblr-api:e2e .
-          kind load docker-image pebblr-api:e2e --name pebblr-local
+          # ── Converge: wait for Docker build ─────────────────────────
+          echo "==> Waiting for Docker build to finish..."
+          wait $DOCKER_PID
+          echo "==> Docker build complete."
+
+      - name: Load image into Kind
+        run: kind load docker-image pebblr-api:e2e --name pebblr-local
 
       - name: Deploy app via Helm
         run: |
