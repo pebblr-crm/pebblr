@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # Sets up the full E2E environment in a Kind cluster.
 # Orchestrates the composable Makefile targets:
-#   e2e-cluster → e2e-db + e2e-image (parallel) → e2e-deploy
+#   e2e-cluster → e2e-db → e2e-image → e2e-deploy
 #
 # Usage: scripts/e2e-setup.sh
 set -euo pipefail
@@ -18,17 +18,15 @@ else
   make e2e-cluster
 fi
 
-# ── Step 2: DB setup + Docker build in parallel ─────────────────────────────
-log "Starting DB setup and Docker build in parallel..."
-make e2e-db &
-DB_PID=$!
-make e2e-image &
-IMAGE_PID=$!
+# ── Step 2: Database setup ──────────────────────────────────────────────────
+log "Setting up database..."
+make e2e-db
 
-wait $DB_PID   || { log "DB setup failed"; exit 1; }
-wait $IMAGE_PID || { log "Image build failed"; exit 1; }
+# ── Step 3: Docker image ───────────────────────────────────────────────────
+log "Building and loading Docker image..."
+make e2e-image
 
-# ── Step 3: Deploy the app ──────────────────────────────────────────────────
+# ── Step 4: Deploy the app ──────────────────────────────────────────────────
 log "Deploying app via Helm..."
 make e2e-deploy
 
