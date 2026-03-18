@@ -33,15 +33,18 @@ jobs:
         with:
           version: "v3.14.0"
 
-      - name: Create Kind cluster
-        uses: helm/kind-action@v1
-        with:
-          cluster_name: pebblr-local
-          config: deploy/kind/kind-config.yaml
+      - name: Install Kind
+        run: |
+          [ -x "$(command -v kind)" ] && exit 0
+          curl -Lo ./kind https://kind.sigs.k8s.io/dl/v0.27.0/kind-linux-amd64
+          chmod +x ./kind
+          sudo mv ./kind /usr/local/bin/kind
 
-      # ── Parallel track: Docker build runs in the background while the
-      #    cluster is prepared with PostgreSQL, migrations, and secrets. ──
-      - name: "Parallel: Docker build (background) + cluster setup (foreground)"
+      # ── Two parallel tracks ────────────────────────────────────────
+      #   Background: docker build
+      #   Foreground: kind cluster → postgres → migrations → secrets
+      # They converge before loading the image into Kind.
+      - name: "Parallel: Docker build + Kind cluster setup"
         run: |
           set -euo pipefail
 
@@ -50,15 +53,16 @@ jobs:
           docker build -t pebblr-api:e2e . &
           DOCKER_PID=$!
 
-          # ── Foreground: prepare cluster ─────────────────────────────
+          # ── Foreground: create cluster and prepare it ───────────────
 
-          # Deploy PostgreSQL
+          echo "==> Creating Kind cluster..."
+          kind create cluster --config deploy/kind/kind-config.yaml --wait 120s
+
           echo "==> Deploying PostgreSQL..."
           kubectl apply -f deploy/k8s/e2e/postgres.yaml
           kubectl rollout status deployment/postgres -n pebblr-e2e --timeout=120s
           kubectl wait pod -l app=postgres -n pebblr-e2e --for=condition=Ready --timeout=120s
 
-          # Run migrations and seed data
           echo "==> Running migrations..."
           kubectl create configmap e2e-migrations \
             --from-file=migrations/ \
@@ -121,7 +125,6 @@ jobs:
 
           kubectl wait job/e2e-migrate-seed -n pebblr-e2e --for=condition=Complete --timeout=120s
 
-          # Create app secrets
           echo "==> Creating app secrets..."
           kubectl create secret generic pebblr-e2e-pebblr-secrets \
             --from-literal=db-dsn="postgres://pebblr:pebblr-e2e-password@postgres.pebblr-e2e.svc.cluster.local:5432/pebblr?sslmode=disable" \
