@@ -104,8 +104,8 @@ func TestLeadList_ReturnsOK(t *testing.T) {
 	if err := json.NewDecoder(w.Body).Decode(&resp); err != nil {
 		t.Fatalf("invalid JSON: %v", err)
 	}
-	if _, ok := resp["leads"]; !ok {
-		t.Error("expected 'leads' key in response")
+	if _, ok := resp["items"]; !ok {
+		t.Error("expected 'items' key in response")
 	}
 }
 
@@ -123,7 +123,7 @@ func TestLeadList_NoUser_Returns401(t *testing.T) {
 func TestLeadCreate_AdminSucceeds(t *testing.T) {
 	t.Parallel()
 	body, _ := json.Marshal(map[string]any{
-		"title": "Test Lead", "team_id": "team-1", "customer_id": "cust-1",
+		"title": "Test Lead", "teamId": "team-1", "customerId": "cust-1",
 	})
 	req := httptest.NewRequest(http.MethodPost, "/", bytes.NewReader(body))
 	req.Header.Set("Content-Type", "application/json")
@@ -138,7 +138,7 @@ func TestLeadCreate_AdminSucceeds(t *testing.T) {
 func TestLeadCreate_RepForbidden(t *testing.T) {
 	t.Parallel()
 	body, _ := json.Marshal(map[string]any{
-		"title": "Test Lead", "team_id": "team-1", "customer_id": "cust-1",
+		"title": "Test Lead", "teamId": "team-1", "customerId": "cust-1",
 	})
 	req := httptest.NewRequest(http.MethodPost, "/", bytes.NewReader(body))
 	req.Header.Set("Content-Type", "application/json")
@@ -152,7 +152,7 @@ func TestLeadCreate_RepForbidden(t *testing.T) {
 
 func TestLeadCreate_MissingTitle_Returns400(t *testing.T) {
 	t.Parallel()
-	body, _ := json.Marshal(map[string]any{"team_id": "team-1", "customer_id": "cust-1"})
+	body, _ := json.Marshal(map[string]any{"teamId": "team-1", "customerId": "cust-1"})
 	req := httptest.NewRequest(http.MethodPost, "/", bytes.NewReader(body))
 	req.Header.Set("Content-Type", "application/json")
 	w := httptest.NewRecorder()
