@@ -58,14 +58,44 @@ jobs:
       - name: Collect debug info on failure
         if: failure()
         run: |
-          echo "=== Pod status ==="
+          echo "=== All pods in namespace ==="
           kubectl get pods -n pebblr-e2e -o wide
           echo ""
-          echo "=== Pod logs ==="
+          echo "=== All jobs in namespace ==="
+          kubectl get jobs -n pebblr-e2e -o wide
+          echo ""
+          echo "=== Helm pre-install migration job pods ==="
+          kubectl get pods -n pebblr-e2e -l app.kubernetes.io/component=migration -o wide || true
+          echo ""
+          echo "=== Migration job pod describe ==="
+          kubectl describe pods -n pebblr-e2e -l app.kubernetes.io/component=migration || true
+          echo ""
+          echo "=== Migration job pod logs ==="
+          kubectl logs -n pebblr-e2e -l app.kubernetes.io/component=migration --tail=200 || true
+          echo ""
+          echo "=== App pod logs ==="
           kubectl logs -n pebblr-e2e -l app.kubernetes.io/name=pebblr --tail=100 || true
           echo ""
-          echo "=== Pod describe ==="
+          echo "=== App pod describe ==="
           kubectl describe pods -n pebblr-e2e -l app.kubernetes.io/name=pebblr || true
           echo ""
-          echo "=== Events ==="
+          echo "=== Secrets in namespace ==="
+          kubectl get secrets -n pebblr-e2e || true
+          echo ""
+          echo "=== ConfigMaps in namespace ==="
+          kubectl get configmaps -n pebblr-e2e || true
+          echo ""
+          echo "=== PostgreSQL pod status ==="
+          kubectl get pods -n pebblr-e2e -l app=postgres -o wide || true
+          echo ""
+          echo "=== PostgreSQL pod logs (last 50 lines) ==="
+          kubectl logs -n pebblr-e2e -l app=postgres --tail=50 || true
+          echo ""
+          echo "=== Events (sorted by time) ==="
           kubectl get events -n pebblr-e2e --sort-by='.lastTimestamp' || true
+          echo ""
+          echo "=== Helm release status ==="
+          helm status pebblr-e2e -n pebblr-e2e 2>&1 || true
+          echo ""
+          echo "=== Helm release history ==="
+          helm history pebblr-e2e -n pebblr-e2e 2>&1 || true
