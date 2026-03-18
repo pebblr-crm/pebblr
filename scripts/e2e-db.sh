@@ -97,7 +97,7 @@ kubectl wait job/e2e-migrate-seed -n "$NAMESPACE" --for=condition=Complete --tim
 
 # ── Create app secrets ────────────────────────────────────────────────────
 log "Creating app secrets..."
-kubectl create secret generic pebblr-e2e-pebblr-secrets \
+kubectl create secret generic pebblr-e2e-secrets \
   --from-literal=db-dsn="$DB_DSN" \
   --from-literal=db-url="$DB_DSN" \
   --from-literal=db-password="pebblr-e2e-password" \
