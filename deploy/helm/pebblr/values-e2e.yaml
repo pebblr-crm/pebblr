@@ -37,6 +37,7 @@ resources:
 
 # Health endpoint is behind auth middleware, so use exec probes for e2e.
 livenessProbe:
+  httpGet: null
   exec:
     command:
       - wget
@@ -49,6 +50,7 @@ livenessProbe:
   periodSeconds: 10
 
 readinessProbe:
+  httpGet: null
   exec:
     command:
       - wget
