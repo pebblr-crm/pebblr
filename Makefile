@@ -2,7 +2,7 @@
 # CI/CD pipelines call these targets only.
 
 .DEFAULT_GOAL := help
-.PHONY: help build test lint typecheck dev-api dev-web cluster-up deploy migrate clean helm-validate e2e
+.PHONY: help build test lint typecheck dev-api dev-web cluster-up deploy migrate clean helm-validate e2e coverage coverage-report
 
 # ── Pinned versions ───────────────────────────────────────────────────────────
 ESO_VERSION           := 0.12.1
@@ -68,5 +68,11 @@ helm-validate: ## Validate Helm chart against a running Kind cluster (dry-run)
 e2e: ## Run E2E tests against a running Kind cluster
 	@go test -v -tags=e2e -count=1 -timeout=10m ./e2e/...
 
+coverage: ## Collect Go and frontend code coverage
+	@scripts/coverage-report.sh
+
+coverage-report: ## Collect coverage and post as a GitHub PR comment
+	@scripts/coverage-report.sh --comment
+
 clean: ## Clean build artifacts
-	@rm -rf bin/ web/dist/ web/node_modules/.vite
+	@rm -rf bin/ web/dist/ web/node_modules/.vite coverage/
