@@ -52,10 +52,10 @@ func NewLeadRouter(h *LeadHandler) http.Handler {
 type leadRequest struct {
 	Title        string              `json:"title"`
 	Description  string              `json:"description"`
-	AssigneeID   string              `json:"assignee_id"`
-	TeamID       string              `json:"team_id"`
-	CustomerID   string              `json:"customer_id"`
-	CustomerType domain.CustomerType `json:"customer_type"`
+	AssigneeID   string              `json:"assigneeId"`
+	TeamID       string              `json:"teamId"`
+	CustomerID   string              `json:"customerId"`
+	CustomerType domain.CustomerType `json:"customerType"`
 	Status       domain.LeadStatus   `json:"status"`
 }
 
@@ -71,7 +71,7 @@ type leadResponse struct {
 
 // leadListResponse is the JSON envelope for a paginated lead list.
 type leadListResponse struct {
-	Leads []*domain.Lead `json:"leads"`
+	Items []*domain.Lead `json:"items"`
 	Total int            `json:"total"`
 	Page  int            `json:"page"`
 	Limit int            `json:"limit"`
@@ -137,7 +137,7 @@ func (h *LeadHandler) List(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(http.StatusOK)
 	_ = json.NewEncoder(w).Encode(leadListResponse{
-		Leads: leads,
+		Items: leads,
 		Total: result.Total,
 		Page:  result.Page,
 		Limit: result.Limit,
@@ -163,11 +163,11 @@ func (h *LeadHandler) Create(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	if req.TeamID == "" {
-		writeError(w, http.StatusBadRequest, "BAD_REQUEST", "team_id is required")
+		writeError(w, http.StatusBadRequest, "BAD_REQUEST", "teamId is required")
 		return
 	}
 	if req.CustomerID == "" {
-		writeError(w, http.StatusBadRequest, "BAD_REQUEST", "customer_id is required")
+		writeError(w, http.StatusBadRequest, "BAD_REQUEST", "customerId is required")
 		return
 	}
 

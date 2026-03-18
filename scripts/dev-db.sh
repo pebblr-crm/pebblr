@@ -7,7 +7,7 @@ PG_VERSION="16"
 PG_USER="pebblr"
 PG_PASSWORD="pebblr_dev"
 PG_DB="pebblr"
-PG_PORT="5432"
+PG_PORT="${PG_PORT:-5433}"
 DSN_FILE=".local/secrets/db-dsn"
 
 ACTION="${1:-up}"
@@ -64,6 +64,7 @@ case "$ACTION" in
     echo "Stopping container '${CONTAINER_NAME}'..."
     docker stop "$CONTAINER_NAME" 2>/dev/null || true
     docker rm   "$CONTAINER_NAME" 2>/dev/null || true
+    rm -f "$DSN_FILE"
     echo "Done."
     ;;
 

@@ -36,6 +36,14 @@ const columns = [
   }),
 ]
 
+const paginationButtonStyle: React.CSSProperties = {
+  padding: '4px 12px',
+  fontSize: '13px',
+  border: '1px solid var(--color-border, #e5e5e5)',
+  borderRadius: '4px',
+  backgroundColor: 'var(--color-surface, #fff)',
+}
+
 function formatDate(iso: string): string {
   if (!iso) return '—'
   try {
@@ -198,11 +206,7 @@ export function LeadsPage() {
                   onClick={() => setPage((p) => p - 1)}
                   disabled={!hasPrev}
                   style={{
-                    padding: '4px 12px',
-                    fontSize: '13px',
-                    border: '1px solid var(--color-border, #e5e5e5)',
-                    borderRadius: '4px',
-                    backgroundColor: 'var(--color-surface, #fff)',
+                    ...paginationButtonStyle,
                     cursor: hasPrev ? 'pointer' : 'default',
                     opacity: hasPrev ? 1 : 0.4,
                   }}
@@ -217,11 +221,7 @@ export function LeadsPage() {
                   onClick={() => setPage((p) => p + 1)}
                   disabled={!hasNext}
                   style={{
-                    padding: '4px 12px',
-                    fontSize: '13px',
-                    border: '1px solid var(--color-border, #e5e5e5)',
-                    borderRadius: '4px',
-                    backgroundColor: 'var(--color-surface, #fff)',
+                    ...paginationButtonStyle,
                     cursor: hasNext ? 'pointer' : 'default',
                     opacity: hasNext ? 1 : 0.4,
                   }}
