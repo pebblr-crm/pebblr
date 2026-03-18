@@ -1,61 +1,58 @@
 
-
 /**
  * Lead domain types — mirror the Go backend domain model.
+ * Field names use camelCase (frontend convention), mapping to the
+ * snake_case json tags on the Go domain.Lead struct.
  */
 
 export type LeadStatus =
   | 'new'
-  | 'contacted'
-  | 'qualified'
-  | 'proposal'
-  | 'won'
-  | 'lost'
+  | 'assigned'
+  | 'in_progress'
+  | 'visited'
+  | 'closed_won'
+  | 'closed_lost'
+
+export type CustomerType =
+  | 'retail'
+  | 'wholesale'
+  | 'hospitality'
+  | 'institutional'
+  | 'other'
 
 export interface Lead {
   id: string
-  companyName: string
-  contactName: string
-  contactEmail: string
-  /** Primary contact phone */
-  phone?: string
+  title: string
+  description: string
   status: LeadStatus
   assigneeId: string
-  notes: string
-  /** Physical address of the customer site */
-  address?: string
+  teamId: string
+  customerId: string
+  customerType: CustomerType
   createdAt: string
   updatedAt: string
+  deletedAt?: string | null
 }
 
 export interface CreateLeadInput {
-  companyName: string
-  contactName: string
-  contactEmail: string
-  phone?: string
+  title: string
+  description?: string
   status?: LeadStatus
   assigneeId: string
-  notes?: string
-  address?: string
+  teamId: string
+  customerId: string
+  customerType: CustomerType
 }
 
 export interface UpdateLeadInput {
   id: string
-  companyName?: string
-  contactName?: string
-  contactEmail?: string
-  phone?: string
+  title?: string
+  description?: string
   status?: LeadStatus
   assigneeId?: string
-  notes?: string
-  address?: string
-}
-
-export interface LeadsListResponse {
-  leads: Lead[]
-  total: number
-  page: number
-  limit: number
+  teamId?: string
+  customerId?: string
+  customerType?: CustomerType
 }
 
 export interface LeadListParams {

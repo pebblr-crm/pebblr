@@ -28,18 +28,18 @@ function LeadDetailPage() {
   return (
     <div>
       <div className="page-header">
-        <h1 className="page-title">{lead.companyName}</h1>
+        <h1 className="page-title">{lead.title}</h1>
       </div>
       <div className="page-body">
         <dl style={{ display: 'grid', gridTemplateColumns: 'max-content 1fr', gap: '8px 24px' }}>
-          <dt style={{ color: 'var(--color-text-secondary)', fontWeight: 'var(--font-medium)' }}>Contact</dt>
-          <dd>{lead.contactName}</dd>
-          <dt style={{ color: 'var(--color-text-secondary)', fontWeight: 'var(--font-medium)' }}>Email</dt>
-          <dd>{lead.contactEmail}</dd>
+          <dt style={{ color: 'var(--color-text-secondary)', fontWeight: 'var(--font-medium)' }}>Description</dt>
+          <dd>{lead.description}</dd>
           <dt style={{ color: 'var(--color-text-secondary)', fontWeight: 'var(--font-medium)' }}>Status</dt>
           <dd>{lead.status}</dd>
-          <dt style={{ color: 'var(--color-text-secondary)', fontWeight: 'var(--font-medium)' }}>Notes</dt>
-          <dd>{lead.notes}</dd>
+          <dt style={{ color: 'var(--color-text-secondary)', fontWeight: 'var(--font-medium)' }}>Customer Type</dt>
+          <dd>{lead.customerType}</dd>
+          <dt style={{ color: 'var(--color-text-secondary)', fontWeight: 'var(--font-medium)' }}>Assignee</dt>
+          <dd>{lead.assigneeId}</dd>
         </dl>
       </div>
     </div>

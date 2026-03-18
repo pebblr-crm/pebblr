@@ -5,9 +5,9 @@ Pebblr CRM has been deployed!
   Version:   {{ .Chart.AppVersion }}
 
 To access the API:
-{{- if .Values.ingress.enabled }}
-  {{- range .Values.ingress.hosts }}
-  http{{ if $.Values.ingress.tls }}s{{ end }}://{{ .host }}
+{{- if .Values.gateway.enabled }}
+  {{- if .Values.tls.hostname }}
+  http{{ if .Values.tls.enabled }}s{{ end }}://{{ .Values.tls.hostname }}
   {{- end }}
 {{- else if eq .Values.service.type "ClusterIP" }}
   kubectl port-forward svc/{{ include "pebblr.fullname" . }} 8080:{{ .Values.service.port }} -n {{ .Release.Namespace }}

@@ -1,0 +1,66 @@
+{{- if .Values.tls.enabled -}}
+{{- if eq .Values.tls.mode "selfsigned" }}
+# Bootstrap: self-signed ClusterIssuer → CA cert → CA ClusterIssuer → leaf cert
+apiVersion: cert-manager.io/v1
+kind: ClusterIssuer
+metadata:
+  name: {{ include "pebblr.fullname" . }}-selfsigned
+  labels:
+    {{- include "pebblr.labels" . | nindent 4 }}
+spec:
+  selfSigned: {}
+---
+apiVersion: cert-manager.io/v1
+kind: Certificate
+metadata:
+  name: {{ include "pebblr.fullname" . }}-ca
+  namespace: cert-manager
+  labels:
+    {{- include "pebblr.labels" . | nindent 4 }}
+spec:
+  isCA: true
+  commonName: {{ include "pebblr.fullname" . }}-ca
+  secretName: {{ include "pebblr.fullname" . }}-ca-secret
+  duration: 87600h
+  privateKey:
+    algorithm: ECDSA
+    size: 256
+  issuerRef:
+    name: {{ include "pebblr.fullname" . }}-selfsigned
+    kind: ClusterIssuer
+    group: cert-manager.io
+---
+apiVersion: cert-manager.io/v1
+kind: ClusterIssuer
+metadata:
+  name: {{ include "pebblr.fullname" . }}-ca-issuer
+  labels:
+    {{- include "pebblr.labels" . | nindent 4 }}
+spec:
+  ca:
+    secretName: {{ include "pebblr.fullname" . }}-ca-secret
+---
+apiVersion: cert-manager.io/v1
+kind: Certificate
+metadata:
+  name: {{ include "pebblr.fullname" . }}-tls
+  namespace: {{ .Release.Namespace }}
+  labels:
+    {{- include "pebblr.labels" . | nindent 4 }}
+spec:
+  secretName: {{ include "pebblr.fullname" . }}-tls
+  duration: 8760h
+  renewBefore: 720h
+  commonName: {{ .Values.tls.hostname }}
+  dnsNames:
+    - {{ .Values.tls.hostname }}
+  issuerRef:
+    name: {{ include "pebblr.fullname" . }}-ca-issuer
+    kind: ClusterIssuer
+    group: cert-manager.io
+{{- end }}
+{{- if eq .Values.tls.mode "letsencrypt" }}
+# Placeholder for future Let's Encrypt integration.
+# Will use a ClusterIssuer backed by ACME.
+{{- end }}
+{{- end }}
