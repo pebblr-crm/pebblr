@@ -47,19 +47,19 @@ jobs:
           chmod +x skaffold
           sudo mv skaffold /usr/local/bin/skaffold
 
-      - name: Create Kind cluster
+      - name: Cluster
         run: make e2e-cluster
 
-      - name: Deploy PostgreSQL, run migrations, create secrets
+      - name: Database
         run: make e2e-db
 
-      - name: Build, load image, and deploy via Skaffold
+      - name: Deploy
         run: make e2e-deploy
 
-      - name: Run E2E tests
+      - name: Test
         run: make e2e
 
-      - name: Collect debug info on failure
+      - name: Debug
         if: failure()
         run: |
           echo "=== All pods in namespace ==="
