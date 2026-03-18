@@ -17,7 +17,7 @@ spec:
         {{- include "pebblr.selectorLabels" . | nindent 8 }}
         app.kubernetes.io/component: migration
     spec:
-      serviceAccountName: default
+      serviceAccountName: {{ include "pebblr.serviceAccountName" . }}
       restartPolicy: Never
       securityContext:
         runAsNonRoot: true
