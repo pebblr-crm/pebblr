@@ -47,3 +47,18 @@ profiles:
               resources.requests.memory: "64Mi"
               resources.limits.cpu: "200m"
               resources.limits.memory: "256Mi"
+
+  - name: e2e
+    manifests:
+      helm:
+        releases:
+          - name: pebblr-e2e
+            chartPath: deploy/helm/pebblr
+            namespace: pebblr-e2e
+            createNamespace: true
+            valuesFiles:
+              - deploy/helm/pebblr/values.yaml
+              - deploy/helm/pebblr/values-e2e.yaml
+            setValueTemplates:
+              image.repository: "{{.IMAGE_REPO_pebblr_api}}"
+              image.tag: "{{.IMAGE_TAG_pebblr_api}}"

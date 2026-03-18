@@ -22,7 +22,7 @@ import (
 
 const (
 	defaultNamespace = "pebblr-e2e"
-	defaultService   = "svc/pebblr-e2e-pebblr"
+	defaultService   = "svc/pebblr-e2e"
 	servicePort      = "8080"
 )
 

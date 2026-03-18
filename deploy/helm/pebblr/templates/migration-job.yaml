@@ -37,9 +37,6 @@ spec:
             - {{ .Values.secrets.mountPath }}/{{ .Values.secrets.dbUrlKey }}
             - -migrations-path
             - /app/migrations
-          envFrom:
-            - configMapRef:
-                name: {{ include "pebblr.fullname" . }}-config
           volumeMounts:
             - name: secrets
               mountPath: {{ .Values.secrets.mountPath }}

@@ -2,7 +2,7 @@
 # CI/CD pipelines call these targets only.
 
 .DEFAULT_GOAL := help
-.PHONY: help build test lint typecheck dev-api dev-web dev-db dev-db-stop dev-db-reset cluster-up deploy migrate clean helm-validate e2e e2e-setup e2e-teardown e2e-cluster e2e-db e2e-image e2e-deploy
+.PHONY: help build test lint typecheck dev-api dev-web dev-db dev-db-stop dev-db-reset cluster-up deploy migrate clean helm-validate e2e e2e-setup e2e-teardown e2e-cluster e2e-db e2e-deploy
 
 # ── Pinned versions ───────────────────────────────────────────────────────────
 ESO_VERSION           := 0.12.1
@@ -97,16 +97,9 @@ e2e-cluster: ## Create a lightweight Kind cluster for E2E (no cert-manager/ESO/E
 e2e-db: ## Deploy PostgreSQL, run migrations, seed data, and create secrets
 	@scripts/e2e-db.sh
 
-e2e-image: ## Build Docker image and load it into the Kind cluster
-	@docker build -t pebblr-api:e2e .
-	@kind load docker-image pebblr-api:e2e --name $(CLUSTER)
-
-e2e-deploy: ## Deploy the app via Helm into pebblr-e2e namespace
-	@helm upgrade --install pebblr-e2e deploy/helm/pebblr \
-		--namespace pebblr-e2e \
-		--values deploy/helm/pebblr/values-e2e.yaml \
-		--set image.tag=e2e \
-		--wait --timeout 120s
+e2e-deploy: ## Build, load, and deploy the app into pebblr-e2e namespace via Skaffold
+	$(AKS_GUARD)
+	@skaffold run -p e2e --default-repo="" --status-check=true
 
 clean: ## Clean build artifacts
 	@rm -rf bin/ web/dist/ web/node_modules/.vite

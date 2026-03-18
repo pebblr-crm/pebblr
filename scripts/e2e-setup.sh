@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # Sets up the full E2E environment in a Kind cluster.
 # Orchestrates the composable Makefile targets:
-#   e2e-cluster → e2e-db → e2e-image → e2e-deploy
+#   e2e-cluster → e2e-db → e2e-deploy (Skaffold: build + load + helm)
 #
 # Usage: scripts/e2e-setup.sh
 set -euo pipefail
@@ -22,12 +22,8 @@ fi
 log "Setting up database..."
 make e2e-db
 
-# ── Step 3: Docker image ───────────────────────────────────────────────────
-log "Building and loading Docker image..."
-make e2e-image
-
-# ── Step 4: Deploy the app ──────────────────────────────────────────────────
-log "Deploying app via Helm..."
+# ── Step 3: Build, load image, and deploy via Skaffold ──────────────────────
+log "Building and deploying via Skaffold..."
 make e2e-deploy
 
 # ── Done ────────────────────────────────────────────────────────────────────
