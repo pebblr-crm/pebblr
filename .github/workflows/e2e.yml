@@ -40,116 +40,19 @@ jobs:
           chmod +x ./kind
           sudo mv ./kind /usr/local/bin/kind
 
-      # ── Two parallel tracks ────────────────────────────────────────
-      #   Background: docker build
-      #   Foreground: kind cluster → postgres → migrations → secrets
-      # They converge before loading the image into Kind.
-      - name: "Parallel: Docker build + Kind cluster setup"
+      - name: Create Kind cluster
+        run: make e2e-cluster
+
+      # DB setup and Docker image build+load are independent — run in parallel.
+      # Both need the Kind cluster, so they must share this runner.
+      - name: "Parallel: DB setup + Docker image build"
         run: |
-          set -euo pipefail
-
-          # ── Background: build Docker image ──────────────────────────
-          echo "==> Starting Docker build in background..."
-          docker build -t pebblr-api:e2e . &
-          DOCKER_PID=$!
-
-          # ── Foreground: create cluster and prepare it ───────────────
-
-          echo "==> Creating Kind cluster..."
-          kind create cluster --config deploy/kind/kind-config.yaml --wait 120s
-
-          echo "==> Deploying PostgreSQL..."
-          kubectl apply -f deploy/k8s/e2e/postgres.yaml
-          kubectl rollout status deployment/postgres -n pebblr-e2e --timeout=120s
-          kubectl wait pod -l app=postgres -n pebblr-e2e --for=condition=Ready --timeout=120s
-
-          echo "==> Running migrations..."
-          kubectl create configmap e2e-migrations \
-            --from-file=migrations/ \
-            --from-file=scripts/seed-data.sql \
-            -n pebblr-e2e \
-            --dry-run=client -o yaml | kubectl apply -f -
-
-          cat <<'EOF' | kubectl apply -n pebblr-e2e -f -
-          apiVersion: batch/v1
-          kind: Job
-          metadata:
-            name: e2e-migrate-seed
-            namespace: pebblr-e2e
-          spec:
-            backoffLimit: 3
-            ttlSecondsAfterFinished: 300
-            template:
-              spec:
-                restartPolicy: Never
-                containers:
-                  - name: migrate
-                    image: postgres:16-alpine
-                    command:
-                      - sh
-                      - -c
-                      - |
-                        set -e
-                        export PGPASSWORD="pebblr-e2e-password"
-                        PSQL="psql -h postgres.pebblr-e2e.svc.cluster.local -U pebblr -d pebblr"
-                        for f in /migrations/*.up.sql; do
-                          echo "  -> $(basename "$f")"
-                          $PSQL -f "$f"
-                        done
-                        $PSQL -f /seed/seed-data.sql
-                    volumeMounts:
-                      - name: migrations
-                        mountPath: /migrations
-                      - name: seed
-                        mountPath: /seed
-                    resources:
-                      limits:
-                        cpu: 200m
-                        memory: 128Mi
-                volumes:
-                  - name: migrations
-                    configMap:
-                      name: e2e-migrations
-                      items:
-                        - key: 001_initial_schema.up.sql
-                          path: 001_initial_schema.up.sql
-                        - key: 002_lead_soft_delete.up.sql
-                          path: 002_lead_soft_delete.up.sql
-                  - name: seed
-                    configMap:
-                      name: e2e-migrations
-                      items:
-                        - key: seed-data.sql
-                          path: seed-data.sql
-          EOF
-
-          kubectl wait job/e2e-migrate-seed -n pebblr-e2e --for=condition=Complete --timeout=120s
-
-          echo "==> Creating app secrets..."
-          kubectl create secret generic pebblr-e2e-pebblr-secrets \
-            --from-literal=db-dsn="postgres://pebblr:pebblr-e2e-password@postgres.pebblr-e2e.svc.cluster.local:5432/pebblr?sslmode=disable" \
-            --from-literal=db-url="postgres://pebblr:pebblr-e2e-password@postgres.pebblr-e2e.svc.cluster.local:5432/pebblr?sslmode=disable" \
-            --from-literal=db-password="pebblr-e2e-password" \
-            --from-literal=jwt-secret="e2e-jwt-secret-not-for-production" \
-            -n pebblr-e2e
-
-          # ── Converge: wait for Docker build ─────────────────────────
-          echo "==> Waiting for Docker build to finish..."
-          wait $DOCKER_PID
-          echo "==> Docker build complete."
-
-      - name: Load image into Kind
-        run: kind load docker-image pebblr-api:e2e --name pebblr-local
+          make e2e-db &
+          make e2e-image &
+          wait
 
       - name: Deploy app via Helm
-        run: |
-          helm upgrade --install pebblr-e2e deploy/helm/pebblr \
-            --namespace pebblr-e2e \
-            --values deploy/helm/pebblr/values-e2e.yaml \
-            --set image.tag=e2e \
-            --wait \
-            --timeout 120s
-          kubectl rollout status deployment/pebblr-e2e-pebblr -n pebblr-e2e --timeout=120s
+        run: make e2e-deploy
 
       - name: Run E2E tests
         run: make e2e
