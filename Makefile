@@ -2,7 +2,7 @@
 # CI/CD pipelines call these targets only.
 
 .DEFAULT_GOAL := help
-.PHONY: help build test lint typecheck dev-api dev-web dev-db dev-db-stop dev-db-reset cluster-up deploy migrate clean helm-validate e2e
+.PHONY: help build test lint typecheck dev-api dev-web dev-db dev-db-stop dev-db-reset cluster-up deploy migrate clean helm-validate e2e e2e-setup e2e-teardown
 
 # ── Pinned versions ───────────────────────────────────────────────────────────
 ESO_VERSION           := 0.12.1
@@ -79,6 +79,13 @@ migrate: ## Run database migrations
 
 helm-validate: ## Validate Helm chart against a running Kind cluster (dry-run)
 	@scripts/helm-ci-install.sh
+
+e2e-setup: ## Create Kind cluster, deploy PostgreSQL and pebblr for E2E testing
+	$(AKS_GUARD)
+	@scripts/e2e-setup.sh
+
+e2e-teardown: ## Delete the Kind cluster used for E2E testing
+	@kind delete cluster --name $(CLUSTER)
 
 e2e: ## Run E2E tests against a running Kind cluster
 	@go test -v -tags=e2e -count=1 -timeout=10m ./e2e/...
