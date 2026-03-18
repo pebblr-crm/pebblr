@@ -42,7 +42,7 @@ livenessProbe:
       - wget
       - --no-check-certificate
       - --spider
-      - --header=Authorization: Bearer e2e-probe-token
+      - "--header=Authorization: Bearer e2e-probe-token"
       - -q
       - http://localhost:8080/api/v1/health
   initialDelaySeconds: 5
@@ -54,7 +54,7 @@ readinessProbe:
       - wget
       - --no-check-certificate
       - --spider
-      - --header=Authorization: Bearer e2e-probe-token
+      - "--header=Authorization: Bearer e2e-probe-token"
       - -q
       - http://localhost:8080/api/v1/health
   initialDelaySeconds: 3
