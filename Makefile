@@ -2,11 +2,11 @@
 # CI/CD pipelines call these targets only.
 
 .DEFAULT_GOAL := help
-.PHONY: help build test lint typecheck dev-api dev-web dev-db dev-db-stop dev-db-reset cluster-up dev-certs deploy migrate clean helm-validate e2e
+.PHONY: help build test lint typecheck dev-api dev-web dev-db dev-db-stop dev-db-reset cluster-up deploy migrate clean helm-validate e2e
 
 # ── Pinned versions ───────────────────────────────────────────────────────────
 ESO_VERSION           := 0.12.1
-INGRESS_NGINX_VERSION := 4.12.1
+ENVOY_GW_VERSION      := v1.3.0
 CERT_MANAGER_VERSION  := v1.17.1
 
 # ── Paths ─────────────────────────────────────────────────────────────────────
@@ -51,12 +51,11 @@ dev-db-stop: ## Stop and remove the local PostgreSQL container
 dev-db-reset: ## Destroy and recreate the local PostgreSQL container with fresh seed data
 	@scripts/dev-db.sh reset
 
-cluster-up: ## Recreate local Kind cluster; install cert-manager, ESO, and ingress-nginx (pinned versions)
+cluster-up: ## Recreate local Kind cluster; install cert-manager, ESO, and Envoy Gateway (pinned versions)
 	$(AKS_GUARD)
 	@kind delete cluster --name $(CLUSTER) 2>/dev/null || true
 	@kind create cluster --name $(CLUSTER) --config $(KIND_CFG)
 	@helm repo add external-secrets https://charts.external-secrets.io 2>/dev/null || true
-	@helm repo add ingress-nginx https://kubernetes.github.io/ingress-nginx 2>/dev/null || true
 	@helm repo add jetstack https://charts.jetstack.io 2>/dev/null || true
 	@helm repo update
 	@helm upgrade --install cert-manager jetstack/cert-manager \
@@ -66,23 +65,10 @@ cluster-up: ## Recreate local Kind cluster; install cert-manager, ESO, and ingre
 	@helm upgrade --install external-secrets external-secrets/external-secrets \
 		--version $(ESO_VERSION) \
 		--namespace external-secrets-operator --create-namespace --wait
-	@helm upgrade --install ingress-nginx ingress-nginx/ingress-nginx \
-		--version $(INGRESS_NGINX_VERSION) \
-		--namespace ingress-nginx --create-namespace --wait \
-		--set controller.hostPort.enabled=true \
-		--set controller.service.type=NodePort \
-		--set controller.nodeSelector."ingress-ready"=true \
-		--set controller.tolerations[0].key=node-role.kubernetes.io/control-plane \
-		--set controller.tolerations[0].operator=Exists \
-		--set controller.tolerations[0].effect=NoSchedule
-
-dev-certs: ## Apply cert-manager issuers and certificates for local TLS
-	$(AKS_GUARD)
-	@kubectl apply -f deploy/k8s/local-tls/selfsigned-issuer.yaml
-	@kubectl apply -f deploy/k8s/local-tls/ca-certificate.yaml
-	@kubectl apply -f deploy/k8s/local-tls/ca-issuer.yaml
-	@kubectl create namespace pebblr --dry-run=client -o yaml | kubectl apply -f -
-	@kubectl apply -f deploy/k8s/local-tls/pebblr-cert.yaml
+	@helm install eg oci://docker.io/envoyproxy/gateway-helm \
+		--version $(ENVOY_GW_VERSION) \
+		--namespace envoy-gateway-system --create-namespace --wait
+	@kubectl apply -f deploy/k8s/gateway/gatewayclass.yaml
 
 deploy: ## Build and deploy to local Kind cluster via Skaffold
 	$(AKS_GUARD)

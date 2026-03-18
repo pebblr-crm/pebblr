@@ -17,17 +17,11 @@ auth:
   clientId: local-placeholder
   issuerUrl: https://login.microsoftonline.com/local-placeholder/v2.0
 
-ingress:
+gateway:
   enabled: true
-  className: nginx
-  annotations:
-    nginx.ingress.kubernetes.io/ssl-redirect: "true"
-  hosts:
-    - host: pebblr.local
-      paths:
-        - path: /
-          pathType: Prefix
-  tls:
-    - secretName: pebblr-local-tls
-      hosts:
-        - pebblr.local
+  className: eg
+
+tls:
+  enabled: true
+  mode: selfsigned
+  hostname: pebblr.local

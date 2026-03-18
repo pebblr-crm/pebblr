@@ -22,16 +22,18 @@ service:
   type: ClusterIP
   port: 8080
 
-ingress:
+# Gateway API — creates Gateway + HTTPRoute when enabled
+gateway:
   enabled: false
-  className: ""
-  annotations: {}
-  hosts:
-    - host: pebblr.local
-      paths:
-        - path: /
-          pathType: Prefix
-  tls: []
+  className: eg
+
+# TLS via cert-manager
+# mode: "selfsigned" — self-signed CA chain (local dev)
+# mode: "letsencrypt" — ACME (not yet implemented)
+tls:
+  enabled: false
+  mode: selfsigned
+  hostname: ""
 
 resources:
   requests:
