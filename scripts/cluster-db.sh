@@ -1,5 +1,6 @@
 #!/usr/bin/env bash
-# Deploy on-cluster PostgreSQL, run migrations, seed data, and create app secrets.
+# Deploy on-cluster PostgreSQL and create app secrets.
+# Migrations are handled by the Helm migration job (golang-migrate).
 # Works for both local dev (pebblr namespace) and e2e (pebblr-e2e namespace).
 #
 # Usage: scripts/cluster-db.sh <namespace> [up|stop|reset]
@@ -25,69 +26,6 @@ do_up() {
   kubectl apply -f "$POSTGRES_MANIFEST" -n "$NAMESPACE"
   kubectl rollout status deployment/postgres -n "$NAMESPACE" --timeout="${TIMEOUT}s"
   kubectl wait pod -l app=postgres -n "$NAMESPACE" --for=condition=Ready --timeout="${TIMEOUT}s"
-
-  # ── Run migrations and seed data ────────────────────────────────────────
-  log "Running migrations and seeding data..."
-
-  kubectl create configmap cluster-db-migrations \
-    --from-file=migrations/ \
-    --from-file=scripts/seed-data.sql \
-    -n "$NAMESPACE" \
-    --dry-run=client -o yaml | kubectl apply -f -
-
-  kubectl delete job cluster-db-migrate-seed -n "$NAMESPACE" --ignore-not-found
-
-  cat <<JOBEOF | kubectl apply -n "$NAMESPACE" -f -
-apiVersion: batch/v1
-kind: Job
-metadata:
-  name: cluster-db-migrate-seed
-spec:
-  backoffLimit: 3
-  ttlSecondsAfterFinished: 300
-  template:
-    spec:
-      restartPolicy: Never
-      containers:
-        - name: migrate
-          image: postgres:16-alpine
-          command:
-            - sh
-            - -c
-            - |
-              set -e
-              export PGPASSWORD="${DB_PASSWORD}"
-              PSQL="psql -h ${DB_HOST} -U pebblr -d pebblr"
-
-              echo "Applying migrations..."
-              for f in /data/*.up.sql; do
-                echo "  -> \$(basename "\$f")"
-                \$PSQL -f "\$f"
-              done
-
-              echo "Seeding data..."
-              \$PSQL -f /data/seed-data.sql
-
-              echo "Migration and seeding complete."
-          volumeMounts:
-            - name: data
-              mountPath: /data
-          resources:
-            requests:
-              cpu: 50m
-              memory: 64Mi
-            limits:
-              cpu: 200m
-              memory: 128Mi
-      volumes:
-        - name: data
-          configMap:
-            name: cluster-db-migrations
-JOBEOF
-
-  log "Waiting for migration job to complete..."
-  kubectl wait job/cluster-db-migrate-seed -n "$NAMESPACE" \
-    --for=condition=Complete --timeout="${TIMEOUT}s"
 
   # ── Create app secrets ──────────────────────────────────────────────────
   log "Creating app secrets..."
@@ -115,8 +53,6 @@ JOBEOF
 do_stop() {
   log "Removing PostgreSQL from ${NAMESPACE}..."
   kubectl delete -f "$POSTGRES_MANIFEST" -n "$NAMESPACE" --ignore-not-found
-  kubectl delete job cluster-db-migrate-seed -n "$NAMESPACE" --ignore-not-found
-  kubectl delete configmap cluster-db-migrations -n "$NAMESPACE" --ignore-not-found
   log "Done."
 }
 

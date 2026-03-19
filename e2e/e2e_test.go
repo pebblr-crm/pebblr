@@ -42,9 +42,10 @@ func TestMain(m *testing.M) {
 		fmt.Fprintf(os.Stderr, "e2e setup failed: %v\n", err)
 		os.Exit(1)
 	}
-	defer env.teardown()
 
-	os.Exit(m.Run())
+	code := m.Run()
+	env.teardown()
+	os.Exit(code)
 }
 
 func setupPortForward() (*testEnv, error) {
@@ -73,6 +74,7 @@ func setupPortForward() (*testEnv, error) {
 	cmd := exec.CommandContext(ctx, "kubectl", "port-forward", svc, portArg, "-n", ns)
 	cmd.Stdout = os.Stderr
 	cmd.Stderr = os.Stderr
+	cmd.WaitDelay = 2 * time.Second
 
 	if err := cmd.Start(); err != nil {
 		cancel()
@@ -285,56 +287,54 @@ func TestMetricsPipelineNotImplemented(t *testing.T) {
 }
 
 // ── Lead Endpoint Tests ────────────────────────────────────────────────────
-// The auth middleware accepts any Bearer token but does not set a user in
-// context yet (TODO in codebase). Lead handlers call rbac.UserFromContext
-// which returns an error → 401. These tests verify that behavior.
+// Lead endpoints are not yet implemented and return 501. Once implemented,
+// these tests should be updated to verify auth context enforcement (401
+// when user context is missing) and actual CRUD behavior.
 
-func TestLeadListRequiresAuthContext(t *testing.T) {
+func TestLeadListNotImplemented(t *testing.T) {
 	resp := authedRequest(t, "GET", "/api/v1/leads", "")
 	body := readBody(t, resp)
 
-	// Since auth middleware doesn't populate the user context yet,
-	// the handler returns 401 from rbac.UserFromContext.
-	if resp.StatusCode != http.StatusUnauthorized {
-		t.Fatalf("expected 401 for /leads (no user context), got %d: %s", resp.StatusCode, body)
+	if resp.StatusCode != http.StatusNotImplemented {
+		t.Fatalf("expected 501 for /leads (not implemented), got %d: %s", resp.StatusCode, body)
 	}
 }
 
-func TestLeadCreateRequiresAuthContext(t *testing.T) {
+func TestLeadCreateNotImplemented(t *testing.T) {
 	payload := `{"title":"Test Lead","teamId":"b0000000-0000-0000-0000-000000000001","customerId":"c0000000-0000-0000-0000-000000000001"}`
 	resp := authedRequest(t, "POST", "/api/v1/leads", payload)
 	body := readBody(t, resp)
 
-	if resp.StatusCode != http.StatusUnauthorized {
-		t.Fatalf("expected 401 for POST /leads (no user context), got %d: %s", resp.StatusCode, body)
+	if resp.StatusCode != http.StatusNotImplemented {
+		t.Fatalf("expected 501 for POST /leads (not implemented), got %d: %s", resp.StatusCode, body)
 	}
 }
 
-func TestLeadGetRequiresAuthContext(t *testing.T) {
+func TestLeadGetNotImplemented(t *testing.T) {
 	resp := authedRequest(t, "GET", "/api/v1/leads/d0000000-0000-0000-0000-000000000001", "")
 	body := readBody(t, resp)
 
-	if resp.StatusCode != http.StatusUnauthorized {
-		t.Fatalf("expected 401 for GET /leads/:id (no user context), got %d: %s", resp.StatusCode, body)
+	if resp.StatusCode != http.StatusNotImplemented {
+		t.Fatalf("expected 501 for GET /leads/:id (not implemented), got %d: %s", resp.StatusCode, body)
 	}
 }
 
-func TestLeadDeleteRequiresAuthContext(t *testing.T) {
+func TestLeadDeleteNotImplemented(t *testing.T) {
 	resp := authedRequest(t, "DELETE", "/api/v1/leads/d0000000-0000-0000-0000-000000000001", "")
 	body := readBody(t, resp)
 
-	if resp.StatusCode != http.StatusUnauthorized {
-		t.Fatalf("expected 401 for DELETE /leads/:id (no user context), got %d: %s", resp.StatusCode, body)
+	if resp.StatusCode != http.StatusNotImplemented {
+		t.Fatalf("expected 501 for DELETE /leads/:id (not implemented), got %d: %s", resp.StatusCode, body)
 	}
 }
 
-func TestLeadPatchStatusRequiresAuthContext(t *testing.T) {
+func TestLeadPatchStatusNotImplemented(t *testing.T) {
 	payload := `{"status":"in_progress"}`
 	resp := authedRequest(t, "PATCH", "/api/v1/leads/d0000000-0000-0000-0000-000000000001/status", payload)
 	body := readBody(t, resp)
 
-	if resp.StatusCode != http.StatusUnauthorized {
-		t.Fatalf("expected 401 for PATCH /leads/:id/status (no user context), got %d: %s", resp.StatusCode, body)
+	if resp.StatusCode != http.StatusNotImplemented {
+		t.Fatalf("expected 501 for PATCH /leads/:id/status (not implemented), got %d: %s", resp.StatusCode, body)
 	}
 }
 
