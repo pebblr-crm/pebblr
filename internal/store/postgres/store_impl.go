@@ -26,3 +26,8 @@ func (db *DB) Teams() store.TeamRepository {
 func (db *DB) Events() store.EventRepository {
 	return &eventRepository{pool: db.pool}
 }
+
+// Customers returns the PostgreSQL-backed customer repository.
+func (db *DB) Customers() store.CustomerRepository {
+	return &customerRepository{pool: db.pool}
+}

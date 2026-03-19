@@ -338,6 +338,45 @@ func TestLeadPatchStatusNotImplemented(t *testing.T) {
 	}
 }
 
+// ── Customer Endpoint Tests ────────────────────────────────────────────────
+
+func TestCustomerListReturnsOK(t *testing.T) {
+	resp := authedRequest(t, "GET", "/api/v1/customers", "")
+	body := readBody(t, resp)
+
+	if resp.StatusCode != http.StatusOK {
+		t.Fatalf("expected 200 for GET /customers, got %d: %s", resp.StatusCode, body)
+	}
+
+	var result map[string]any
+	if err := json.Unmarshal([]byte(body), &result); err != nil {
+		t.Fatalf("decoding customer list response: %v\nbody: %s", err, body)
+	}
+	if _, ok := result["items"]; !ok {
+		t.Error("expected 'items' key in customer list response")
+	}
+}
+
+func TestCustomerCreateRequiresAuth(t *testing.T) {
+	payload := `{"name":"Test Customer","type":"retail"}`
+	resp := doRequest(t, "POST", "/api/v1/customers", payload, nil)
+	body := readBody(t, resp)
+
+	if resp.StatusCode != http.StatusUnauthorized {
+		t.Fatalf("expected 401 for unauthenticated POST /customers, got %d: %s", resp.StatusCode, body)
+	}
+}
+
+func TestCustomerGetNotFound(t *testing.T) {
+	resp := authedRequest(t, "GET", "/api/v1/customers/00000000-0000-0000-0000-000000000000", "")
+	body := readBody(t, resp)
+
+	// Expect 404 for non-existent customer UUID.
+	if resp.StatusCode != http.StatusNotFound {
+		t.Fatalf("expected 404 for unknown customer, got %d: %s", resp.StatusCode, body)
+	}
+}
+
 // ── Routing Tests ──────────────────────────────────────────────────────────
 
 func TestNotFoundReturns404(t *testing.T) {
