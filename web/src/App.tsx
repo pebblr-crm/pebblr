@@ -4,8 +4,16 @@ import { Route as rootRoute } from './routes/__root'
 import { Route as indexRoute } from './routes/index'
 import { Route as leadsIndexRoute } from './routes/leads/index'
 import { Route as leadDetailRoute } from './routes/leads/$leadId'
+import { Route as customersIndexRoute } from './routes/customers/index'
+import { Route as customerDetailRoute } from './routes/customers/$customerId'
 
-const routeTree = rootRoute.addChildren([indexRoute, leadsIndexRoute, leadDetailRoute])
+const routeTree = rootRoute.addChildren([
+  indexRoute,
+  leadsIndexRoute,
+  leadDetailRoute,
+  customersIndexRoute,
+  customerDetailRoute,
+])
 
 const router = createRouter({ routeTree })
 
