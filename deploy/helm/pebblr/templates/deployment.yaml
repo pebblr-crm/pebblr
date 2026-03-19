@@ -20,6 +20,7 @@ spec:
         {{- include "pebblr.selectorLabels" . | nindent 8 }}
     spec:
       serviceAccountName: {{ include "pebblr.serviceAccountName" . }}
+      automountServiceAccountToken: false
       securityContext:
         runAsNonRoot: true
         runAsUser: 1000

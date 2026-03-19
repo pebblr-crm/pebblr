@@ -2,7 +2,7 @@
 # CI/CD pipelines call these targets only.
 
 .DEFAULT_GOAL := help
-.PHONY: help build test lint typecheck dev-api dev-web dev-db dev-db-stop dev-db-reset cluster-up deploy migrate clean helm-validate e2e
+.PHONY: help build test lint typecheck dev-api dev-web dev-db dev-db-stop dev-db-reset cluster-up deploy migrate clean helm-validate e2e e2e-teardown e2e-cluster e2e-db e2e-deploy
 
 # ── Pinned versions ───────────────────────────────────────────────────────────
 ESO_VERSION           := 0.12.1
@@ -42,14 +42,14 @@ dev-api: ## Run Go API server locally with hot reload
 dev-web: ## Run Vite dev server
 	@cd $(WEB_DIR) && bun run dev
 
-dev-db: ## Start local PostgreSQL 16 container, run migrations, and seed data
-	@scripts/dev-db.sh up
+dev-db: ## Deploy on-cluster PostgreSQL, run migrations, and seed data (pebblr namespace)
+	@scripts/cluster-db.sh pebblr
 
-dev-db-stop: ## Stop and remove the local PostgreSQL container
-	@scripts/dev-db.sh stop
+dev-db-stop: ## Remove PostgreSQL from the pebblr namespace
+	@scripts/cluster-db.sh pebblr stop
 
-dev-db-reset: ## Destroy and recreate the local PostgreSQL container with fresh seed data
-	@scripts/dev-db.sh reset
+dev-db-reset: ## Destroy and recreate on-cluster PostgreSQL with fresh seed data
+	@scripts/cluster-db.sh pebblr reset
 
 cluster-up: ## Recreate local Kind cluster; install cert-manager, ESO, and Envoy Gateway (pinned versions)
 	$(AKS_GUARD)
@@ -80,8 +80,22 @@ migrate: ## Run database migrations
 helm-validate: ## Validate Helm chart against a running Kind cluster (dry-run)
 	@scripts/helm-ci-install.sh
 
+e2e-teardown: ## Delete the Kind cluster used for E2E testing
+	@kind delete cluster --name $(CLUSTER)
+
 e2e: ## Run E2E tests against a running Kind cluster
 	@go test -v -tags=e2e -count=1 -timeout=10m ./e2e/...
+
+e2e-cluster: ## Create a lightweight Kind cluster for E2E (no cert-manager/ESO/Envoy)
+	$(AKS_GUARD)
+	@kind create cluster --name $(CLUSTER) --config $(KIND_CFG) --wait 120s
+
+e2e-db: ## Deploy PostgreSQL, run migrations, seed data, and create secrets (pebblr-e2e namespace)
+	@scripts/cluster-db.sh pebblr-e2e
+
+e2e-deploy: ## Build, load, and deploy the app into pebblr-e2e namespace via Skaffold
+	$(AKS_GUARD)
+	@skaffold run -p e2e --default-repo="" --status-check=true
 
 clean: ## Clean build artifacts
 	@rm -rf bin/ web/dist/ web/node_modules/.vite

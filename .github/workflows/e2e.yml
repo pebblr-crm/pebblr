@@ -1,0 +1,105 @@
+name: E2E
+
+on:
+  push:
+    branches: [main, develop]
+  pull_request:
+    branches: [main]
+
+jobs:
+  e2e:
+    name: E2E Tests
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v6
+
+      - name: Set up Go
+        uses: actions/setup-go@v6
+        with:
+          go-version: "1.26"
+          cache: true
+
+      - name: Set up Bun
+        uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: "1.2.5"
+
+      - name: Install frontend dependencies
+        run: cd web && bun install --frozen-lockfile
+
+      - name: Set up Helm
+        uses: azure/setup-helm@v4
+        with:
+          version: "v3.14.0"
+
+      - name: Install Kind
+        run: |
+          [ -x "$(command -v kind)" ] && exit 0
+          curl -Lo ./kind https://kind.sigs.k8s.io/dl/v0.27.0/kind-linux-amd64
+          chmod +x ./kind
+          sudo mv ./kind /usr/local/bin/kind
+
+      - name: Install Skaffold
+        run: |
+          [ -x "$(command -v skaffold)" ] && exit 0
+          curl -Lo skaffold https://storage.googleapis.com/skaffold/releases/latest/skaffold-linux-amd64
+          chmod +x skaffold
+          sudo mv skaffold /usr/local/bin/skaffold
+
+      - name: Cluster
+        run: make e2e-cluster
+
+      - name: Database
+        run: make e2e-db
+
+      - name: Deploy
+        run: make e2e-deploy
+
+      - name: Test
+        run: make e2e
+
+      - name: Debug
+        if: failure()
+        run: |
+          echo "=== All pods in namespace ==="
+          kubectl get pods -n pebblr-e2e -o wide
+          echo ""
+          echo "=== All jobs in namespace ==="
+          kubectl get jobs -n pebblr-e2e -o wide
+          echo ""
+          echo "=== Helm pre-install migration job pods ==="
+          kubectl get pods -n pebblr-e2e -l app.kubernetes.io/component=migration -o wide || true
+          echo ""
+          echo "=== Migration job pod describe ==="
+          kubectl describe pods -n pebblr-e2e -l app.kubernetes.io/component=migration || true
+          echo ""
+          echo "=== Migration job pod logs ==="
+          kubectl logs -n pebblr-e2e -l app.kubernetes.io/component=migration --tail=200 || true
+          echo ""
+          echo "=== App pod logs ==="
+          kubectl logs -n pebblr-e2e -l app.kubernetes.io/name=pebblr --tail=100 || true
+          echo ""
+          echo "=== App pod describe ==="
+          kubectl describe pods -n pebblr-e2e -l app.kubernetes.io/name=pebblr || true
+          echo ""
+          echo "=== Secrets in namespace ==="
+          kubectl get secrets -n pebblr-e2e || true
+          echo ""
+          echo "=== ConfigMaps in namespace ==="
+          kubectl get configmaps -n pebblr-e2e || true
+          echo ""
+          echo "=== PostgreSQL pod status ==="
+          kubectl get pods -n pebblr-e2e -l app=postgres -o wide || true
+          echo ""
+          echo "=== PostgreSQL pod logs (last 50 lines) ==="
+          kubectl logs -n pebblr-e2e -l app=postgres --tail=50 || true
+          echo ""
+          echo "=== Events (sorted by time) ==="
+          kubectl get events -n pebblr-e2e --sort-by='.lastTimestamp' || true
+          echo ""
+          echo "=== Helm release status ==="
+          helm status pebblr-e2e -n pebblr-e2e 2>&1 || true
+          echo ""
+          echo "=== Helm release history ==="
+          helm history pebblr-e2e -n pebblr-e2e 2>&1 || true
