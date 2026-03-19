@@ -7,4 +7,5 @@ type Store interface {
 	Users() UserRepository
 	Teams() TeamRepository
 	Events() EventRepository
+	Customers() CustomerRepository
 }

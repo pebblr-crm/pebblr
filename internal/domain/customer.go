@@ -1,5 +1,7 @@
 package domain
 
+import "time"
+
 // Customer represents a business or individual that a sales rep visits.
 type Customer struct {
 	ID      string       `json:"id"`
@@ -11,7 +13,9 @@ type Customer struct {
 	// Email is the primary contact email address.
 	Email string `json:"email"`
 	// Notes holds free-form notes about the customer.
-	Notes string `json:"notes"`
+	Notes     string    `json:"notes"`
+	CreatedAt time.Time `json:"createdAt"`
+	UpdatedAt time.Time `json:"updatedAt"`
 }
 
 // Address holds the physical location of a customer.
