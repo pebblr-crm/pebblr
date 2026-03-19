@@ -10,8 +10,9 @@ import (
 
 // RouterConfig holds dependencies for the HTTP router.
 type RouterConfig struct {
-	Logger      *slog.Logger
-	LeadHandler *LeadHandler
+	Logger          *slog.Logger
+	LeadHandler     *LeadHandler
+	CustomerHandler *CustomerHandler
 }
 
 // NewRouter constructs and returns the application HTTP router.
@@ -40,6 +41,18 @@ func NewRouter(cfg RouterConfig) http.Handler {
 				r.Put("/{id}", notImplementedHandler)
 				r.Delete("/{id}", notImplementedHandler)
 				r.Patch("/{id}/status", notImplementedHandler)
+			}
+		})
+
+		// Customer routes
+		r.Route("/customers", func(r chi.Router) {
+			if cfg.CustomerHandler != nil {
+				r.Mount("/", NewCustomerRouter(cfg.CustomerHandler))
+			} else {
+				r.Get("/", notImplementedHandler)
+				r.Post("/", notImplementedHandler)
+				r.Get("/{id}", notImplementedHandler)
+				r.Put("/{id}", notImplementedHandler)
 			}
 		})
 
