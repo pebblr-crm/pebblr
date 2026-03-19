@@ -16,6 +16,8 @@ import (
 	_ "github.com/golang-migrate/migrate/v4/source/file"
 
 	"github.com/pebblr/pebblr/internal/api"
+	"github.com/pebblr/pebblr/internal/service"
+	"github.com/pebblr/pebblr/internal/store/postgres"
 )
 
 const (
@@ -37,8 +39,20 @@ func run() error {
 		return fmt.Errorf("migrations: %w", err)
 	}
 
+	ctx := context.Background()
+	pool, err := postgres.Connect(ctx, defaultDSNFile)
+	if err != nil {
+		return fmt.Errorf("connecting to database: %w", err)
+	}
+	defer pool.Close()
+
+	db := postgres.New(pool)
+	customerSvc := service.NewCustomerService(db.Customers())
+	customerHandler := api.NewCustomerHandler(customerSvc)
+
 	router := api.NewRouter(api.RouterConfig{
-		Logger: logger,
+		Logger:          logger,
+		CustomerHandler: customerHandler,
 	})
 
 	srv := &http.Server{
