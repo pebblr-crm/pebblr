@@ -47,12 +47,23 @@ let _currentUser: AuthenticatedUser | null = null
 /**
  * Initialise the auth module.  Call once in main.tsx before rendering.
  *
- * TODO: replace stub with real MSAL initialisation using `@azure/msal-browser`:
- *   const msalInstance = new PublicClientApplication({ auth: config })
- *   await msalInstance.initialize()
+ * In dev/E2E builds, VITE_STATIC_TOKEN is set at build time and used as
+ * the Bearer token for all API requests. In production, this will be
+ * replaced by real MSAL/OIDC initialisation.
  */
 export async function initAuth(_config: AuthConfig): Promise<void> {
-  // Stub: register a token provider that returns null until real MSAL is wired.
+  const staticToken = import.meta.env.VITE_STATIC_TOKEN as string | undefined
+  if (staticToken) {
+    _currentUser = {
+      id: 'static-dev-user',
+      displayName: 'Dev Admin',
+      email: 'admin@pebblr.dev',
+      role: 'admin',
+      oid: 'a0000000-0000-0000-0000-000000000001',
+      accessToken: staticToken,
+      expiresAt: Date.now() + 365 * 24 * 60 * 60 * 1000,
+    }
+  }
   setTokenProvider(() => _currentUser?.accessToken ?? null)
 }
 

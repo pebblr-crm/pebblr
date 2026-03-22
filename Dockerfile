@@ -23,6 +23,8 @@ COPY web/package.json web/bun.lockb* ./
 RUN npm install -g bun && bun install --frozen-lockfile
 
 COPY web/ ./
+ARG VITE_STATIC_TOKEN=""
+ENV VITE_STATIC_TOKEN=${VITE_STATIC_TOKEN}
 RUN bun run build
 
 # ── Stage 3: Runtime ──────────────────────────────────────────────────────────

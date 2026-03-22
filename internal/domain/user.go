@@ -3,6 +3,7 @@ package domain
 // OnlineStatus represents a user's current availability/presence state.
 type OnlineStatus string
 
+// OnlineStatus values.
 const (
 	OnlineStatusOnline  OnlineStatus = "online"
 	OnlineStatusAway    OnlineStatus = "away"

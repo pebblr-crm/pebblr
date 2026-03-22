@@ -16,6 +16,7 @@ import (
 	_ "github.com/golang-migrate/migrate/v4/source/file"
 
 	"github.com/pebblr/pebblr/internal/api"
+	"github.com/pebblr/pebblr/internal/auth"
 	"github.com/pebblr/pebblr/internal/rbac"
 	"github.com/pebblr/pebblr/internal/service"
 	"github.com/pebblr/pebblr/internal/store/postgres"
@@ -23,6 +24,7 @@ import (
 
 const (
 	defaultDSNFile        = "/run/secrets/db-dsn"
+	defaultJWTSecretFile  = "/run/secrets/jwt-secret"
 	defaultMigrationsPath = "./migrations"
 )
 
@@ -67,10 +69,22 @@ func run() error {
 	dashboardHandler := api.NewDashboardHandler(dashboardSvc)
 
 	webDistPath := os.Getenv("WEB_DIST_PATH")
-	devAuth := os.Getenv("DEV_AUTH") == "true"
+
+	// Read the JWT secret for token validation.
+	secretPath := os.Getenv("SECRET_MOUNT_PATH")
+	if secretPath == "" {
+		secretPath = "/run/secrets"
+	}
+	jwtSecret, err := readSecretFile(secretPath + "/jwt-secret")
+	if err != nil {
+		return fmt.Errorf("reading jwt secret: %w", err)
+	}
+	authenticator := auth.NewStaticAuthenticator(jwtSecret)
+	logger.Info("using static token authenticator")
 
 	router := api.NewRouter(api.RouterConfig{
 		Logger:               logger,
+		Authenticator:        authenticator,
 		LeadHandler:          leadHandler,
 		CustomerHandler:      customerHandler,
 		CalendarEventHandler: calendarEventHandler,
@@ -78,7 +92,6 @@ func run() error {
 		UserHandler:          userHandler,
 		DashboardHandler:     dashboardHandler,
 		WebDistPath:          webDistPath,
-		DevAuth:              devAuth,
 	})
 
 	srv := &http.Server{

@@ -38,11 +38,6 @@ func NewTeamRouter(h *TeamHandler) http.Handler {
 	return r
 }
 
-// teamResponse is the JSON envelope for a single team.
-type teamResponse struct {
-	Team *domain.Team `json:"team"`
-}
-
 // teamDetailResponse is the JSON envelope for a team with its members.
 type teamDetailResponse struct {
 	Team    *domain.Team   `json:"team"`

@@ -8,6 +8,8 @@ build:
     - image: pebblr-api
       docker:
         dockerfile: Dockerfile
+        buildArgs:
+          VITE_STATIC_TOKEN: "local-jwt-secret-not-for-production"
   local:
     push: false
     useBuildkit: true

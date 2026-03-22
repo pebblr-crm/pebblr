@@ -13,9 +13,6 @@ database:
   host: postgres.pebblr-db.svc.cluster.local
   sslMode: disable
 
-config:
-  devAuth: true
-
 auth:
   tenantId: local-placeholder
   clientId: local-placeholder

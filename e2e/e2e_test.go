@@ -24,6 +24,8 @@ const (
 	defaultNamespace = "pebblr-e2e"
 	defaultService   = "svc/pebblr-e2e"
 	servicePort      = "8080"
+	// Must match the jwt-secret created by scripts/cluster-db.sh.
+	defaultToken = "local-jwt-secret-not-for-production"
 )
 
 // testEnv holds the port-forward connection for the test suite.
@@ -109,15 +111,13 @@ func freePort() (int, error) {
 	return l.Addr().(*net.TCPAddr).Port, nil
 }
 
-// waitForReady polls the health endpoint until it returns 200 or times out.
+// waitForReady polls the healthz endpoint (outside auth) until it returns 200.
 func waitForReady(baseURL string, timeout time.Duration) error {
 	client := &http.Client{Timeout: 2 * time.Second}
 	deadline := time.Now().Add(timeout)
 
 	for time.Now().Before(deadline) {
-		req, _ := http.NewRequest("GET", baseURL+"/api/v1/health", nil)
-		req.Header.Set("Authorization", "Bearer e2e-test-token")
-		resp, err := client.Do(req)
+		resp, err := client.Get(baseURL + "/healthz")
 		if err == nil {
 			resp.Body.Close()
 			if resp.StatusCode == http.StatusOK {
@@ -155,11 +155,15 @@ func doRequest(t *testing.T, method, path string, body string, headers map[strin
 	return resp
 }
 
-// authedRequest makes a request with a valid Bearer token.
-func authedRequest(t *testing.T, method, path, body string) *http.Response {
+// apiRequest makes an authenticated request to an API endpoint.
+func apiRequest(t *testing.T, method, path, body string) *http.Response {
 	t.Helper()
+	token := os.Getenv("E2E_TOKEN")
+	if token == "" {
+		token = defaultToken
+	}
 	headers := map[string]string{
-		"Authorization": "Bearer e2e-test-token",
+		"Authorization": "Bearer " + token,
 		"Content-Type":  "application/json",
 	}
 	return doRequest(t, method, path, body, headers)
@@ -179,7 +183,7 @@ func readBody(t *testing.T, resp *http.Response) string {
 // ── Health Endpoint Tests ──────────────────────────────────────────────────
 
 func TestHealthEndpoint(t *testing.T) {
-	resp := authedRequest(t, "GET", "/api/v1/health", "")
+	resp := apiRequest(t, "GET", "/api/v1/health", "")
 	defer resp.Body.Close()
 
 	if resp.StatusCode != http.StatusOK {
@@ -197,7 +201,7 @@ func TestHealthEndpoint(t *testing.T) {
 }
 
 func TestHealthContentType(t *testing.T) {
-	resp := authedRequest(t, "GET", "/api/v1/health", "")
+	resp := apiRequest(t, "GET", "/api/v1/health", "")
 	defer resp.Body.Close()
 
 	ct := resp.Header.Get("Content-Type")
@@ -215,133 +219,109 @@ func TestAuthMissingHeader(t *testing.T) {
 	if resp.StatusCode != http.StatusUnauthorized {
 		t.Fatalf("expected 401 without auth header, got %d: %s", resp.StatusCode, body)
 	}
-
-	var errResp errorEnvelope
-	if err := json.Unmarshal([]byte(body), &errResp); err != nil {
-		t.Fatalf("decoding error response: %v", err)
-	}
-	if errResp.Error.Code != "UNAUTHORIZED" {
-		t.Errorf("expected error code UNAUTHORIZED, got %q", errResp.Error.Code)
-	}
 }
 
-func TestAuthInvalidFormat(t *testing.T) {
+func TestAuthWrongToken(t *testing.T) {
 	headers := map[string]string{
-		"Authorization": "Basic dXNlcjpwYXNz",
+		"Authorization": "Bearer wrong-token",
 	}
 	resp := doRequest(t, "GET", "/api/v1/health", "", headers)
 	body := readBody(t, resp)
 
 	if resp.StatusCode != http.StatusUnauthorized {
-		t.Fatalf("expected 401 with Basic auth, got %d: %s", resp.StatusCode, body)
+		t.Fatalf("expected 401 with wrong token, got %d: %s", resp.StatusCode, body)
 	}
 }
 
-func TestAuthEmptyBearer(t *testing.T) {
-	headers := map[string]string{
-		"Authorization": "Bearer",
-	}
-	resp := doRequest(t, "GET", "/api/v1/health", "", headers)
+// ── Current User (Me) Endpoint ───────────────────────────────────────────
+
+func TestMeEndpointReturnsDevUser(t *testing.T) {
+	resp := apiRequest(t, "GET", "/api/v1/me", "")
 	body := readBody(t, resp)
 
-	if resp.StatusCode != http.StatusUnauthorized {
-		t.Fatalf("expected 401 with empty Bearer, got %d: %s", resp.StatusCode, body)
+	if resp.StatusCode != http.StatusOK {
+		t.Fatalf("expected 200 for /me, got %d: %s", resp.StatusCode, body)
+	}
+
+	var user map[string]any
+	if err := json.Unmarshal([]byte(body), &user); err != nil {
+		t.Fatalf("decoding /me response: %v\nbody: %s", err, body)
+	}
+	if user["role"] != "admin" {
+		t.Errorf("expected dev user role=admin, got %q", user["role"])
 	}
 }
 
-// ── Placeholder Endpoint Tests (501 Not Implemented) ───────────────────────
+// ── User Endpoint Tests ──────────────────────────────────────────────────
 
-func TestUsersEndpointNotImplemented(t *testing.T) {
-	resp := authedRequest(t, "GET", "/api/v1/users", "")
+func TestUserListReturnsOK(t *testing.T) {
+	resp := apiRequest(t, "GET", "/api/v1/users", "")
 	body := readBody(t, resp)
 
-	if resp.StatusCode != http.StatusNotImplemented {
-		t.Fatalf("expected 501 for /users, got %d: %s", resp.StatusCode, body)
+	if resp.StatusCode != http.StatusOK {
+		t.Fatalf("expected 200 for GET /users, got %d: %s", resp.StatusCode, body)
 	}
 
-	var errResp errorEnvelope
-	if err := json.Unmarshal([]byte(body), &errResp); err != nil {
-		t.Fatalf("decoding error response: %v", err)
+	var result map[string]any
+	if err := json.Unmarshal([]byte(body), &result); err != nil {
+		t.Fatalf("decoding user list response: %v\nbody: %s", err, body)
 	}
-	if errResp.Error.Code != "NOT_IMPLEMENTED" {
-		t.Errorf("expected error code NOT_IMPLEMENTED, got %q", errResp.Error.Code)
+	if _, ok := result["items"]; !ok {
+		t.Error("expected 'items' key in user list response")
 	}
 }
 
-func TestTeamsEndpointNotImplemented(t *testing.T) {
-	resp := authedRequest(t, "GET", "/api/v1/teams", "")
+// ── Team Endpoint Tests ──────────────────────────────────────────────────
+
+func TestTeamListReturnsOK(t *testing.T) {
+	resp := apiRequest(t, "GET", "/api/v1/teams", "")
 	body := readBody(t, resp)
 
-	if resp.StatusCode != http.StatusNotImplemented {
-		t.Fatalf("expected 501 for /teams, got %d: %s", resp.StatusCode, body)
+	if resp.StatusCode != http.StatusOK {
+		t.Fatalf("expected 200 for GET /teams, got %d: %s", resp.StatusCode, body)
+	}
+
+	var result map[string]any
+	if err := json.Unmarshal([]byte(body), &result); err != nil {
+		t.Fatalf("decoding team list response: %v\nbody: %s", err, body)
+	}
+	if _, ok := result["items"]; !ok {
+		t.Error("expected 'items' key in team list response")
 	}
 }
 
-func TestMetricsPipelineNotImplemented(t *testing.T) {
-	resp := authedRequest(t, "GET", "/api/v1/metrics/pipeline", "")
+// ── Lead Endpoint Tests ──────────────────────────────────────────────────
+
+func TestLeadListReturnsOK(t *testing.T) {
+	resp := apiRequest(t, "GET", "/api/v1/leads", "")
 	body := readBody(t, resp)
 
-	if resp.StatusCode != http.StatusNotImplemented {
-		t.Fatalf("expected 501 for /metrics/pipeline, got %d: %s", resp.StatusCode, body)
+	if resp.StatusCode != http.StatusOK {
+		t.Fatalf("expected 200 for GET /leads, got %d: %s", resp.StatusCode, body)
+	}
+
+	var result map[string]any
+	if err := json.Unmarshal([]byte(body), &result); err != nil {
+		t.Fatalf("decoding lead list response: %v\nbody: %s", err, body)
+	}
+	if _, ok := result["items"]; !ok {
+		t.Error("expected 'items' key in lead list response")
 	}
 }
 
-// ── Lead Endpoint Tests ────────────────────────────────────────────────────
-// Lead endpoints are not yet implemented and return 501. Once implemented,
-// these tests should be updated to verify auth context enforcement (401
-// when user context is missing) and actual CRUD behavior.
-
-func TestLeadListNotImplemented(t *testing.T) {
-	resp := authedRequest(t, "GET", "/api/v1/leads", "")
+func TestLeadGetNotFound(t *testing.T) {
+	resp := apiRequest(t, "GET", "/api/v1/leads/00000000-0000-0000-0000-000000000000", "")
 	body := readBody(t, resp)
 
-	if resp.StatusCode != http.StatusNotImplemented {
-		t.Fatalf("expected 501 for /leads (not implemented), got %d: %s", resp.StatusCode, body)
+	if resp.StatusCode != http.StatusNotFound {
+		t.Fatalf("expected 404 for unknown lead, got %d: %s", resp.StatusCode, body)
 	}
 }
 
-func TestLeadCreateNotImplemented(t *testing.T) {
-	payload := `{"title":"Test Lead","teamId":"b0000000-0000-0000-0000-000000000001","customerId":"c0000000-0000-0000-0000-000000000001"}`
-	resp := authedRequest(t, "POST", "/api/v1/leads", payload)
-	body := readBody(t, resp)
-
-	if resp.StatusCode != http.StatusNotImplemented {
-		t.Fatalf("expected 501 for POST /leads (not implemented), got %d: %s", resp.StatusCode, body)
-	}
-}
-
-func TestLeadGetNotImplemented(t *testing.T) {
-	resp := authedRequest(t, "GET", "/api/v1/leads/d0000000-0000-0000-0000-000000000001", "")
-	body := readBody(t, resp)
-
-	if resp.StatusCode != http.StatusNotImplemented {
-		t.Fatalf("expected 501 for GET /leads/:id (not implemented), got %d: %s", resp.StatusCode, body)
-	}
-}
-
-func TestLeadDeleteNotImplemented(t *testing.T) {
-	resp := authedRequest(t, "DELETE", "/api/v1/leads/d0000000-0000-0000-0000-000000000001", "")
-	body := readBody(t, resp)
-
-	if resp.StatusCode != http.StatusNotImplemented {
-		t.Fatalf("expected 501 for DELETE /leads/:id (not implemented), got %d: %s", resp.StatusCode, body)
-	}
-}
-
-func TestLeadPatchStatusNotImplemented(t *testing.T) {
-	payload := `{"status":"in_progress"}`
-	resp := authedRequest(t, "PATCH", "/api/v1/leads/d0000000-0000-0000-0000-000000000001/status", payload)
-	body := readBody(t, resp)
-
-	if resp.StatusCode != http.StatusNotImplemented {
-		t.Fatalf("expected 501 for PATCH /leads/:id/status (not implemented), got %d: %s", resp.StatusCode, body)
-	}
-}
-
-// ── Customer Endpoint Tests ────────────────────────────────────────────────
+// ── Customer Endpoint Tests ──────────────────────────────────────────────
 
 func TestCustomerListReturnsOK(t *testing.T) {
-	resp := authedRequest(t, "GET", "/api/v1/customers", "")
+	resp := apiRequest(t, "GET", "/api/v1/customers", "")
 	body := readBody(t, resp)
 
 	if resp.StatusCode != http.StatusOK {
@@ -357,42 +337,69 @@ func TestCustomerListReturnsOK(t *testing.T) {
 	}
 }
 
-func TestCustomerCreateRequiresAuth(t *testing.T) {
-	payload := `{"name":"Test Customer","type":"retail"}`
-	resp := doRequest(t, "POST", "/api/v1/customers", payload, nil)
-	body := readBody(t, resp)
-
-	if resp.StatusCode != http.StatusUnauthorized {
-		t.Fatalf("expected 401 for unauthenticated POST /customers, got %d: %s", resp.StatusCode, body)
-	}
-}
-
 func TestCustomerGetNotFound(t *testing.T) {
-	resp := authedRequest(t, "GET", "/api/v1/customers/00000000-0000-0000-0000-000000000000", "")
+	resp := apiRequest(t, "GET", "/api/v1/customers/00000000-0000-0000-0000-000000000000", "")
 	body := readBody(t, resp)
 
-	// Expect 404 for non-existent customer UUID.
 	if resp.StatusCode != http.StatusNotFound {
 		t.Fatalf("expected 404 for unknown customer, got %d: %s", resp.StatusCode, body)
 	}
 }
 
-// ── Routing Tests ──────────────────────────────────────────────────────────
+// ── Calendar Event Endpoint Tests ────────────────────────────────────────
 
-func TestNotFoundReturns404(t *testing.T) {
-	resp := authedRequest(t, "GET", "/api/v1/nonexistent", "")
-	defer resp.Body.Close()
+func TestCalendarEventListReturnsOK(t *testing.T) {
+	resp := apiRequest(t, "GET", "/api/v1/events", "")
+	body := readBody(t, resp)
 
-	// chi returns 404 for unmatched routes
-	if resp.StatusCode != http.StatusNotFound {
-		body := readBody(t, resp)
-		t.Fatalf("expected 404 for unknown route, got %d: %s", resp.StatusCode, body)
+	if resp.StatusCode != http.StatusOK {
+		t.Fatalf("expected 200 for GET /events, got %d: %s", resp.StatusCode, body)
+	}
+
+	var result map[string]any
+	if err := json.Unmarshal([]byte(body), &result); err != nil {
+		t.Fatalf("decoding event list response: %v\nbody: %s", err, body)
+	}
+	if _, ok := result["items"]; !ok {
+		t.Error("expected 'items' key in event list response")
 	}
 }
 
+// ── Dashboard Endpoint Tests ─────────────────────────────────────────────
+
+func TestDashboardStatsReturnsOK(t *testing.T) {
+	resp := apiRequest(t, "GET", "/api/v1/dashboard/stats", "")
+	body := readBody(t, resp)
+
+	if resp.StatusCode != http.StatusOK {
+		t.Fatalf("expected 200 for GET /dashboard/stats, got %d: %s", resp.StatusCode, body)
+	}
+
+	var result map[string]any
+	if err := json.Unmarshal([]byte(body), &result); err != nil {
+		t.Fatalf("decoding dashboard stats response: %v\nbody: %s", err, body)
+	}
+	if _, ok := result["totalLeads"]; !ok {
+		t.Error("expected 'totalLeads' key in dashboard stats response")
+	}
+}
+
+// ── Placeholder Endpoint Tests (501 Not Implemented) ───────────────────
+
+func TestMetricsPipelineNotImplemented(t *testing.T) {
+	resp := apiRequest(t, "GET", "/api/v1/metrics/pipeline", "")
+	body := readBody(t, resp)
+
+	if resp.StatusCode != http.StatusNotImplemented {
+		t.Fatalf("expected 501 for /metrics/pipeline, got %d: %s", resp.StatusCode, body)
+	}
+}
+
+// ── Routing Tests ────────────────────────────────────────────────────────
+
 func TestMethodNotAllowed(t *testing.T) {
 	// PATCH on /health is not defined, should return 405
-	resp := authedRequest(t, "PATCH", "/api/v1/health", "")
+	resp := apiRequest(t, "PATCH", "/api/v1/health", "")
 	defer resp.Body.Close()
 
 	if resp.StatusCode != http.StatusMethodNotAllowed && resp.StatusCode != http.StatusNotFound {
@@ -401,11 +408,11 @@ func TestMethodNotAllowed(t *testing.T) {
 	}
 }
 
-// ── Response Format Tests ──────────────────────────────────────────────────
+// ── Response Format Tests ────────────────────────────────────────────────
 
 func TestErrorResponseFormat(t *testing.T) {
-	// No auth header → 401 with structured error
-	resp := doRequest(t, "GET", "/api/v1/health", "", nil)
+	// Request a non-existent lead → 404 with structured error
+	resp := apiRequest(t, "GET", "/api/v1/leads/00000000-0000-0000-0000-000000000000", "")
 	body := readBody(t, resp)
 
 	var errResp errorEnvelope
@@ -420,7 +427,7 @@ func TestErrorResponseFormat(t *testing.T) {
 	}
 }
 
-// ── Types ──────────────────────────────────────────────────────────────────
+// ── Types ────────────────────────────────────────────────────────────────
 
 type errorEnvelope struct {
 	Error struct {

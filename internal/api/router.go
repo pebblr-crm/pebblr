@@ -10,12 +10,14 @@ import (
 
 	"github.com/go-chi/chi/v5"
 	chimiddleware "github.com/go-chi/chi/v5/middleware"
+	"github.com/pebblr/pebblr/internal/auth"
 	"github.com/pebblr/pebblr/internal/rbac"
 )
 
 // RouterConfig holds dependencies for the HTTP router.
 type RouterConfig struct {
 	Logger               *slog.Logger
+	Authenticator        auth.Authenticator
 	LeadHandler          *LeadHandler
 	CustomerHandler      *CustomerHandler
 	CalendarEventHandler *CalendarEventHandler
@@ -23,9 +25,6 @@ type RouterConfig struct {
 	UserHandler          *UserHandler
 	DashboardHandler     *DashboardHandler
 	WebDistPath          string
-	// DevAuth bypasses token validation and injects a default admin user.
-	// Must only be used for local development.
-	DevAuth bool
 }
 
 // NewRouter constructs and returns the application HTTP router.
@@ -43,12 +42,8 @@ func NewRouter(cfg RouterConfig) http.Handler {
 	r.Get("/readyz", healthHandler)
 
 	r.Route("/api/v1", func(r chi.Router) {
-		if cfg.DevAuth {
-			cfg.Logger.Warn("dev auth enabled — all requests use a default admin identity")
-			r.Use(devAuthMiddleware)
-		} else {
-			r.Use(authMiddleware)
-		}
+		r.Use(auth.Middleware(cfg.Authenticator))
+		r.Use(auth.ClaimsBridge)
 
 		r.Get("/health", healthHandler)
 

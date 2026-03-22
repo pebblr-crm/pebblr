@@ -19,6 +19,3 @@ data:
   AUTH_AUDIENCE: {{ .Values.auth.audience | quote }}
   AUTH_ISSUER_URL: {{ .Values.auth.issuerUrl | quote }}
   SECRET_MOUNT_PATH: {{ .Values.secrets.mountPath | quote }}
-  {{- if .Values.config.devAuth }}
-  DEV_AUTH: "true"
-  {{- end }}

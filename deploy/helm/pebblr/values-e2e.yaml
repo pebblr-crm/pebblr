@@ -35,29 +35,17 @@ resources:
     cpu: 200m
     memory: 256Mi
 
-# Health endpoint is behind auth middleware, so use exec probes for e2e.
+# Use /healthz which is outside auth middleware.
 livenessProbe:
-  httpGet: null
-  exec:
-    command:
-      - wget
-      - --no-check-certificate
-      - --spider
-      - "--header=Authorization: Bearer e2e-probe-token"
-      - -q
-      - http://localhost:8080/api/v1/health
+  httpGet:
+    path: /healthz
+    port: http
   initialDelaySeconds: 5
   periodSeconds: 10
 
 readinessProbe:
-  httpGet: null
-  exec:
-    command:
-      - wget
-      - --no-check-certificate
-      - --spider
-      - "--header=Authorization: Bearer e2e-probe-token"
-      - -q
-      - http://localhost:8080/api/v1/health
+  httpGet:
+    path: /readyz
+    port: http
   initialDelaySeconds: 3
   periodSeconds: 5
