@@ -19,7 +19,7 @@ type targetRepository struct {
 }
 
 const targetColumns = `
-	id::TEXT, target_type, name, fields,
+	id::TEXT, COALESCE(external_id, ''), target_type, name, fields,
 	COALESCE(assignee_id::TEXT, ''), COALESCE(team_id::TEXT, ''),
 	imported_at, created_at, updated_at`
 
@@ -27,7 +27,7 @@ func scanTarget(row pgx.Row) (*domain.Target, error) {
 	var t domain.Target
 	var fieldsJSON []byte
 	err := row.Scan(
-		&t.ID, &t.TargetType, &t.Name, &fieldsJSON,
+		&t.ID, &t.ExternalID, &t.TargetType, &t.Name, &fieldsJSON,
 		&t.AssigneeID, &t.TeamID,
 		&t.ImportedAt, &t.CreatedAt, &t.UpdatedAt,
 	)
@@ -160,10 +160,10 @@ func (r *targetRepository) Create(ctx context.Context, t *domain.Target) (*domai
 	}
 
 	row := r.pool.QueryRow(ctx,
-		`INSERT INTO targets (target_type, name, fields, assignee_id, team_id, imported_at)
-		 VALUES ($1, $2, $3, $4::UUID, $5::UUID, $6)
+		`INSERT INTO targets (external_id, target_type, name, fields, assignee_id, team_id, imported_at)
+		 VALUES ($1, $2, $3, $4, $5::UUID, $6::UUID, $7)
 		 RETURNING `+targetColumns,
-		t.TargetType, t.Name, fieldsJSON,
+		nullIfEmpty(t.ExternalID), t.TargetType, t.Name, fieldsJSON,
 		nullIfEmpty(t.AssigneeID), nullIfEmpty(t.TeamID), t.ImportedAt,
 	)
 	return scanTarget(row)
@@ -187,4 +187,78 @@ func (r *targetRepository) Update(ctx context.Context, t *domain.Target) (*domai
 		t.ID,
 	)
 	return scanTarget(row)
+}
+
+func (r *targetRepository) Upsert(ctx context.Context, targets []*domain.Target) (*store.ImportResult, error) {
+	if len(targets) == 0 {
+		return &store.ImportResult{}, nil
+	}
+
+	tx, err := r.pool.Begin(ctx)
+	if err != nil {
+		return nil, fmt.Errorf("beginning import transaction: %w", err)
+	}
+	defer tx.Rollback(ctx) //nolint:errcheck // rollback after commit is a no-op
+
+	result := &store.ImportResult{}
+
+	for _, t := range targets {
+		fieldsJSON, err := json.Marshal(t.Fields)
+		if err != nil {
+			return nil, fmt.Errorf("marshalling target fields: %w", err)
+		}
+
+		var isNew bool
+		row := tx.QueryRow(ctx,
+			`INSERT INTO targets (external_id, target_type, name, fields, assignee_id, team_id, imported_at)
+			 VALUES ($1, $2, $3, $4, $5::UUID, $6::UUID, NOW())
+			 ON CONFLICT (target_type, external_id) WHERE external_id IS NOT NULL
+			 DO UPDATE SET name = EXCLUDED.name, fields = EXCLUDED.fields,
+			     assignee_id = EXCLUDED.assignee_id, team_id = EXCLUDED.team_id,
+			     imported_at = NOW(), updated_at = NOW()
+			 RETURNING `+targetColumns+`,
+			     (xmax = 0) AS is_new`,
+			nullIfEmpty(t.ExternalID), t.TargetType, t.Name, fieldsJSON,
+			nullIfEmpty(t.AssigneeID), nullIfEmpty(t.TeamID),
+		)
+
+		imported, err := scanTargetWithFlag(row, &isNew)
+		if err != nil {
+			return nil, fmt.Errorf("upserting target %q: %w", t.ExternalID, err)
+		}
+
+		result.Imported = append(result.Imported, imported)
+		if isNew {
+			result.Created++
+		} else {
+			result.Updated++
+		}
+	}
+
+	if err := tx.Commit(ctx); err != nil {
+		return nil, fmt.Errorf("committing import transaction: %w", err)
+	}
+
+	return result, nil
+}
+
+func scanTargetWithFlag(row pgx.Row, flag *bool) (*domain.Target, error) {
+	var t domain.Target
+	var fieldsJSON []byte
+	err := row.Scan(
+		&t.ID, &t.ExternalID, &t.TargetType, &t.Name, &fieldsJSON,
+		&t.AssigneeID, &t.TeamID,
+		&t.ImportedAt, &t.CreatedAt, &t.UpdatedAt,
+		flag,
+	)
+	if err != nil {
+		return nil, fmt.Errorf("scanning target: %w", err)
+	}
+	t.Fields = make(map[string]any)
+	if len(fieldsJSON) > 0 {
+		if err := json.Unmarshal(fieldsJSON, &t.Fields); err != nil {
+			return nil, fmt.Errorf("unmarshalling target fields: %w", err)
+		}
+	}
+	return &t, nil
 }

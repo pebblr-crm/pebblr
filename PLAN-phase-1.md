@@ -8,7 +8,7 @@
 2. ✅ **Config API endpoint** — `GET /api/v1/config`
 3. ✅ **Target domain + store** — `Target` entity, PostgreSQL repo with JSONB fields, migration 006
 4. ✅ **Target API** — CRUD handlers, RBAC (rep sees own, manager sees team)
-5. ❌ **Target import endpoint** — bulk upsert for admin/scripts
+5. ✅ **Target import endpoint** — bulk upsert for admin/scripts
 6. ❌ **Frontend: Target list + detail** — reuse `DataTable`, status badge, pagination from leads pages
 7. ❌ **Remove dead code** — drop Lead, CalendarEvent, lead_events code + frontend pages
 8. 🔧 **Seed script** — exists with sample users/teams; needs DrMax-specific doctor/pharmacy target data
@@ -95,14 +95,16 @@ PUT    /api/v1/targets/{id}             # update editable fields
 
 ## 3. Remaining Work
 
-### 3.1 Target Import Endpoint ❌
+### 3.1 Target Import Endpoint ✅
 
-For MVP, targets (doctors, pharmacies) come from external data (TGA exports, DrMax internal DB):
+Implemented:
 
-- `POST /api/v1/targets/import` — accepts JSON array, upserts by external ID
+- `POST /api/v1/targets/import` — accepts JSON array, upserts by `(target_type, external_id)`
 - Admin-only, triggered by script/job
-- `imported_at` timestamp tracks last import
-- Fields marked `editable: false` in config cannot be changed by reps
+- `imported_at` timestamp set automatically on upsert
+- Migration 007 adds `external_id` column with partial unique index
+- Response includes `created`/`updated` counts and the imported targets
+- Full test coverage at service and handler layers
 
 ### 3.2 Frontend: Target List + Detail ❌
 

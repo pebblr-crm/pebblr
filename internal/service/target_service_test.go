@@ -3,6 +3,7 @@ package service_test
 import (
 	"context"
 	"errors"
+	"fmt"
 	"testing"
 	"time"
 
@@ -16,11 +17,12 @@ import (
 // --- stub target repo ---
 
 type stubTargetRepo struct {
-	target  *domain.Target
-	created *domain.Target
-	updated *domain.Target
-	getErr  error
-	saveErr error
+	target   *domain.Target
+	created  *domain.Target
+	updated  *domain.Target
+	upserted []*domain.Target
+	getErr   error
+	saveErr  error
 }
 
 func (r *stubTargetRepo) Get(_ context.Context, _ string) (*domain.Target, error) {
@@ -53,6 +55,20 @@ func (r *stubTargetRepo) Update(_ context.Context, target *domain.Target) (*doma
 	}
 	r.updated = target
 	return target, nil
+}
+
+func (r *stubTargetRepo) Upsert(_ context.Context, targets []*domain.Target) (*store.ImportResult, error) {
+	if r.saveErr != nil {
+		return nil, r.saveErr
+	}
+	r.upserted = targets
+	for i, t := range targets {
+		t.ID = fmt.Sprintf("target-%d", i+1)
+		t.CreatedAt = time.Now().UTC()
+		now := time.Now().UTC()
+		t.ImportedAt = &now
+	}
+	return &store.ImportResult{Created: len(targets), Imported: targets}, nil
 }
 
 // --- test config ---
@@ -232,5 +248,98 @@ func TestTargetUpdate_RepForbiddenOnOtherTarget(t *testing.T) {
 	_, err := svc.Update(context.Background(), repUser(), &updated)
 	if !errors.Is(err, service.ErrForbidden) {
 		t.Errorf("expected ErrForbidden, got %v", err)
+	}
+}
+
+// --- Import tests ---
+
+func TestTargetImport_AdminSucceeds(t *testing.T) {
+	t.Parallel()
+	repo := &stubTargetRepo{}
+	svc := newTargetSvc(repo)
+
+	targets := []*domain.Target{
+		{ExternalID: "ext-1", TargetType: "doctor", Name: "Dr. Import", Fields: map[string]any{}},
+		{ExternalID: "ext-2", TargetType: "pharmacy", Name: "Central Pharmacy", Fields: map[string]any{}},
+	}
+	result, err := svc.Import(context.Background(), adminUser(), targets)
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if result.Created != 2 {
+		t.Errorf("expected 2 created, got %d", result.Created)
+	}
+	if len(repo.upserted) != 2 {
+		t.Errorf("expected 2 upserted, got %d", len(repo.upserted))
+	}
+}
+
+func TestTargetImport_RepForbidden(t *testing.T) {
+	t.Parallel()
+	repo := &stubTargetRepo{}
+	svc := newTargetSvc(repo)
+
+	targets := []*domain.Target{
+		{ExternalID: "ext-1", TargetType: "doctor", Name: "Dr. Import", Fields: map[string]any{}},
+	}
+	_, err := svc.Import(context.Background(), repUser(), targets)
+	if !errors.Is(err, service.ErrForbidden) {
+		t.Errorf("expected ErrForbidden, got %v", err)
+	}
+}
+
+func TestTargetImport_ManagerForbidden(t *testing.T) {
+	t.Parallel()
+	repo := &stubTargetRepo{}
+	svc := newTargetSvc(repo)
+
+	targets := []*domain.Target{
+		{ExternalID: "ext-1", TargetType: "doctor", Name: "Dr. Import", Fields: map[string]any{}},
+	}
+	_, err := svc.Import(context.Background(), managerUser(), targets)
+	if !errors.Is(err, service.ErrForbidden) {
+		t.Errorf("expected ErrForbidden, got %v", err)
+	}
+}
+
+func TestTargetImport_MissingExternalID(t *testing.T) {
+	t.Parallel()
+	repo := &stubTargetRepo{}
+	svc := newTargetSvc(repo)
+
+	targets := []*domain.Target{
+		{ExternalID: "", TargetType: "doctor", Name: "Dr. Import", Fields: map[string]any{}},
+	}
+	_, err := svc.Import(context.Background(), adminUser(), targets)
+	if !errors.Is(err, service.ErrInvalidInput) {
+		t.Errorf("expected ErrInvalidInput, got %v", err)
+	}
+}
+
+func TestTargetImport_InvalidType(t *testing.T) {
+	t.Parallel()
+	repo := &stubTargetRepo{}
+	svc := newTargetSvc(repo)
+
+	targets := []*domain.Target{
+		{ExternalID: "ext-1", TargetType: "invalid", Name: "Test", Fields: map[string]any{}},
+	}
+	_, err := svc.Import(context.Background(), adminUser(), targets)
+	if !errors.Is(err, service.ErrInvalidInput) {
+		t.Errorf("expected ErrInvalidInput, got %v", err)
+	}
+}
+
+func TestTargetImport_EmptyName(t *testing.T) {
+	t.Parallel()
+	repo := &stubTargetRepo{}
+	svc := newTargetSvc(repo)
+
+	targets := []*domain.Target{
+		{ExternalID: "ext-1", TargetType: "doctor", Name: "", Fields: map[string]any{}},
+	}
+	_, err := svc.Import(context.Background(), adminUser(), targets)
+	if !errors.Is(err, service.ErrInvalidInput) {
+		t.Errorf("expected ErrInvalidInput, got %v", err)
 	}
 }

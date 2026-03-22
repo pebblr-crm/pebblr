@@ -81,6 +81,26 @@ func (s *TargetService) Update(ctx context.Context, actor *domain.User, target *
 	return updated, nil
 }
 
+// Import bulk-upserts targets by external ID. Admin-only.
+func (s *TargetService) Import(ctx context.Context, actor *domain.User, targets []*domain.Target) (*store.ImportResult, error) {
+	if actor.Role != domain.RoleAdmin {
+		return nil, ErrForbidden
+	}
+	for i, t := range targets {
+		if t.ExternalID == "" {
+			return nil, fmt.Errorf("target at index %d: %w: externalId is required", i, ErrInvalidInput)
+		}
+		if err := s.validateTarget(t); err != nil {
+			return nil, fmt.Errorf("target at index %d: %w", i, err)
+		}
+	}
+	result, err := s.targets.Upsert(ctx, targets)
+	if err != nil {
+		return nil, fmt.Errorf("importing targets: %w", err)
+	}
+	return result, nil
+}
+
 // validateTarget checks that the target has a valid type and name.
 func (s *TargetService) validateTarget(target *domain.Target) error {
 	if target.Name == "" {
