@@ -1,7 +1,7 @@
 {
   "tenant": {
     "name": "Pillzilla Pharmaceuticals",
-    "locale": "ro"
+    "locale": "en"
   },
   "accounts": {
     "types": [
@@ -10,36 +10,36 @@
         "label": "Doctor",
         "fields": [
           { "key": "name", "type": "text", "required": true, "editable": false },
-          { "key": "specialitate", "type": "select", "required": false, "editable": false, "options_ref": "specialties" },
+          { "key": "specialty", "type": "select", "required": false, "editable": false, "options_ref": "specialties" },
           { "key": "potential", "type": "select", "required": false, "editable": true, "options_ref": "classifications" },
-          { "key": "oras", "type": "text", "required": false, "editable": false },
-          { "key": "judet", "type": "text", "required": false, "editable": false },
-          { "key": "adresa", "type": "text", "required": false, "editable": false }
+          { "key": "city", "type": "text", "required": false, "editable": false },
+          { "key": "county", "type": "text", "required": false, "editable": false },
+          { "key": "address", "type": "text", "required": false, "editable": false }
         ]
       },
       {
         "key": "pharmacy",
-        "label": "Farmacie",
+        "label": "Pharmacy",
         "fields": [
           { "key": "name", "type": "text", "required": true, "editable": false },
-          { "key": "tip", "type": "select", "required": false, "editable": false, "options_ref": "pharmacy_types" },
-          { "key": "oras", "type": "text", "required": false, "editable": false },
-          { "key": "judet", "type": "text", "required": false, "editable": false },
-          { "key": "adresa", "type": "text", "required": false, "editable": false }
+          { "key": "pharmacy_type", "type": "select", "required": false, "editable": false, "options_ref": "pharmacy_types" },
+          { "key": "city", "type": "text", "required": false, "editable": false },
+          { "key": "county", "type": "text", "required": false, "editable": false },
+          { "key": "address", "type": "text", "required": false, "editable": false }
         ]
       }
     ]
   },
   "activities": {
     "statuses": [
-      { "key": "planificat", "label": "Planificat", "initial": true },
-      { "key": "realizat", "label": "Realizat" },
-      { "key": "anulat", "label": "Anulat" }
+      { "key": "planned", "label": "Planned", "initial": true },
+      { "key": "completed", "label": "Completed" },
+      { "key": "cancelled", "label": "Cancelled" }
     ],
     "status_transitions": {
-      "planificat": ["realizat", "anulat"],
-      "realizat": [],
-      "anulat": []
+      "planned": ["completed", "cancelled"],
+      "completed": [],
+      "cancelled": []
     },
     "durations": [
       { "key": "full_day", "label": "Full Day" },
@@ -48,19 +48,19 @@
     "types": [
       {
         "key": "visit",
-        "label": "Vizită",
+        "label": "Visit",
         "category": "field",
         "fields": [
           { "key": "account_id", "type": "relation", "required": true },
-          { "key": "tip_vizita", "type": "select", "required": true, "options": ["f2f", "remote"] },
-          { "key": "produse_promovate", "type": "multi_select", "required": false, "options_ref": "products" },
+          { "key": "visit_type", "type": "select", "required": true, "options": ["f2f", "remote"] },
+          { "key": "promoted_products", "type": "multi_select", "required": false, "options_ref": "products" },
           { "key": "feedback", "type": "text", "required": false },
-          { "key": "detalii", "type": "text", "required": false },
+          { "key": "details", "type": "text", "required": false },
           { "key": "duration", "type": "select", "required": true, "options_ref": "durations" },
-          { "key": "partener_vizita", "type": "text", "required": false },
+          { "key": "visit_partner", "type": "text", "required": false },
           { "key": "joint_visit_user_id", "type": "relation", "required": false }
         ],
-        "submit_required": ["produse_promovate", "feedback"]
+        "submit_required": ["promoted_products", "feedback"]
       },
       {
         "key": "administrative",
@@ -68,7 +68,7 @@
         "category": "non_field",
         "fields": [
           { "key": "duration", "type": "select", "required": true, "options_ref": "durations" },
-          { "key": "detalii", "type": "text", "required": false }
+          { "key": "details", "type": "text", "required": false }
         ]
       },
       {
@@ -77,7 +77,7 @@
         "category": "non_field",
         "fields": [
           { "key": "duration", "type": "select", "required": true, "options_ref": "durations" },
-          { "key": "detalii", "type": "text", "required": false }
+          { "key": "details", "type": "text", "required": false }
         ]
       },
       {
@@ -86,7 +86,7 @@
         "category": "non_field",
         "fields": [
           { "key": "duration", "type": "select", "required": true, "options_ref": "durations" },
-          { "key": "detalii", "type": "text", "required": false }
+          { "key": "details", "type": "text", "required": false }
         ]
       },
       {
@@ -95,7 +95,7 @@
         "category": "non_field",
         "fields": [
           { "key": "duration", "type": "select", "required": true, "options_ref": "durations" },
-          { "key": "detalii", "type": "text", "required": false }
+          { "key": "details", "type": "text", "required": false }
         ]
       },
       {
@@ -104,7 +104,7 @@
         "category": "non_field",
         "fields": [
           { "key": "duration", "type": "select", "required": true, "options_ref": "durations" },
-          { "key": "detalii", "type": "text", "required": false }
+          { "key": "details", "type": "text", "required": false }
         ]
       },
       {
@@ -113,7 +113,7 @@
         "category": "non_field",
         "fields": [
           { "key": "duration", "type": "select", "required": true, "options_ref": "durations" },
-          { "key": "detalii", "type": "text", "required": false }
+          { "key": "details", "type": "text", "required": false }
         ]
       },
       {
@@ -135,8 +135,8 @@
         ]
       },
       {
-        "key": "pauza_de_masa",
-        "label": "Pauză de masă",
+        "key": "lunch_break",
+        "label": "Lunch Break",
         "category": "non_field",
         "fields": [
           { "key": "duration", "type": "select", "required": true, "options_ref": "durations" }
@@ -144,23 +144,23 @@
       }
     ],
     "routing_options": [
-      { "key": "saptamana_1", "label": "Săptămâna 1" },
-      { "key": "saptamana_2", "label": "Săptămâna 2" },
-      { "key": "saptamana_3", "label": "Săptămâna 3" }
+      { "key": "week_1", "label": "Week 1" },
+      { "key": "week_2", "label": "Week 2" },
+      { "key": "week_3", "label": "Week 3" }
     ]
   },
   "options": {
     "specialties": [
-      { "key": "cardiologie", "label": "Cardiologie" },
-      { "key": "internal_medicine", "label": "Medicină Internă" },
-      { "key": "family_and_general_medicine", "label": "Medicină de Familie" },
-      { "key": "emergency_medicine", "label": "Medicină de Urgență" },
-      { "key": "gastroenterologie", "label": "Gastroenterologie" },
-      { "key": "geriatrics", "label": "Geriatrie" },
-      { "key": "neurologie", "label": "Neurologie" },
-      { "key": "pediatrie", "label": "Pediatrie" },
-      { "key": "pulmonology", "label": "Pneumologie" },
-      { "key": "other", "label": "Altele" }
+      { "key": "cardiology", "label": "Cardiology" },
+      { "key": "internal_medicine", "label": "Internal Medicine" },
+      { "key": "family_medicine", "label": "Family Medicine" },
+      { "key": "emergency_medicine", "label": "Emergency Medicine" },
+      { "key": "gastroenterology", "label": "Gastroenterology" },
+      { "key": "geriatrics", "label": "Geriatrics" },
+      { "key": "neurology", "label": "Neurology" },
+      { "key": "pediatrics", "label": "Pediatrics" },
+      { "key": "pulmonology", "label": "Pulmonology" },
+      { "key": "other", "label": "Other" }
     ],
     "classifications": [
       { "key": "a", "label": "A" },
@@ -168,7 +168,7 @@
       { "key": "c", "label": "C" }
     ],
     "pharmacy_types": [
-      { "key": "lant", "label": "Lanț" }
+      { "key": "chain", "label": "Chain" }
     ],
     "products": [
       { "key": "product_1", "label": "Product 1" }
