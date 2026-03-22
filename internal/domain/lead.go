@@ -10,8 +10,8 @@ type Lead struct {
 	Status       LeadStatus   `json:"status"`
 	AssigneeID   string       `json:"assigneeId"` // User.ID of the assigned rep
 	TeamID       string       `json:"teamId"`     // Team.ID that owns this lead
-	CustomerID   string       `json:"customerId"` // Customer.ID this lead is associated with
-	CustomerType CustomerType `json:"customerType"`
+	CustomerID   string `json:"customerId"`   // Legacy: was Customer.ID reference
+	CustomerType string `json:"customerType"` // Legacy: was CustomerType enum
 	// Company is the name of the company this lead is associated with.
 	Company string `json:"company"`
 	// Industry is the industry sector of the lead's company.

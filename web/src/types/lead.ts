@@ -13,13 +13,6 @@ export type LeadStatus =
   | 'closed_won'
   | 'closed_lost'
 
-export type CustomerType =
-  | 'retail'
-  | 'wholesale'
-  | 'hospitality'
-  | 'institutional'
-  | 'other'
-
 export interface Lead {
   id: string
   title: string
@@ -28,7 +21,7 @@ export interface Lead {
   assigneeId: string
   teamId: string
   customerId: string
-  customerType: CustomerType
+  customerType: string
   company: string
   industry: string
   location: string
@@ -46,7 +39,7 @@ export interface CreateLeadInput {
   assigneeId: string
   teamId: string
   customerId: string
-  customerType: CustomerType
+  customerType: string
 }
 
 export interface UpdateLeadInput {
@@ -57,7 +50,7 @@ export interface UpdateLeadInput {
   assigneeId?: string
   teamId?: string
   customerId?: string
-  customerType?: CustomerType
+  customerType?: string
 }
 
 export interface LeadListParams {

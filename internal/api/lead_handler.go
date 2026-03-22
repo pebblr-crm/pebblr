@@ -55,7 +55,7 @@ type leadRequest struct {
 	AssigneeID   string              `json:"assigneeId"`
 	TeamID       string              `json:"teamId"`
 	CustomerID   string              `json:"customerId"`
-	CustomerType domain.CustomerType `json:"customerType"`
+	CustomerType string `json:"customerType"`
 	Status       domain.LeadStatus   `json:"status"`
 	Company      string              `json:"company"`
 	Industry     string              `json:"industry"`

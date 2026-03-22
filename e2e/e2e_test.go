@@ -318,34 +318,6 @@ func TestLeadGetNotFound(t *testing.T) {
 	}
 }
 
-// ── Customer Endpoint Tests ──────────────────────────────────────────────
-
-func TestCustomerListReturnsOK(t *testing.T) {
-	resp := apiRequest(t, "GET", "/api/v1/customers", "")
-	body := readBody(t, resp)
-
-	if resp.StatusCode != http.StatusOK {
-		t.Fatalf("expected 200 for GET /customers, got %d: %s", resp.StatusCode, body)
-	}
-
-	var result map[string]any
-	if err := json.Unmarshal([]byte(body), &result); err != nil {
-		t.Fatalf("decoding customer list response: %v\nbody: %s", err, body)
-	}
-	if _, ok := result["items"]; !ok {
-		t.Error("expected 'items' key in customer list response")
-	}
-}
-
-func TestCustomerGetNotFound(t *testing.T) {
-	resp := apiRequest(t, "GET", "/api/v1/customers/00000000-0000-0000-0000-000000000000", "")
-	body := readBody(t, resp)
-
-	if resp.StatusCode != http.StatusNotFound {
-		t.Fatalf("expected 404 for unknown customer, got %d: %s", resp.StatusCode, body)
-	}
-}
-
 // ── Calendar Event Endpoint Tests ────────────────────────────────────────
 
 func TestCalendarEventListReturnsOK(t *testing.T) {

@@ -19,7 +19,7 @@ type RouterConfig struct {
 	Logger               *slog.Logger
 	Authenticator        auth.Authenticator
 	LeadHandler          *LeadHandler
-	CustomerHandler      *CustomerHandler
+	TargetHandler        *TargetHandler
 	CalendarEventHandler *CalendarEventHandler
 	TeamHandler          *TeamHandler
 	UserHandler          *UserHandler
@@ -65,10 +65,10 @@ func NewRouter(cfg RouterConfig) http.Handler {
 			}
 		})
 
-		// Customer routes
-		r.Route("/customers", func(r chi.Router) {
-			if cfg.CustomerHandler != nil {
-				r.Mount("/", NewCustomerRouter(cfg.CustomerHandler))
+		// Target routes
+		r.Route("/targets", func(r chi.Router) {
+			if cfg.TargetHandler != nil {
+				r.Mount("/", NewTargetRouter(cfg.TargetHandler))
 			} else {
 				r.Get("/", notImplementedHandler)
 				r.Post("/", notImplementedHandler)
