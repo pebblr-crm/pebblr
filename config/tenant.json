@@ -1,0 +1,195 @@
+{
+  "tenant": {
+    "name": "DrMax Romania",
+    "locale": "ro"
+  },
+  "accounts": {
+    "types": [
+      {
+        "key": "doctor",
+        "label": "Doctor",
+        "fields": [
+          { "key": "name", "type": "text", "required": true, "editable": false },
+          { "key": "specialitate", "type": "select", "required": false, "editable": false, "options_ref": "specialties" },
+          { "key": "potential", "type": "select", "required": false, "editable": true, "options_ref": "classifications" },
+          { "key": "oras", "type": "text", "required": false, "editable": false },
+          { "key": "judet", "type": "text", "required": false, "editable": false },
+          { "key": "adresa", "type": "text", "required": false, "editable": false }
+        ]
+      },
+      {
+        "key": "pharmacy",
+        "label": "Farmacie",
+        "fields": [
+          { "key": "name", "type": "text", "required": true, "editable": false },
+          { "key": "tip", "type": "select", "required": false, "editable": false, "options_ref": "pharmacy_types" },
+          { "key": "oras", "type": "text", "required": false, "editable": false },
+          { "key": "judet", "type": "text", "required": false, "editable": false },
+          { "key": "adresa", "type": "text", "required": false, "editable": false }
+        ]
+      }
+    ]
+  },
+  "activities": {
+    "statuses": [
+      { "key": "planificat", "label": "Planificat", "initial": true },
+      { "key": "realizat", "label": "Realizat" },
+      { "key": "anulat", "label": "Anulat" }
+    ],
+    "status_transitions": {
+      "planificat": ["realizat", "anulat"],
+      "realizat": [],
+      "anulat": []
+    },
+    "durations": [
+      { "key": "full_day", "label": "Full Day" },
+      { "key": "half_day", "label": "Half Day" }
+    ],
+    "types": [
+      {
+        "key": "visit",
+        "label": "Vizită",
+        "category": "field",
+        "fields": [
+          { "key": "account_id", "type": "relation", "required": true },
+          { "key": "tip_vizita", "type": "select", "required": true, "options": ["f2f", "remote"] },
+          { "key": "produse_promovate", "type": "multi_select", "required": false, "options_ref": "products" },
+          { "key": "feedback", "type": "text", "required": false },
+          { "key": "detalii", "type": "text", "required": false },
+          { "key": "duration", "type": "select", "required": true, "options_ref": "durations" },
+          { "key": "partener_vizita", "type": "text", "required": false },
+          { "key": "joint_visit_user_id", "type": "relation", "required": false }
+        ],
+        "submit_required": ["produse_promovate", "feedback"]
+      },
+      {
+        "key": "administrative",
+        "label": "Administrative",
+        "category": "non_field",
+        "fields": [
+          { "key": "duration", "type": "select", "required": true, "options_ref": "durations" },
+          { "key": "detalii", "type": "text", "required": false }
+        ]
+      },
+      {
+        "key": "business_travel",
+        "label": "Business Travel",
+        "category": "non_field",
+        "fields": [
+          { "key": "duration", "type": "select", "required": true, "options_ref": "durations" },
+          { "key": "detalii", "type": "text", "required": false }
+        ]
+      },
+      {
+        "key": "company_event",
+        "label": "Company Event",
+        "category": "non_field",
+        "fields": [
+          { "key": "duration", "type": "select", "required": true, "options_ref": "durations" },
+          { "key": "detalii", "type": "text", "required": false }
+        ]
+      },
+      {
+        "key": "cycle_meeting",
+        "label": "Cycle Meeting",
+        "category": "non_field",
+        "fields": [
+          { "key": "duration", "type": "select", "required": true, "options_ref": "durations" },
+          { "key": "detalii", "type": "text", "required": false }
+        ]
+      },
+      {
+        "key": "team_meeting",
+        "label": "Team Meeting",
+        "category": "non_field",
+        "fields": [
+          { "key": "duration", "type": "select", "required": true, "options_ref": "durations" },
+          { "key": "detalii", "type": "text", "required": false }
+        ]
+      },
+      {
+        "key": "training",
+        "label": "Training",
+        "category": "non_field",
+        "fields": [
+          { "key": "duration", "type": "select", "required": true, "options_ref": "durations" },
+          { "key": "detalii", "type": "text", "required": false }
+        ]
+      },
+      {
+        "key": "public_holiday",
+        "label": "Public Holiday",
+        "category": "non_field",
+        "blocks_field_activities": true,
+        "fields": [
+          { "key": "duration", "type": "select", "required": true, "options_ref": "durations" }
+        ]
+      },
+      {
+        "key": "vacation",
+        "label": "Vacation",
+        "category": "non_field",
+        "blocks_field_activities": true,
+        "fields": [
+          { "key": "duration", "type": "select", "required": true, "options_ref": "durations" }
+        ]
+      },
+      {
+        "key": "pauza_de_masa",
+        "label": "Pauză de masă",
+        "category": "non_field",
+        "fields": [
+          { "key": "duration", "type": "select", "required": true, "options_ref": "durations" }
+        ]
+      }
+    ],
+    "routing_options": [
+      { "key": "saptamana_1", "label": "Săptămâna 1" },
+      { "key": "saptamana_2", "label": "Săptămâna 2" },
+      { "key": "saptamana_3", "label": "Săptămâna 3" }
+    ]
+  },
+  "options": {
+    "specialties": [
+      { "key": "cardiologie", "label": "Cardiologie" },
+      { "key": "internal_medicine", "label": "Medicină Internă" },
+      { "key": "family_and_general_medicine", "label": "Medicină de Familie" },
+      { "key": "emergency_medicine", "label": "Medicină de Urgență" },
+      { "key": "gastroenterologie", "label": "Gastroenterologie" },
+      { "key": "geriatrics", "label": "Geriatrie" },
+      { "key": "neurologie", "label": "Neurologie" },
+      { "key": "pediatrie", "label": "Pediatrie" },
+      { "key": "pulmonology", "label": "Pneumologie" },
+      { "key": "other", "label": "Altele" }
+    ],
+    "classifications": [
+      { "key": "a", "label": "A" },
+      { "key": "b", "label": "B" },
+      { "key": "c", "label": "C" }
+    ],
+    "pharmacy_types": [
+      { "key": "lant", "label": "Lanț" }
+    ],
+    "products": [
+      { "key": "product_1", "label": "Product 1" }
+    ]
+  },
+  "rules": {
+    "frequency": {
+      "a": 4,
+      "b": 2,
+      "c": 1
+    },
+    "max_activities_per_day": 10,
+    "default_visit_duration_minutes": {
+      "doctor": 30,
+      "pharmacy": 15
+    },
+    "visit_duration_step_minutes": 15,
+    "recovery": {
+      "weekend_activity_flag": true,
+      "recovery_window_days": 5,
+      "recovery_type": "full_day"
+    }
+  }
+}
