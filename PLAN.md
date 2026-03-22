@@ -11,18 +11,17 @@
 | Area | Status | Details |
 |------|--------|---------|
 | **Tenant config system** | ✅ Done | `internal/config/` — structs, JSON loader, field-level validator, full test coverage |
-| **Config API endpoint** | ❌ | `GET /api/v1/config` handler not yet wired |
-| **Existing backend** | ✅ Done | Lead, Customer, CalendarEvent, User, Team, Dashboard — full CRUD + RBAC + tests |
+| **Config API endpoint** | ✅ Done | `GET /api/v1/config` — returns tenant config for frontend |
+| **Target domain** | ✅ Done | Entity, repository, service, handler, RBAC, migration 006 (replaces old Customer) |
 | **Auth & RBAC** | ✅ Done | Azure AD config, OIDC middleware, static test auth, per-row RBAC with PostgreSQL RLS |
-| **Database (migrations 001–005)** | ✅ Done | Users, teams, customers, leads (soft delete, JSONB fields, priority), calendar_events |
-| **Database (migrations 006–008)** | ❌ | Accounts, Activities, Audit log tables |
-| **Account domain** | ❌ | Entity, repository, service, handler, import endpoint |
+| **Database (migrations 001–006)** | ✅ Done | Users, teams, leads (soft delete, JSONB, priority), calendar_events, targets (dropped customers) |
+| **Database (migrations 007–008)** | ❌ | Activities, Audit log tables |
 | **Activity domain** | ❌ | Entity, repository, service, handler, submit flow, business rules |
 | **Frontend foundation** | ✅ Done | React + TypeScript strict, Vite, TanStack Router/Query/Table, Tailwind |
-| **Frontend pages (existing)** | ✅ Done | Dashboard, leads, customers, calendar, team, my-leads — all with tests |
-| **Frontend pages (DrMax)** | ❌ | Accounts list/detail, planner, activity form/detail |
+| **Frontend pages (existing)** | ✅ Done | Dashboard, leads, calendar, team, my-leads — all with tests |
+| **Frontend pages (DrMax)** | ❌ | Targets list/detail, planner, activity form/detail |
 | **Helm / K8s / CI** | ✅ Done | Helm chart, Kind cluster, ExternalSecret, migration job, Makefile targets |
-| **Next step** | | Phase 1 items 2–6: config endpoint, account domain + API + frontend |
+| **Next step** | | Phase 1 cleanup (remove dead code) → Phase 2 (activities) |
 
 ## Context
 
@@ -30,7 +29,7 @@
 
 **Current state:** DrMax runs on Twenty CRM with a fragile per-user object duplication hack (54 custom objects, 126 workflows, PowerShell webhook) to work around Twenty's lack of row-level security. Pebblr replaces this with a proper multi-tenant CRM with native RBAC.
 
-**Current Pebblr codebase:** Has generic domain entities (Lead, Customer, User, Team, CalendarEvent) with RBAC, event audit trail, PostgreSQL RLS, React+TanStack frontend. Needs domain evolution to support pharmaceutical field sales workflows.
+**Current Pebblr codebase:** Core infrastructure is complete — auth, RBAC, tenant config, targets (doctors/pharmacies). The Lead/CalendarEvent/lead_events code from the generic CRM scaffold is unused by DrMax and scheduled for removal. Next: activities domain + planner UI.
 
 **Key design constraint:** Nothing client-specific is hardcoded. Enums (statuses, activity types, specialties, products, etc.) and field-level requirements are driven by a JSON tenant configuration file. Validation happens at the API layer against this config, not via DB constraints on enum values.
 
@@ -38,77 +37,89 @@
 
 ## Phase Overview
 
-### Phase 1 — Foundation (config + accounts) 🔧
+### Phase 1 — Foundation (config + targets) ✅
 
 1. ✅ **Tenant config system** — `internal/config/` package, JSON loading, validation, tests
-2. ❌ **Config API endpoint** — `GET /api/v1/config`
-3. ❌ **Account domain + store** — `Account` entity, PostgreSQL repo with JSONB fields, migration 006
-4. ❌ **Account API** — CRUD handlers, RBAC (rep sees own, manager sees team)
-5. ❌ **Account import endpoint** — bulk upsert for admin/scripts
-6. ❌ **Frontend: Account list + detail** — dynamic field rendering from config
-7. 🔧 **Seed script** — `scripts/seed.sh` and `scripts/seed-data.sql` exist with sample users/teams/customers/leads; needs DrMax-specific doctor/pharmacy account data
+2. ✅ **Config API endpoint** — `GET /api/v1/config`
+3. ✅ **Target domain + store** — `Target` entity, PostgreSQL repo with JSONB fields, migration 006
+4. ✅ **Target API** — CRUD handlers, RBAC (rep sees own, manager sees team)
+5. ❌ **Target import endpoint** — bulk upsert for admin/scripts
+6. ❌ **Frontend: Target list + detail** — reuse `DataTable`, status badge, pagination from leads pages
+7. ❌ **Remove dead code** — drop Lead, CalendarEvent, lead_events, Customer code + migrations; remove frontend lead/calendar/my-leads pages
+8. 🔧 **Seed script** — exists with sample users/teams; needs DrMax-specific doctor/pharmacy target data
 
 → [Full details](PLAN-phase-1.md)
 
 ### Phase 2 — Activities (core workflow) ❌
 
-8. ❌ **Activity domain + store** — `Activity` entity, PostgreSQL repo, migration 007
-9. ❌ **Activity API** — CRUD + status transitions + submit, all validated against config
-10. ❌ **Audit log** — migration 008, generic audit recording on activity changes
-11. ❌ **Business rules enforcement** — max activities/day, blocked days (vacation/holiday), status transitions
-12. ❌ **Frontend: Activity form** — dynamic form from config, per-type field rendering
-13. ❌ **Frontend: Planner** — weekly/monthly calendar view with activities
-14. ❌ **Frontend: Activity detail** — view + report/submit flow
+9. ❌ **Activity domain + store** — `Activity` entity, PostgreSQL repo, migration 007
+10. ❌ **Activity API** — CRUD + status transitions + submit, all validated against config
+11. ❌ **Audit log** — migration 008, generic audit recording on activity changes
+12. ❌ **Business rules enforcement** — max activities/day, blocked days (vacation/holiday), status transitions
+13. ❌ **Frontend: Activity form** — dynamic form from config, per-type field rendering
+14. ❌ **Frontend: Planner** — weekly/monthly calendar view with activities (reuse CalendarGrid patterns)
+15. ❌ **Frontend: Activity detail** — view + report/submit flow
 
 → [Full details](PLAN-phase-2.md)
 
 ### Phase 3 — Reporting & Dashboard ❌
 
-15. ❌ **Dashboard stats API** — planned vs realized, coverage, field vs non-field, per user/team/period
-16. 🔧 **Frontend: Dashboard** — basic dashboard exists; needs DrMax KPIs
-17. ❌ **Joint visit** — co-visitor association, activity visible to both users
-18. ❌ **Frequency tracking** — visits per account vs target from config rules
+16. ❌ **Dashboard stats API** — planned vs realized, coverage, field vs non-field, per user/team/period
+17. 🔧 **Frontend: Dashboard** — basic dashboard exists; needs DrMax KPIs (replace lead-based stats)
+18. ❌ **Joint visit** — co-visitor association, activity visible to both users
+19. ❌ **Frequency tracking** — visits per target vs frequency from config rules
 
 → [Full details](PLAN-phase-3.md)
 
 ### Phase 4 — Post Go-Live Optimizations ❌
 
-19. ❌ Weekend activity + recovery days
-20. ❌ Drag & drop calendar
-21. ❌ Copy-paste activities
-22. ❌ Advanced filtering with saved filters
-23. ❌ Target group management (quarterly)
-24. ❌ Plan generation (rule-based monthly plan proposal)
+20. ❌ Weekend activity + recovery days
+21. ❌ Drag & drop calendar
+22. ❌ Copy-paste activities
+23. ❌ Advanced filtering with saved filters
+24. ❌ Target group management (quarterly)
+25. ❌ Plan generation (rule-based monthly plan proposal)
 
 → [Full details](PLAN-phase-4.md)
 
 ---
 
-## What Stays, What Goes
+## Dead Code Removal Plan
 
-| Current Code                | Decision     | Status | Rationale                                                    |
-| --------------------------- | ------------ | ------ | ------------------------------------------------------------ |
-| `internal/domain/lead.go`   | **Keep**     | ✅ Kept | May be useful later; not in the way                          |
-| `internal/domain/customer.go`| **Keep**    | ✅ Kept | Account replaces it for DrMax, but no need to delete          |
-| `internal/api/lead_handler` | **Keep**     | ✅ Kept | Still functional, just not used by DrMax frontend             |
-| `internal/api/calendar_*`   | **Keep**     | ✅ Kept | Activity replaces it, but keep for backward compat            |
-| `internal/events/`          | **Keep**     | ✅ Kept | Event types still useful; audit_log extends this concept      |
-| `internal/rbac/`            | **Extend**   | 🔧 Existing | Currently has lead-scoped methods. Needs `CanViewAccount`, `CanUpdateActivity`, `ScopeAccountQuery` |
-| `migrations/001-005`        | **Keep**     | ✅ Kept | Don't touch existing schema; add new tables alongside         |
-| Frontend routes             | **Extend**   | 🔧 Existing | Current routes stay; DrMax-specific routes to be added |
+The generic CRM scaffold included Lead, Customer, and CalendarEvent domains. DrMax uses **Targets** (doctors/pharmacies) and **Activities** (visits, time-off) instead. Customer was already dropped in migration 006. The rest should be removed to reduce maintenance burden and confusion.
+
+| Code to Remove | Replacement | Notes |
+| --- | --- | --- |
+| `internal/domain/lead.go`, `lead_status.go` | Target domain | Target covers the "entity reps visit" concept |
+| `internal/domain/calendar_event.go` | Activity domain (Phase 2) | Activities replace calendar events |
+| `internal/service/lead_service.go` | Target service (done) | — |
+| `internal/service/calendar_event_service.go` | Activity service (Phase 2) | — |
+| `internal/store/lead_store.go` + postgres impl | Target store (done) | — |
+| `internal/store/calendar_event_store.go` + postgres impl | Activity store (Phase 2) | — |
+| `internal/api/lead_handler.go` | Target handler (done) | — |
+| `internal/api/calendar_event_handler.go` | Activity handler (Phase 2) | — |
+| `internal/events/` (lead events) | Audit log (Phase 2) | Generalized audit replaces lead-specific events |
+| `internal/rbac/` lead methods | Already has target methods | Remove `CanViewLead`, `ScopeLeadQuery`, etc. |
+| Frontend: leads pages, my-leads, calendar | Target list/detail + Planner | Reuse `DataTable`, pagination, status badge patterns |
+| `web/src/services/leads.ts` | `targets.ts` (done) | — |
+| `web/src/services/calendar.ts` | Activity service (Phase 2) | — |
+| `web/src/types/lead.ts`, `calendar.ts` | `target.ts` (done) + activity types | — |
+| Dashboard lead-based stats | Activity-based KPIs (Phase 3) | — |
+
+**Strategy:** Remove lead code in Phase 1 (backend is already unused). Remove calendar_event code when Activity domain lands in Phase 2. Reuse frontend patterns (DataTable, status badges, pagination) — don't rewrite from scratch.
 
 ---
 
 ## Open Questions
 
-1. **Account territory assignment** — Is territory = "the accounts assigned to this user"? Or is there a geographic territory entity? → For MVP: territory = set of accounts with `assignee_id` = user. No separate territory table.
+1. **Territory assignment** — For MVP: territory = set of targets with `assignee_id` = user. No separate territory table.
 
-2. **Data import frequency** — One-time import or periodic sync? → Start with one-time + manual re-import. Automated sync is Phase 4+.
+2. **Data import frequency** — Start with one-time + manual re-import. Automated sync is Phase 4+.
 
-3. **CLM (Closed Loop Marketing)** — Material tracking during visits. → Deprioritize for MVP. Can be added as another dynamic field type later.
+3. **CLM (Closed Loop Marketing)** — Deprioritize for MVP. Can be added as another dynamic field type later.
 
-4. **IQVIA integration** — External market data for doctor potential scoring. → Out of scope for MVP. Potential (A/B/C) is manually set or imported.
+4. **IQVIA integration** — Out of scope for MVP. Potential (A/B/C) is manually set or imported.
 
-5. **Plan generation algorithm** — Auto-propose monthly plan based on frequency rules + priority. → Phase 4. For MVP, reps create activities manually.
+5. **Plan generation algorithm** — Phase 4. For MVP, reps create activities manually.
 
-6. **Retrospective edit restrictions** — Can reps edit past activities? → Configurable in `rules` section of tenant config. Default: allow edits up to N days back.
+6. **Retrospective edit restrictions** — Configurable in `rules` section of tenant config. Default: allow edits up to N days back.

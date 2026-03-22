@@ -4,13 +4,14 @@
 
 ## Checklist
 
-8. ❌ **Activity domain + store** — `Activity` entity, PostgreSQL repo, migration 007
-9. ❌ **Activity API** — CRUD + status transitions + submit, all validated against config
-10. ❌ **Audit log** — migration 008, generic audit recording on activity changes
-11. ❌ **Business rules enforcement** — max activities/day, blocked days (vacation/holiday), status transitions
-12. ❌ **Frontend: Activity form** — dynamic form from config, per-type field rendering
-13. ❌ **Frontend: Planner** — weekly/monthly calendar view with activities
-14. ❌ **Frontend: Activity detail** — view + report/submit flow
+9. ❌ **Activity domain + store** — `Activity` entity, PostgreSQL repo, migration
+10. ❌ **Activity API** — CRUD + status transitions + submit, all validated against config
+11. ❌ **Audit log** — migration, generic audit recording on activity changes
+12. ❌ **Business rules enforcement** — max activities/day, blocked days (vacation/holiday), status transitions
+13. ❌ **Frontend: Activity form** — dynamic form from config, per-type field rendering
+14. ❌ **Frontend: Planner** — weekly/monthly calendar view (replaces old calendar page)
+15. ❌ **Frontend: Activity detail** — view + report/submit flow
+16. ❌ **Remove calendar_event code** — replaced by Activity domain
 
 ---
 
@@ -28,7 +29,7 @@ type Activity struct {
     Duration       string            // "full_day", "half_day" — key from config
     Routing        *string           // optional routing week
     Fields         map[string]any    // dynamic fields (detalii, feedback, produse_promovate, etc.)
-    AccountID      *uuid.UUID        // linked account (required for visits, null for time-off)
+    TargetID       *uuid.UUID        // linked target (required for visits, null for time-off)
     CreatorID      uuid.UUID         // the rep who created it
     JointVisitUID  *uuid.UUID        // optional co-visitor
     TeamID         *uuid.UUID
@@ -39,7 +40,18 @@ type Activity struct {
 }
 ```
 
-### 1.2 Database Migration 007
+### 1.2 Database Migrations
+
+**Migration: Drop dead tables**
+
+```sql
+-- Drop unused Lead and lead_events tables
+DROP TABLE IF EXISTS lead_events;
+DROP TABLE IF EXISTS leads;
+DROP TABLE IF EXISTS calendar_events;
+```
+
+**Migration: Activities table**
 
 ```sql
 CREATE TABLE activities (
@@ -50,7 +62,7 @@ CREATE TABLE activities (
     duration TEXT NOT NULL,
     routing TEXT,
     fields JSONB NOT NULL DEFAULT '{}',
-    account_id UUID REFERENCES accounts(id),
+    target_id UUID REFERENCES targets(id),
     creator_id UUID NOT NULL REFERENCES users(id),
     joint_visit_user_id UUID REFERENCES users(id),
     team_id UUID REFERENCES teams(id),
@@ -64,7 +76,7 @@ CREATE INDEX idx_activities_type ON activities(activity_type);
 CREATE INDEX idx_activities_status ON activities(status);
 CREATE INDEX idx_activities_due_date ON activities(due_date);
 CREATE INDEX idx_activities_creator ON activities(creator_id);
-CREATE INDEX idx_activities_account ON activities(account_id);
+CREATE INDEX idx_activities_target ON activities(target_id);
 CREATE INDEX idx_activities_team ON activities(team_id);
 CREATE INDEX idx_activities_fields ON activities USING GIN(fields);
 
@@ -73,6 +85,25 @@ CREATE POLICY activities_rep ON activities FOR ALL
     USING (current_setting('app.user_role') IN ('manager','admin')
            OR creator_id = current_setting('app.user_id')::uuid
            OR joint_visit_user_id = current_setting('app.user_id')::uuid);
+```
+
+**Migration: Audit log**
+
+```sql
+CREATE TABLE audit_log (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    entity_type TEXT NOT NULL,          -- "activity", "target"
+    entity_id UUID NOT NULL,
+    event_type TEXT NOT NULL,           -- "created", "status_changed", "submitted", "field_updated"
+    actor_id UUID NOT NULL REFERENCES users(id),
+    old_value JSONB,
+    new_value JSONB,
+    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+
+CREATE INDEX idx_audit_entity ON audit_log(entity_type, entity_id);
+CREATE INDEX idx_audit_actor ON audit_log(actor_id);
+CREATE INDEX idx_audit_created ON audit_log(created_at);
 ```
 
 ---
@@ -101,17 +132,17 @@ Client POST/PUT /activities
     → Check status is valid
     → Check all required fields for this type are present
     → Check select/multi_select values are within allowed options
-    → Check account_id is present if activity type requires it
+    → Check target_id is present if activity type requires it
     → Return []FieldError (field key + error message)
   → If errors: return 422 with field-level errors
-  → Service: RBAC check (creator owns account, or is admin/manager)
+  → Service: RBAC check (creator owns target, or is admin/manager)
   → Service: business rules (max activities/day, blocked days, status transitions)
   → Store: save to DB
 ```
 
 Submit flow adds `submit_required` field validation and sets `submitted_at`, making the activity read-only.
 
-> **Status:** Validation functions (`ValidateActivity`, `ValidateStatus`, `ValidateStatusTransition`, `ValidateDuration`) are implemented in `internal/config/validator.go` with full test coverage. Integration into handlers is pending.
+> **Note:** Validation functions are already implemented in `internal/config/validator.go` with full test coverage. Integration into handlers is the remaining work.
 
 ### 2.3 Backend Package Structure
 
@@ -125,49 +156,32 @@ internal/
 ├── store/postgres/activity.go       # PostgreSQL implementation (NEW)
 ├── store/postgres/audit.go          # PostgreSQL implementation (NEW)
 ├── api/activity_handler.go          # HTTP handlers (NEW)
-└── api/router.go                    # Add new routes (MODIFY)
+└── api/router.go                    # Add new routes, remove calendar_event routes (MODIFY)
 ```
+
+Also remove (replaced by Activity):
+- `internal/domain/calendar_event.go`
+- `internal/service/calendar_event_service.go`
+- `internal/store/calendar_event_store.go` + postgres impl
+- `internal/api/calendar_event_handler.go`
+
+RBAC: add `CanViewActivity`, `CanUpdateActivity`, `CanDeleteActivity`, `ScopeActivityQuery` to enforcer.
 
 ---
 
-## 3. Audit Log
-
-### 3.1 Migration 008
-
-```sql
-CREATE TABLE audit_log (
-    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-    entity_type TEXT NOT NULL,          -- "activity", "account"
-    entity_id UUID NOT NULL,
-    event_type TEXT NOT NULL,           -- "created", "status_changed", "submitted", "field_updated"
-    actor_id UUID NOT NULL REFERENCES users(id),
-    old_value JSONB,
-    new_value JSONB,
-    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
-);
-
-CREATE INDEX idx_audit_entity ON audit_log(entity_type, entity_id);
-CREATE INDEX idx_audit_actor ON audit_log(actor_id);
-CREATE INDEX idx_audit_created ON audit_log(created_at);
-```
-
-> Note: `lead_events` table is kept as-is. New audit entries go to `audit_log`. If leads are fully deprecated later, we can drop `lead_events`.
-
----
-
-## 4. Business Rules
+## 3. Business Rules
 
 - **Max activities per day:** `rules.max_activities_per_day` (default 10)
 - **Blocked days:** Activity types with `blocks_field_activities: true` (vacation, public_holiday) prevent scheduling field activities on that day
 - **Status transitions:** Only allowed transitions from `activities.status_transitions` config
 - **Submit lock:** Once `submitted_at` is set, activity cannot be edited or deleted
-- **Account required:** Visit-type activities require `account_id`
+- **Target required:** Visit-type activities require `target_id`
 
 ---
 
-## 5. Frontend: Activities ❌
+## 4. Frontend: Activities ❌
 
-### 5.1 New Routes
+### 4.1 New Routes
 
 | Route                    | Component        | Description                                        |
 | ------------------------ | ---------------- | -------------------------------------------------- |
@@ -177,22 +191,45 @@ CREATE INDEX idx_audit_created ON audit_log(created_at);
 | `/activities/:id`        | `ActivityDetail` | Activity detail + report/submit                     |
 | `/activities/:id/edit`   | `ActivityForm`   | Edit activity (blocked if submitted)                |
 
-### 5.2 Dynamic Form Rendering
+### 4.2 Dynamic Form Rendering
 
 The `ActivityForm` component does not hardcode fields. It:
 
-1. Fetches tenant config via `GET /api/v1/config` (cached with TanStack Query, staleTime: Infinity)
+1. Fetches tenant config via `useConfig()` (cached with TanStack Query, staleTime: Infinity)
 2. On activity type selection, looks up the type's `fields` array from config
 3. Renders each field based on its `type`:
    - `text` → `<input type="text">`
    - `select` → `<select>` with options from config (resolved via `options_ref`)
    - `multi_select` → multi-select component with search
-   - `relation` → lookup/search component (accounts or users)
+   - `relation` → lookup/search component (targets or users)
    - `date` → date picker
 4. Marks required fields with visual indicator
 5. On save: sends `{ activity_type, status, due_date, duration, fields: { ... } }` — backend validates
 
-### 5.3 TypeScript Types
+### 4.3 Planner — Reuse Patterns from Calendar
+
+The old `CalendarGrid.tsx` and `EventCard.tsx` provide useful patterns:
+- Month grid layout logic
+- Color-coded event cards by type
+- Date navigation (prev/next month)
+
+Reuse these patterns in the Planner component, then delete the originals. The Planner adds:
+- Week view (in addition to month)
+- Daily agenda view
+- Activity type color coding from config
+- Status indicators (planned/realized/cancelled)
+- Drag-and-drop (Phase 4)
+
+### 4.4 Frontend Cleanup
+
+Remove when Activity domain is ready:
+- `web/src/routes/calendar/` → replaced by Planner
+- `web/src/services/calendar.ts` → replaced by activity service
+- `web/src/types/calendar.ts` → replaced by activity types
+- `web/src/components/calendar/` → patterns reused in Planner, originals deleted
+- Sidebar navigation: replace "Calendar" with "Planner"
+
+### 4.5 TypeScript Types
 
 ```typescript
 // types/activity.ts
@@ -204,8 +241,8 @@ interface Activity {
   duration: string
   routing?: string
   fields: Record<string, unknown>
-  account_id?: string
-  account?: Account  // populated on detail
+  target_id?: string
+  target?: Target  // populated on detail
   creator_id: string
   joint_visit_user_id?: string
   team_id?: string
@@ -215,7 +252,7 @@ interface Activity {
 }
 ```
 
-### 5.4 TanStack Query Hooks
+### 4.6 TanStack Query Hooks
 
 ```typescript
 // services/activities.ts

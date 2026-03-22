@@ -4,12 +4,12 @@
 
 ## Checklist
 
-19. ❌ Weekend activity + recovery days
-20. ❌ Drag & drop calendar
-21. ❌ Copy-paste activities
-22. ❌ Advanced filtering with saved filters
-23. ❌ Target group management (quarterly)
-24. ❌ Plan generation (rule-based monthly plan proposal)
+20. ❌ Weekend activity + recovery days
+21. ❌ Drag & drop calendar
+22. ❌ Copy-paste activities
+23. ❌ Advanced filtering with saved filters
+24. ❌ Target group management (quarterly)
+25. ❌ Plan generation (rule-based monthly plan proposal)
 
 ---
 
@@ -17,12 +17,12 @@
 
 Config rules:
 
-```yaml
-rules:
-  recovery:
-    weekend_activity_flag: true
-    recovery_window_days: 5
-    recovery_type: full_day
+```json
+"recovery": {
+  "weekend_activity_flag": true,
+  "recovery_window_days": 5,
+  "recovery_type": "full_day"
+}
 ```
 
 - If a rep works on a weekend (creates a field activity on Saturday/Sunday), they earn a recovery day
@@ -58,22 +58,21 @@ Allow reps to duplicate activities:
 
 ## 4. Advanced Filtering with Saved Filters ❌
 
-- Filter activities by: type, status, date range, account, creator, team, routing week
+- Filter activities by: type, status, date range, target, creator, team, routing week
 - Save filter combinations as named presets (stored in localStorage or user preferences)
 - Quick-switch between saved filters in planner and activity list
-- Share filter presets within a team (optional, stored server-side)
 
 ---
 
 ## 5. Target Group Management (Quarterly) ❌
 
-Each quarter, managers define which accounts each rep should focus on:
+Each quarter, managers define which targets each rep should focus on:
 
-- Admin/manager UI to assign accounts to reps for the quarter
+- Admin/manager UI to assign targets to reps for the quarter
 - Bulk assignment (CSV upload or multi-select)
-- Track changes: which accounts were added/removed from target group
-- Frequency targets apply to target group accounts specifically
-- Dashboard shows target group coverage vs all-account coverage
+- Track changes: which targets were added/removed from target group
+- Frequency rules apply to target group specifically
+- Dashboard shows target group coverage vs all-target coverage
 
 ---
 
@@ -93,8 +92,8 @@ Auto-propose a monthly activity plan based on rules:
 
 For go-live, existing Twenty CRM data needs to be imported:
 
-- **Doctors** — export from per-user `*Doctori` objects → `POST /accounts/import`
-- **Pharmacies** — export from per-user `*Farmacii` objects → `POST /accounts/import`
+- **Doctors** — export from per-user `*Doctori` objects → `POST /targets/import`
+- **Pharmacies** — export from per-user `*Farmacii` objects → `POST /targets/import`
 - **Historical activities** — export from per-user `*Tasks` + master `tasks` → `POST /activities/import` (new endpoint, admin only)
 
 Script in `scripts/import-twenty.sh` or a Go CLI tool under `cmd/import/`.
