@@ -157,7 +157,7 @@ func (r *leadRepository) Create(ctx context.Context, lead *domain.Lead) (*domain
 		 VALUES ($1, $2, $3, $4::UUID, $5::UUID, $6::UUID, $7, $8, $9, $10, $11, $12)
 		 RETURNING `+leadColumns,
 		lead.Title, lead.Description, string(lead.Status),
-		assigneeID, lead.TeamID, lead.CustomerID, string(lead.CustomerType),
+		assigneeID, lead.TeamID, lead.CustomerID, lead.CustomerType,
 		lead.Company, lead.Industry, lead.Location, lead.ValueCents, lead.Initials,
 	)
 	return scanLead(row)
@@ -179,7 +179,7 @@ func (r *leadRepository) Update(ctx context.Context, lead *domain.Lead) (*domain
 		 WHERE id = $13::UUID AND deleted_at IS NULL
 		 RETURNING `+leadColumns,
 		lead.Title, lead.Description, string(lead.Status),
-		assigneeID, lead.TeamID, lead.CustomerID, string(lead.CustomerType),
+		assigneeID, lead.TeamID, lead.CustomerID, lead.CustomerType,
 		lead.Company, lead.Industry, lead.Location, lead.ValueCents, lead.Initials,
 		lead.ID,
 	)

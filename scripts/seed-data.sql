@@ -37,21 +37,7 @@ INSERT INTO team_members (team_id, user_id) VALUES
 ON CONFLICT DO NOTHING;
 
 -- ============================================================
--- Customers
--- ============================================================
-INSERT INTO customers (id, name, customer_type, street, city, state, country, zip, phone, email, notes) VALUES
-  ('c0000000-0000-0000-0000-000000000001', 'Greenfield Market',        'retail',        '101 Oak St',        'Portland',     'OR', 'US', '97201', '503-555-0101', 'gfmarket@example.com',    'Family-owned grocery, interested in weekly delivery.'),
-  ('c0000000-0000-0000-0000-000000000002', 'Pacific Wholesale Co.',    'wholesale',     '500 Industrial Blvd','Seattle',      'WA', 'US', '98101', '206-555-0202', 'pwco@example.com',        'Large distributor, price-sensitive, net-60 terms.'),
-  ('c0000000-0000-0000-0000-000000000003', 'The Grand Hotel',          'hospitality',   '200 Harbor View Dr', 'San Francisco','CA', 'US', '94105', '415-555-0303', 'procurement@grandhotel.example.com', 'Upscale hotel, high-volume beverage needs.'),
-  ('c0000000-0000-0000-0000-000000000004', 'Riverside College Dining', 'institutional', '10 Campus Way',      'Eugene',       'OR', 'US', '97401', '541-555-0404', 'dining@riverside.example.edu', 'University dining services, seasonal volume spikes.'),
-  ('c0000000-0000-0000-0000-000000000005', 'Corner Deli & Café',       'retail',        '77 Main St',         'Bend',         'OR', 'US', '97701', '541-555-0505', 'cornerdeli@example.com',  'Local deli, steady small orders.'),
-  ('c0000000-0000-0000-0000-000000000006', 'Sunrise Hospitality Group','hospitality',   '3030 Resort Rd',     'Las Vegas',    'NV', 'US', '89101', '702-555-0606', 'ops@sunrisehg.example.com','Casino resort group, bulk purchasing, quarterly reviews.'),
-  ('c0000000-0000-0000-0000-000000000007', 'Northgate Grocers',        'retail',        '42 Northgate Plaza', 'Tacoma',       'WA', 'US', '98402', '253-555-0707', 'buying@northgate.example.com', 'Regional chain, 6 locations, prefers consolidated invoicing.'),
-  ('c0000000-0000-0000-0000-000000000008', 'Metro Supply Partners',    'wholesale',     '900 Freight Ct',     'Sacramento',   'CA', 'US', '95814', '916-555-0808', 'orders@metrosupply.example.com', 'Mid-size distributor, expanding into OR market.')
-ON CONFLICT (id) DO NOTHING;
-
--- ============================================================
--- Leads
+-- Leads (customer_id/customer_type are legacy columns — FK removed in migration 006)
 -- ============================================================
 INSERT INTO leads (id, title, description, status, assignee_id, team_id, customer_id, customer_type, created_at) VALUES
   -- North Region leads

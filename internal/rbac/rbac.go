@@ -24,6 +24,16 @@ type Enforcer interface {
 	// ScopeLeadQuery returns a LeadScope that restricts a query to the leads
 	// the given actor is permitted to see. Use this when building store queries.
 	ScopeLeadQuery(ctx context.Context, actor *domain.User) LeadScope
+
+	// CanViewTarget returns true if the actor is permitted to view the given target.
+	CanViewTarget(ctx context.Context, actor *domain.User, target *domain.Target) bool
+
+	// CanUpdateTarget returns true if the actor is permitted to update the given target.
+	CanUpdateTarget(ctx context.Context, actor *domain.User, target *domain.Target) bool
+
+	// ScopeTargetQuery returns a TargetScope that restricts a query to the targets
+	// the given actor is permitted to see.
+	ScopeTargetQuery(ctx context.Context, actor *domain.User) TargetScope
 }
 
 // LeadScope encodes RBAC visibility constraints for a lead list query.
@@ -37,4 +47,14 @@ type LeadScope struct {
 	TeamIDs []string
 	// AllLeads bypasses all scoping (admin only).
 	AllLeads bool
+}
+
+// TargetScope encodes RBAC visibility constraints for a target list query.
+type TargetScope struct {
+	// AssigneeIDs restricts results to targets assigned to these user IDs.
+	AssigneeIDs []string
+	// TeamIDs restricts results to targets belonging to these team IDs.
+	TeamIDs []string
+	// AllTargets bypasses all scoping (admin only).
+	AllTargets bool
 }

@@ -55,7 +55,6 @@ func run() error {
 
 	// Services
 	leadSvc := service.NewLeadService(db.Leads(), db.Events(), enforcer)
-	customerSvc := service.NewCustomerService(db.Customers())
 	calendarEventSvc := service.NewCalendarEventService(db.CalendarEvents())
 	teamSvc := service.NewTeamService(db.Teams())
 	userSvc := service.NewUserService(db.Users())
@@ -64,8 +63,10 @@ func run() error {
 	// Tenant config
 	tenantConfigPath := os.Getenv("TENANT_CONFIG_PATH")
 	var configHandler *api.ConfigHandler
+	var tenantCfg *config.TenantConfig
 	if tenantConfigPath != "" {
-		tenantCfg, err := config.Load(tenantConfigPath)
+		var err error
+		tenantCfg, err = config.Load(tenantConfigPath)
 		if err != nil {
 			return fmt.Errorf("loading tenant config: %w", err)
 		}
@@ -73,9 +74,12 @@ func run() error {
 		logger.Info("tenant config loaded", "path", tenantConfigPath)
 	}
 
+	// Target service (needs tenant config for validation)
+	targetSvc := service.NewTargetService(db.Targets(), enforcer, tenantCfg)
+
 	// Handlers
 	leadHandler := api.NewLeadHandler(leadSvc)
-	customerHandler := api.NewCustomerHandler(customerSvc)
+	targetHandler := api.NewTargetHandler(targetSvc)
 	calendarEventHandler := api.NewCalendarEventHandler(calendarEventSvc)
 	teamHandler := api.NewTeamHandler(teamSvc)
 	userHandler := api.NewUserHandler(userSvc)
@@ -99,7 +103,7 @@ func run() error {
 		Logger:               logger,
 		Authenticator:        authenticator,
 		LeadHandler:          leadHandler,
-		CustomerHandler:      customerHandler,
+		TargetHandler:        targetHandler,
 		CalendarEventHandler: calendarEventHandler,
 		TeamHandler:          teamHandler,
 		UserHandler:          userHandler,

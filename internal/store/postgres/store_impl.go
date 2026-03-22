@@ -27,9 +27,9 @@ func (db *DB) Events() store.EventRepository {
 	return &eventRepository{pool: db.pool}
 }
 
-// Customers returns the PostgreSQL-backed customer repository.
-func (db *DB) Customers() store.CustomerRepository {
-	return &customerRepository{pool: db.pool}
+// Targets returns the PostgreSQL-backed target repository.
+func (db *DB) Targets() store.TargetRepository {
+	return &targetRepository{pool: db.pool}
 }
 
 // CalendarEvents returns the PostgreSQL-backed calendar event repository.

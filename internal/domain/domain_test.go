@@ -100,26 +100,6 @@ func TestOnlineStatusValid(t *testing.T) {
 	}
 }
 
-func TestCustomerTypeValid(t *testing.T) {
-	t.Parallel()
-	valid := []domain.CustomerType{
-		domain.CustomerTypeRetail,
-		domain.CustomerTypeWholesale,
-		domain.CustomerTypeHospitality,
-		domain.CustomerTypeInstitutional,
-		domain.CustomerTypeOther,
-	}
-	for _, ct := range valid {
-		ct := ct
-		t.Run(string(ct), func(t *testing.T) {
-			t.Parallel()
-			if !ct.Valid() {
-				t.Errorf("expected %q to be valid", ct)
-			}
-		})
-	}
-}
-
 func TestRoleValid(t *testing.T) {
 	t.Parallel()
 	for _, r := range []domain.Role{domain.RoleRep, domain.RoleManager, domain.RoleAdmin} {
