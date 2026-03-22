@@ -17,6 +17,7 @@ import (
 
 	"github.com/pebblr/pebblr/internal/api"
 	"github.com/pebblr/pebblr/internal/auth"
+	"github.com/pebblr/pebblr/internal/config"
 	"github.com/pebblr/pebblr/internal/rbac"
 	"github.com/pebblr/pebblr/internal/service"
 	"github.com/pebblr/pebblr/internal/store/postgres"
@@ -60,6 +61,18 @@ func run() error {
 	userSvc := service.NewUserService(db.Users())
 	dashboardSvc := service.NewDashboardService(db.Leads())
 
+	// Tenant config
+	tenantConfigPath := os.Getenv("TENANT_CONFIG_PATH")
+	var configHandler *api.ConfigHandler
+	if tenantConfigPath != "" {
+		tenantCfg, err := config.Load(tenantConfigPath)
+		if err != nil {
+			return fmt.Errorf("loading tenant config: %w", err)
+		}
+		configHandler = api.NewConfigHandler(tenantCfg)
+		logger.Info("tenant config loaded", "path", tenantConfigPath)
+	}
+
 	// Handlers
 	leadHandler := api.NewLeadHandler(leadSvc)
 	customerHandler := api.NewCustomerHandler(customerSvc)
@@ -91,6 +104,7 @@ func run() error {
 		TeamHandler:          teamHandler,
 		UserHandler:          userHandler,
 		DashboardHandler:     dashboardHandler,
+		ConfigHandler:        configHandler,
 		WebDistPath:          webDistPath,
 	})
 

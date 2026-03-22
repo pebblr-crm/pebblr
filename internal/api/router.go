@@ -24,6 +24,7 @@ type RouterConfig struct {
 	TeamHandler          *TeamHandler
 	UserHandler          *UserHandler
 	DashboardHandler     *DashboardHandler
+	ConfigHandler        *ConfigHandler
 	WebDistPath          string
 }
 
@@ -108,6 +109,13 @@ func NewRouter(cfg RouterConfig) http.Handler {
 				r.Get("/{id}", notImplementedHandler)
 			}
 		})
+
+		// Config route
+		if cfg.ConfigHandler != nil {
+			r.Get("/config", cfg.ConfigHandler.Get)
+		} else {
+			r.Get("/config", notImplementedHandler)
+		}
 
 		// Dashboard routes
 		r.Route("/dashboard", func(r chi.Router) {
