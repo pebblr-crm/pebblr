@@ -57,6 +57,11 @@ type leadRequest struct {
 	CustomerID   string              `json:"customerId"`
 	CustomerType domain.CustomerType `json:"customerType"`
 	Status       domain.LeadStatus   `json:"status"`
+	Company      string              `json:"company"`
+	Industry     string              `json:"industry"`
+	Location     string              `json:"location"`
+	ValueCents   int64               `json:"valueCents"`
+	Initials     string              `json:"initials"`
 }
 
 // statusPatchRequest is the body for PATCH /leads/:id/status.
@@ -178,6 +183,11 @@ func (h *LeadHandler) Create(w http.ResponseWriter, r *http.Request) {
 		TeamID:       req.TeamID,
 		CustomerID:   req.CustomerID,
 		CustomerType: req.CustomerType,
+		Company:      req.Company,
+		Industry:     req.Industry,
+		Location:     req.Location,
+		ValueCents:   req.ValueCents,
+		Initials:     req.Initials,
 	}
 
 	created, err := h.svc.Create(r.Context(), actor, lead)
@@ -241,6 +251,11 @@ func (h *LeadHandler) Update(w http.ResponseWriter, r *http.Request) {
 		TeamID:       req.TeamID,
 		CustomerID:   req.CustomerID,
 		CustomerType: req.CustomerType,
+		Company:      req.Company,
+		Industry:     req.Industry,
+		Location:     req.Location,
+		ValueCents:   req.ValueCents,
+		Initials:     req.Initials,
 	}
 
 	updated, err := h.svc.Update(r.Context(), actor, lead)

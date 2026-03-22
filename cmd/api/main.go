@@ -16,6 +16,7 @@ import (
 	_ "github.com/golang-migrate/migrate/v4/source/file"
 
 	"github.com/pebblr/pebblr/internal/api"
+	"github.com/pebblr/pebblr/internal/rbac"
 	"github.com/pebblr/pebblr/internal/service"
 	"github.com/pebblr/pebblr/internal/store/postgres"
 )
@@ -47,12 +48,32 @@ func run() error {
 	defer pool.Close()
 
 	db := postgres.New(pool)
+	enforcer := rbac.NewEnforcer()
+
+	// Services
+	leadSvc := service.NewLeadService(db.Leads(), db.Events(), enforcer)
 	customerSvc := service.NewCustomerService(db.Customers())
+	calendarEventSvc := service.NewCalendarEventService(db.CalendarEvents())
+	teamSvc := service.NewTeamService(db.Teams())
+	userSvc := service.NewUserService(db.Users())
+	dashboardSvc := service.NewDashboardService(db.Leads())
+
+	// Handlers
+	leadHandler := api.NewLeadHandler(leadSvc)
 	customerHandler := api.NewCustomerHandler(customerSvc)
+	calendarEventHandler := api.NewCalendarEventHandler(calendarEventSvc)
+	teamHandler := api.NewTeamHandler(teamSvc)
+	userHandler := api.NewUserHandler(userSvc)
+	dashboardHandler := api.NewDashboardHandler(dashboardSvc)
 
 	router := api.NewRouter(api.RouterConfig{
-		Logger:          logger,
-		CustomerHandler: customerHandler,
+		Logger:               logger,
+		LeadHandler:          leadHandler,
+		CustomerHandler:      customerHandler,
+		CalendarEventHandler: calendarEventHandler,
+		TeamHandler:          teamHandler,
+		UserHandler:          userHandler,
+		DashboardHandler:     dashboardHandler,
 	})
 
 	srv := &http.Server{
