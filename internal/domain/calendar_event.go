@@ -39,18 +39,15 @@ func (t CalendarEventType) Valid() bool {
 
 // CalendarEvent represents a scheduled event in the sales calendar.
 type CalendarEvent struct {
-	ID          string            `json:"id"`
-	Title       string            `json:"title"`
-	Description string            `json:"description,omitempty"`
-	EventType   CalendarEventType `json:"eventType"`
-	StartTime   time.Time         `json:"startTime"`
-	EndTime     time.Time         `json:"endTime"`
-	// LeadID optionally links this event to a specific lead.
-	LeadID string `json:"leadId,omitempty"`
-	// OrganizerID is the User.ID of the event creator.
-	OrganizerID string `json:"organizerId"`
-	// AttendeeIDs lists the User.IDs of event attendees.
-	AttendeeIDs []string `json:"attendeeIds"`
+	ID        string            `json:"id"`
+	Title     string            `json:"title"`
+	EventType CalendarEventType `json:"eventType"`
+	StartTime time.Time         `json:"startTime"`
+	EndTime   *time.Time        `json:"endTime,omitempty"`
+	// Client is the customer/client name associated with this event.
+	Client string `json:"client,omitempty"`
+	// CreatorID is the User.ID of the event creator.
+	CreatorID string `json:"creatorId"`
 	// TeamID optionally associates the event with a team.
 	TeamID    string    `json:"teamId,omitempty"`
 	CreatedAt time.Time `json:"createdAt"`
