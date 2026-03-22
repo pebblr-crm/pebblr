@@ -8,7 +8,7 @@ export function TopBar() {
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 w-4 h-4" />
           <input
             type="text"
-            placeholder="Search leads or team members..."
+            placeholder="Search targets or team members..."
             className="w-full pl-10 pr-4 py-2 bg-surface-container-highest border-none rounded-xl focus:ring-2 focus:ring-primary/20 focus:bg-white transition-all text-sm outline-none"
           />
         </div>

@@ -54,11 +54,9 @@ func run() error {
 	enforcer := rbac.NewEnforcer()
 
 	// Services
-	leadSvc := service.NewLeadService(db.Leads(), db.Events(), enforcer)
 	calendarEventSvc := service.NewCalendarEventService(db.CalendarEvents())
 	teamSvc := service.NewTeamService(db.Teams())
 	userSvc := service.NewUserService(db.Users())
-	dashboardSvc := service.NewDashboardService(db.Leads())
 
 	// Tenant config
 	tenantConfigPath := os.Getenv("TENANT_CONFIG_PATH")
@@ -78,12 +76,10 @@ func run() error {
 	targetSvc := service.NewTargetService(db.Targets(), enforcer, tenantCfg)
 
 	// Handlers
-	leadHandler := api.NewLeadHandler(leadSvc)
 	targetHandler := api.NewTargetHandler(targetSvc)
 	calendarEventHandler := api.NewCalendarEventHandler(calendarEventSvc)
 	teamHandler := api.NewTeamHandler(teamSvc)
 	userHandler := api.NewUserHandler(userSvc)
-	dashboardHandler := api.NewDashboardHandler(dashboardSvc)
 
 	webDistPath := os.Getenv("WEB_DIST_PATH")
 
@@ -102,12 +98,10 @@ func run() error {
 	router := api.NewRouter(api.RouterConfig{
 		Logger:               logger,
 		Authenticator:        authenticator,
-		LeadHandler:          leadHandler,
 		TargetHandler:        targetHandler,
 		CalendarEventHandler: calendarEventHandler,
 		TeamHandler:          teamHandler,
 		UserHandler:          userHandler,
-		DashboardHandler:     dashboardHandler,
 		ConfigHandler:        configHandler,
 		WebDistPath:          webDistPath,
 	})

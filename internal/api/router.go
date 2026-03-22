@@ -18,12 +18,10 @@ import (
 type RouterConfig struct {
 	Logger               *slog.Logger
 	Authenticator        auth.Authenticator
-	LeadHandler          *LeadHandler
 	TargetHandler        *TargetHandler
 	CalendarEventHandler *CalendarEventHandler
 	TeamHandler          *TeamHandler
 	UserHandler          *UserHandler
-	DashboardHandler     *DashboardHandler
 	ConfigHandler        *ConfigHandler
 	WebDistPath          string
 }
@@ -50,20 +48,6 @@ func NewRouter(cfg RouterConfig) http.Handler {
 
 		// Current user endpoint
 		r.Get("/me", meHandler)
-
-		// Lead routes
-		r.Route("/leads", func(r chi.Router) {
-			if cfg.LeadHandler != nil {
-				r.Mount("/", NewLeadRouter(cfg.LeadHandler))
-			} else {
-				r.Get("/", notImplementedHandler)
-				r.Post("/", notImplementedHandler)
-				r.Get("/{id}", notImplementedHandler)
-				r.Put("/{id}", notImplementedHandler)
-				r.Delete("/{id}", notImplementedHandler)
-				r.Patch("/{id}/status", notImplementedHandler)
-			}
-		})
 
 		// Target routes
 		r.Route("/targets", func(r chi.Router) {
@@ -117,21 +101,6 @@ func NewRouter(cfg RouterConfig) http.Handler {
 			r.Get("/config", notImplementedHandler)
 		}
 
-		// Dashboard routes
-		r.Route("/dashboard", func(r chi.Router) {
-			if cfg.DashboardHandler != nil {
-				r.Get("/stats", cfg.DashboardHandler.Stats)
-			} else {
-				r.Get("/stats", notImplementedHandler)
-			}
-		})
-
-		// Metrics routes — placeholder
-		r.Route("/metrics", func(r chi.Router) {
-			r.Get("/pipeline", notImplementedHandler)
-			r.Get("/rep/{id}", notImplementedHandler)
-			r.Get("/team/{id}", notImplementedHandler)
-		})
 	})
 
 	// Serve frontend SPA from WebDistPath if configured.
