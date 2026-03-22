@@ -10,8 +10,8 @@
 4. ✅ **Target API** — CRUD handlers, RBAC (rep sees own, manager sees team)
 5. ✅ **Target import endpoint** — bulk upsert for admin/scripts
 6. ✅ **Frontend: Target list + detail** — config-driven list with type filter, dynamic columns, detail page with resolved option labels
-7. ❌ **Remove dead code** — drop Lead, CalendarEvent, lead_events code + frontend pages
-8. 🔧 **Seed script** — exists with sample users/teams; needs DrMax-specific doctor/pharmacy target data
+7. ✅ **Remove dead code** — dropped Lead, lead_events, events, metrics, dashboard code + frontend pages
+8. ✅ **Seed script** — 12 doctor targets, 8 pharmacy targets, territory assignments, updated calendar events
 
 ---
 
@@ -93,7 +93,7 @@ PUT    /api/v1/targets/{id}             # update editable fields
 
 ---
 
-## 3. Remaining Work
+## 3. Import, Frontend, Cleanup & Seed ✅
 
 ### 3.1 Target Import Endpoint ✅
 
@@ -133,49 +133,50 @@ Implemented:
 - Routes registered in `App.tsx`, "Targets" added to `Sidebar.tsx`
 - Full test coverage: `index.test.tsx` (14 tests), `$targetId.test.tsx` (8 tests)
 
-### 3.3 Remove Dead Code ❌
+### 3.3 Remove Dead Code ✅
 
-Remove the following unused code from the generic CRM scaffold:
+Removed all Lead-domain scaffolding that was replaced by the Target domain:
 
-**Backend (remove now — Lead domain is unused):**
+**Backend removed:**
 - `internal/domain/lead.go`, `lead_status.go`
-- `internal/service/lead_service.go`
-- `internal/store/lead_store.go`, `postgres/lead_repository.go`
-- `internal/api/lead_handler.go`
-- `internal/events/` — entire package (lead-specific event types, recorder, querier)
-- `internal/store/event_store.go`, `postgres/event_repository.go`
-- `internal/rbac/` — remove `CanViewLead`, `CanAssignLead`, `CanUpdateLead`, `CanDeleteLead`, `ScopeLeadQuery`, `LeadScope`
-- Lead routes from `router.go`
-- `internal/metrics/` — if lead-specific, remove; if generic, keep
+- `internal/service/lead_service.go`, `dashboard_service.go`
+- `internal/api/lead_handler.go`, `dashboard_handler.go` (+ tests)
+- `internal/store/lead_store.go`, `event_store.go` + postgres implementations
+- `internal/events/` — entire package
+- `internal/metrics/` — entire package (lead-specific)
+- Lead RBAC methods (`CanViewLead`, `CanAssignLead`, `CanUpdateLead`, `CanDeleteLead`, `ScopeLeadQuery`, `LeadScope`)
+- Lead routes, dashboard routes, metrics routes from `router.go`
 
-**Backend (remove in Phase 2 when Activity domain replaces it):**
-- `internal/domain/calendar_event.go`
-- `internal/service/calendar_event_service.go`
-- `internal/store/calendar_event_store.go`, `postgres/calendar_event_repository.go`
-- `internal/api/calendar_event_handler.go`
-- Calendar event routes from `router.go`
+**Backend additions during cleanup:**
+- `internal/service/errors.go` — extracted `ErrForbidden`/`ErrInvalidInput` sentinel errors (were in deleted `lead_service.go`)
+- Test helper files for `api` and `service` packages
+- Migration 008: `DROP TABLE leads, lead_events`
 
-**Database:**
-- Migration to drop `leads`, `lead_events` tables (new migration 007, before activities migration)
-- Migration to drop `calendar_events` table (with activities migration in Phase 2)
+**Frontend removed:**
+- `web/src/routes/leads/`, `web/src/routes/my-leads/`
+- `web/src/services/leads.ts`, `web/src/services/dashboard.ts`
+- `web/src/types/lead.ts`, `web/src/types/dashboard.ts`
+- `web/src/components/dashboard/UnassignedLeadCard.tsx`
+- Sidebar entries for Leads/My Leads + "New Lead" button
 
-**Frontend (remove now):**
-- `web/src/routes/leads/` — leads list + detail pages
-- `web/src/routes/my-leads/` — my leads page
-- `web/src/services/leads.ts`
-- `web/src/types/lead.ts`
-- `web/src/components/dashboard/UnassignedLeadCard.tsx` — lead-specific widget
-- Sidebar navigation entries for leads/my-leads
+**Frontend updated:**
+- Dashboard simplified (team performance only, no lead stats)
+- `App.tsx` route tree trimmed
+- `Sidebar.tsx` cleaned to Dashboard/Targets/Calendar/Team
 
-**Frontend (remove in Phase 2):**
-- `web/src/routes/calendar/` — calendar page (replaced by Planner)
-- `web/src/services/calendar.ts`
-- `web/src/types/calendar.ts`
-- `web/src/components/calendar/` — CalendarGrid, EventCard (reuse patterns in Planner, delete originals)
+**Deferred to Phase 2** (CalendarEvent replaced by Activity domain):
+- `internal/domain/calendar_event.go`, service, store, handler, routes
+- `web/src/routes/calendar/`, `web/src/services/calendar.ts`, `web/src/types/calendar.ts`
+- Migration to drop `calendar_events` table
 
-### 3.4 Seed Script 🔧
+### 3.4 Seed Script ✅
 
-`scripts/seed.sh` and `scripts/seed-data.sql` exist with sample users/teams. Needs:
-- DrMax-specific doctor targets (sample doctors with specialties, classifications)
-- DrMax-specific pharmacy targets (sample pharmacies with types)
-- Territory assignments (doctors/pharmacies assigned to sample reps)
+Updated `scripts/seed-data.sql` with pharma-specific target data:
+
+- **12 doctor targets** — specialties from config (cardiology, internal medicine, family medicine, gastroenterology, neurology, pulmonology, geriatrics, pediatrics, emergency medicine), A/B/C classifications, Czech cities (Prague, Brno, Olomouc, Ostrava, Zlin)
+- **8 pharmacy targets** — Dr.Max chain locations across both regions
+- All targets have `external_id` (DOC-xxx, PHR-xxx) for import compatibility
+- Territory assignments: Alice + Bob → North Region (Prague), Carol + Dan → South Region (Brno, Olomouc, Ostrava, Zlin)
+- Calendar events updated to reference doctors and pharmacies
+- Removed all legacy lead, lead_event, and lead enrichment inserts
+- Users, teams, and team members unchanged
