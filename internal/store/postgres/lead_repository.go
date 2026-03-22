@@ -21,6 +21,7 @@ type leadRepository struct {
 const leadColumns = `
 	id, title, description, status,
 	COALESCE(assignee_id::TEXT, ''), team_id::TEXT, customer_id::TEXT, customer_type,
+	company, industry, location, value_cents, initials,
 	created_at, updated_at, deleted_at`
 
 func scanLead(row pgx.Row) (*domain.Lead, error) {
@@ -29,6 +30,7 @@ func scanLead(row pgx.Row) (*domain.Lead, error) {
 	err := row.Scan(
 		&l.ID, &l.Title, &l.Description, &l.Status,
 		&l.AssigneeID, &l.TeamID, &l.CustomerID, &l.CustomerType,
+		&l.Company, &l.Industry, &l.Location, &l.ValueCents, &l.Initials,
 		&l.CreatedAt, &l.UpdatedAt, &deletedAt,
 	)
 	if err != nil {
@@ -150,11 +152,13 @@ func (r *leadRepository) Create(ctx context.Context, lead *domain.Lead) (*domain
 	}
 
 	row := r.pool.QueryRow(ctx,
-		`INSERT INTO leads (title, description, status, assignee_id, team_id, customer_id, customer_type)
-		 VALUES ($1, $2, $3, $4::UUID, $5::UUID, $6::UUID, $7)
+		`INSERT INTO leads (title, description, status, assignee_id, team_id, customer_id, customer_type,
+		                    company, industry, location, value_cents, initials)
+		 VALUES ($1, $2, $3, $4::UUID, $5::UUID, $6::UUID, $7, $8, $9, $10, $11, $12)
 		 RETURNING `+leadColumns,
 		lead.Title, lead.Description, string(lead.Status),
 		assigneeID, lead.TeamID, lead.CustomerID, string(lead.CustomerType),
+		lead.Company, lead.Industry, lead.Location, lead.ValueCents, lead.Initials,
 	)
 	return scanLead(row)
 }
@@ -170,11 +174,13 @@ func (r *leadRepository) Update(ctx context.Context, lead *domain.Lead) (*domain
 		 SET title = $1, description = $2, status = $3,
 		     assignee_id = $4::UUID, team_id = $5::UUID,
 		     customer_id = $6::UUID, customer_type = $7,
+		     company = $8, industry = $9, location = $10, value_cents = $11, initials = $12,
 		     updated_at = NOW()
-		 WHERE id = $8::UUID AND deleted_at IS NULL
+		 WHERE id = $13::UUID AND deleted_at IS NULL
 		 RETURNING `+leadColumns,
 		lead.Title, lead.Description, string(lead.Status),
 		assigneeID, lead.TeamID, lead.CustomerID, string(lead.CustomerType),
+		lead.Company, lead.Industry, lead.Location, lead.ValueCents, lead.Initials,
 		lead.ID,
 	)
 	return scanLead(row)

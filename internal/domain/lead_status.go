@@ -16,13 +16,25 @@ const (
 	LeadStatusClosedWon LeadStatus = "closed_won"
 	// LeadStatusClosedLost indicates the lead did not result in a successful outcome.
 	LeadStatusClosedLost LeadStatus = "closed_lost"
+	// LeadStatusScheduled indicates a visit has been scheduled for the lead.
+	LeadStatusScheduled LeadStatus = "scheduled"
+	// LeadStatusDone indicates the lead interaction is complete.
+	LeadStatusDone LeadStatus = "done"
+	// LeadStatusHotLead indicates a high-priority lead requiring immediate attention.
+	LeadStatusHotLead LeadStatus = "hot_lead"
+	// LeadStatusFollowUp indicates the lead requires a follow-up action.
+	LeadStatusFollowUp LeadStatus = "follow_up"
+	// LeadStatusInquiry indicates an inbound inquiry lead.
+	LeadStatusInquiry LeadStatus = "inquiry"
 )
 
 // Valid returns true if the status is a recognized LeadStatus value.
 func (s LeadStatus) Valid() bool {
 	switch s {
 	case LeadStatusNew, LeadStatusAssigned, LeadStatusInProgress,
-		LeadStatusVisited, LeadStatusClosedWon, LeadStatusClosedLost:
+		LeadStatusVisited, LeadStatusClosedWon, LeadStatusClosedLost,
+		LeadStatusScheduled, LeadStatusDone, LeadStatusHotLead,
+		LeadStatusFollowUp, LeadStatusInquiry:
 		return true
 	}
 	return false
@@ -30,5 +42,5 @@ func (s LeadStatus) Valid() bool {
 
 // Terminal returns true if the status represents a final state.
 func (s LeadStatus) Terminal() bool {
-	return s == LeadStatusClosedWon || s == LeadStatusClosedLost
+	return s == LeadStatusClosedWon || s == LeadStatusClosedLost || s == LeadStatusDone
 }

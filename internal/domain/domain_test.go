@@ -15,6 +15,11 @@ func TestLeadStatusValid(t *testing.T) {
 		domain.LeadStatusVisited,
 		domain.LeadStatusClosedWon,
 		domain.LeadStatusClosedLost,
+		domain.LeadStatusScheduled,
+		domain.LeadStatusDone,
+		domain.LeadStatusHotLead,
+		domain.LeadStatusFollowUp,
+		domain.LeadStatusInquiry,
 	}
 	for _, s := range valid {
 		s := s
@@ -39,8 +44,59 @@ func TestLeadStatusTerminal(t *testing.T) {
 	if !domain.LeadStatusClosedLost.Terminal() {
 		t.Error("closed_lost should be terminal")
 	}
+	if !domain.LeadStatusDone.Terminal() {
+		t.Error("done should be terminal")
+	}
 	if domain.LeadStatusNew.Terminal() {
 		t.Error("new should not be terminal")
+	}
+	if domain.LeadStatusScheduled.Terminal() {
+		t.Error("scheduled should not be terminal")
+	}
+}
+
+func TestCalendarEventTypeValid(t *testing.T) {
+	t.Parallel()
+	valid := []domain.CalendarEventType{
+		domain.CalendarEventTypeSync,
+		domain.CalendarEventTypeVisit,
+		domain.CalendarEventTypeReview,
+		domain.CalendarEventTypeCallback,
+		domain.CalendarEventTypeLunch,
+		domain.CalendarEventTypeDemo,
+	}
+	for _, et := range valid {
+		et := et
+		t.Run(string(et), func(t *testing.T) {
+			t.Parallel()
+			if !et.Valid() {
+				t.Errorf("expected %q to be valid", et)
+			}
+		})
+	}
+	if domain.CalendarEventType("unknown").Valid() {
+		t.Error("expected unknown event type to be invalid")
+	}
+}
+
+func TestOnlineStatusValid(t *testing.T) {
+	t.Parallel()
+	valid := []domain.OnlineStatus{
+		domain.OnlineStatusOnline,
+		domain.OnlineStatusAway,
+		domain.OnlineStatusOffline,
+	}
+	for _, s := range valid {
+		s := s
+		t.Run(string(s), func(t *testing.T) {
+			t.Parallel()
+			if !s.Valid() {
+				t.Errorf("expected %q to be valid", s)
+			}
+		})
+	}
+	if domain.OnlineStatus("busy").Valid() {
+		t.Error("expected unknown online status to be invalid")
 	}
 }
 

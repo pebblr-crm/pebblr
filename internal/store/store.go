@@ -8,4 +8,5 @@ type Store interface {
 	Teams() TeamRepository
 	Events() EventRepository
 	Customers() CustomerRepository
+	CalendarEvents() CalendarEventRepository
 }

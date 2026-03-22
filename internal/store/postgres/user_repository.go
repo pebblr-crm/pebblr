@@ -2,31 +2,86 @@ package postgres
 
 import (
 	"context"
+	"errors"
+	"fmt"
 
+	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
 	"github.com/pebblr/pebblr/internal/domain"
+	"github.com/pebblr/pebblr/internal/store"
 )
 
 type userRepository struct {
 	pool *pgxpool.Pool
 }
 
-func (r *userRepository) GetByID(_ context.Context, _ string) (*domain.User, error) {
-	// TODO: implement
-	return nil, nil
+const userColumns = `id, external_id, email, name, role, avatar, online_status`
+
+func scanUser(row pgx.Row) (*domain.User, error) {
+	var u domain.User
+	err := row.Scan(&u.ID, &u.ExternalID, &u.Email, &u.Name, &u.Role, &u.Avatar, &u.OnlineStatus)
+	if err != nil {
+		if errors.Is(err, pgx.ErrNoRows) {
+			return nil, store.ErrNotFound
+		}
+		return nil, fmt.Errorf("scanning user: %w", err)
+	}
+	return &u, nil
 }
 
-func (r *userRepository) GetByExternalID(_ context.Context, _ string) (*domain.User, error) {
-	// TODO: implement
-	return nil, nil
+func (r *userRepository) GetByID(ctx context.Context, id string) (*domain.User, error) {
+	row := r.pool.QueryRow(ctx,
+		`SELECT `+userColumns+` FROM users WHERE id = $1::UUID`,
+		id,
+	)
+	return scanUser(row)
 }
 
-func (r *userRepository) List(_ context.Context) ([]*domain.User, error) {
-	// TODO: implement
-	return nil, nil
+func (r *userRepository) GetByExternalID(ctx context.Context, externalID string) (*domain.User, error) {
+	row := r.pool.QueryRow(ctx,
+		`SELECT `+userColumns+` FROM users WHERE external_id = $1`,
+		externalID,
+	)
+	return scanUser(row)
 }
 
-func (r *userRepository) Upsert(_ context.Context, user *domain.User) (*domain.User, error) {
-	// TODO: implement
-	return user, nil
+func (r *userRepository) List(ctx context.Context) ([]*domain.User, error) {
+	rows, err := r.pool.Query(ctx,
+		`SELECT `+userColumns+` FROM users ORDER BY name`,
+	)
+	if err != nil {
+		return nil, fmt.Errorf("querying users: %w", err)
+	}
+	defer rows.Close()
+
+	var users []*domain.User
+	for rows.Next() {
+		u, err := scanUser(rows)
+		if err != nil {
+			return nil, err
+		}
+		users = append(users, u)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, fmt.Errorf("iterating users: %w", err)
+	}
+	return users, nil
+}
+
+func (r *userRepository) Upsert(ctx context.Context, user *domain.User) (*domain.User, error) {
+	row := r.pool.QueryRow(ctx,
+		`INSERT INTO users (external_id, email, name, role, avatar, online_status)
+		 VALUES ($1, $2, $3, $4, $5, $6)
+		 ON CONFLICT (external_id) DO UPDATE
+		   SET email = EXCLUDED.email,
+		       name  = EXCLUDED.name,
+		       role  = EXCLUDED.role,
+		       avatar = EXCLUDED.avatar,
+		       online_status = EXCLUDED.online_status,
+		       updated_at = NOW()
+		 RETURNING `+userColumns,
+		user.ExternalID, user.Email, user.Name, string(user.Role),
+		user.Avatar, string(user.OnlineStatus),
+	)
+	return scanUser(row)
 }
