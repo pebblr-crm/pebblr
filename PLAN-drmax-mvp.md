@@ -1,5 +1,27 @@
 # Pebblr — DrMax MVP Implementation Plan
 
+> **Last updated:** 2026-03-22
+>
+> **Legend:** ✅ Done | 🔧 Partial | ❌ Not started
+
+## Implementation Summary
+
+| Area | Status | Details |
+|------|--------|---------|
+| **Tenant config system** | ✅ Done | `internal/config/` — structs, JSON loader, field-level validator, full test coverage |
+| **Config API endpoint** | ❌ | `GET /api/v1/config` handler not yet wired |
+| **Existing backend** | ✅ Done | Lead, Customer, CalendarEvent, User, Team, Dashboard — full CRUD + RBAC + tests |
+| **Auth & RBAC** | ✅ Done | Azure AD config, OIDC middleware, static test auth, per-row RBAC with PostgreSQL RLS |
+| **Database (migrations 001–005)** | ✅ Done | Users, teams, customers, leads (soft delete, JSONB fields, priority), calendar_events |
+| **Database (migrations 006–008)** | ❌ | Accounts, Activities, Audit log tables |
+| **Account domain** | ❌ | Entity, repository, service, handler, import endpoint |
+| **Activity domain** | ❌ | Entity, repository, service, handler, submit flow, business rules |
+| **Frontend foundation** | ✅ Done | React + TypeScript strict, Vite, TanStack Router/Query/Table, Tailwind |
+| **Frontend pages (existing)** | ✅ Done | Dashboard, leads, customers, calendar, team, my-leads — all with tests |
+| **Frontend pages (DrMax)** | ❌ | Accounts list/detail, planner, activity form/detail |
+| **Helm / K8s / CI** | ✅ Done | Helm chart, Kind cluster, ExternalSecret, migration job, Makefile targets |
+| **Next step** | | Phase 1 items 2–6: config endpoint, account domain + API + frontend |
+
 ## Context
 
 **Client:** DrMax Romania — pharmaceutical field sales CRM for Medical Division Team (18 reps, 3 managers).
@@ -12,9 +34,9 @@
 
 ---
 
-## 1. Tenant Configuration System
+## 1. Tenant Configuration System ✅
 
-### 1.1 YAML Config File
+### 1.1 YAML Config File ✅
 
 Create `config/tenant.yaml` (loaded at server startup, path via CLI flag `--tenant-config`).
 
@@ -175,17 +197,21 @@ rules:
     recovery_type: full_day
 ```
 
-### 1.2 Go Implementation
+### 1.2 Go Implementation ✅
 
 **New package:** `internal/config/`
 
-- `tenant.go` — Structs mirroring the YAML schema: `TenantConfig`, `AccountTypeConfig`, `ActivityTypeConfig`, `FieldConfig`, `OptionDef`, `StatusDef`, `RulesConfig`
-- `loader.go` — `Load(path string) (*TenantConfig, error)` — reads YAML, validates internal consistency (e.g., `options_ref` keys resolve, status transitions reference valid statuses)
-- `validator.go` — `ValidateActivity(cfg *TenantConfig, activityType string, fields map[string]any, phase string) []FieldError` — validates field values and required-ness against config. `phase` is `"save"` or `"submit"` (submit enforces additional required fields)
+- ✅ `tenant.go` — Structs mirroring the YAML schema: `TenantConfig`, `AccountTypeConfig`, `ActivityTypeConfig`, `FieldConfig`, `OptionDef`, `StatusDef`, `RulesConfig`
+- ✅ `loader.go` — `Load(path string) (*TenantConfig, error)` — reads JSON (not YAML), validates internal consistency (e.g., `options_ref` keys resolve, status transitions reference valid statuses, status uniqueness)
+- ✅ `loader_test.go` — Tests for config loading and validation
+- ✅ `validator.go` — `ValidateActivity()`, `ValidateStatus()`, `ValidateStatusTransition()`, `ValidateDuration()` — field-level validation against config with support for select/multi_select options and submit-required fields
+- ✅ `validator_test.go` — Tests for field-level validation
 
 **Config is injected** into services and handlers via constructor (DI). It is **not** stored in the DB — it's read once at startup. The API exposes it read-only so the frontend can render dynamic forms.
 
-### 1.3 API Endpoint
+> **Implementation note:** The loader currently reads JSON format rather than YAML. The schema structure matches the plan.
+
+### 1.3 API Endpoint ❌
 
 ```
 GET /api/v1/config
@@ -197,26 +223,28 @@ Returns the tenant config (sans internal-only fields). Frontend uses this to:
 - Show/hide fields based on activity type selection
 - Display labels in the configured locale
 
+> **Status:** Config handler (`config_handler.go`) and route registration not yet implemented.
+
 ---
 
-## 2. Domain Model Evolution
+## 2. Domain Model Evolution 🔧
 
 ### 2.1 What Changes
 
 The current generic Lead/Customer/CalendarEvent model evolves to support the pharmaceutical field sales domain. The key insight: **Accounts** (doctors, pharmacies) are contacts to visit; **Activities** are the work units (visits, time-off, etc.).
 
-| Current Entity     | Evolution                                  | Notes                                                    |
-| ------------------ | ------------------------------------------ | -------------------------------------------------------- |
-| `Customer`         | → **`Account`**                            | Renamed. Gets `account_type` (doctor/pharmacy from config). Custom fields stored as JSONB. |
-| `Lead`             | → **Removed** (or kept for future use)     | DrMax doesn't have "leads" — they have accounts + activities. Keep the table/code but deprioritize. |
-| `CalendarEvent`    | → **`Activity`**                           | Becomes the core entity. Gets `activity_type`, `status`, `duration`, `routing`, dynamic fields as JSONB. |
-| `User`             | Unchanged                                  | Already has role, team, external ID.                     |
-| `Team`             | Unchanged                                  | Already has manager.                                     |
-| (new)              | **`Territory`**                            | Assignment of accounts to users. A user's territory = the set of accounts assigned to them. |
-| (new)              | **`ActivityReport`**                       | The "call report" / "store visit report" — submitted after an activity is realized. Locks the activity. |
-| `lead_events`      | → **`audit_log`** (rename)                 | Generalize to audit any entity, not just leads.          |
+| Current Entity     | Evolution                                  | Status | Notes                                                    |
+| ------------------ | ------------------------------------------ | ------ | -------------------------------------------------------- |
+| `Customer`         | → **`Account`**                            | ❌     | Renamed. Gets `account_type` (doctor/pharmacy from config). Custom fields stored as JSONB. |
+| `Lead`             | → **Removed** (or kept for future use)     | ✅ Kept | DrMax doesn't have "leads" — they have accounts + activities. Keep the table/code but deprioritize. |
+| `CalendarEvent`    | → **`Activity`**                           | ❌     | Becomes the core entity. Gets `activity_type`, `status`, `duration`, `routing`, dynamic fields as JSONB. |
+| `User`             | Unchanged                                  | ✅     | Already has role, team, external ID.                     |
+| `Team`             | Unchanged                                  | ✅     | Already has manager.                                     |
+| (new)              | **`Territory`**                            | ❌     | Assignment of accounts to users. A user's territory = the set of accounts assigned to them. |
+| (new)              | **`ActivityReport`**                       | ❌     | The "call report" / "store visit report" — submitted after an activity is realized. Locks the activity. |
+| `lead_events`      | → **`audit_log`** (rename)                 | ❌     | Generalize to audit any entity, not just leads.          |
 
-### 2.2 New Domain Types
+### 2.2 New Domain Types ❌
 
 ```go
 // internal/domain/account.go
@@ -259,7 +287,7 @@ type Territory struct {
 }
 ```
 
-### 2.3 Dynamic Fields Strategy
+### 2.3 Dynamic Fields Strategy 🔧
 
 **Problem:** Different tenants need different fields on accounts and activities. Hardcoding columns is not extensible.
 
@@ -272,11 +300,15 @@ type Territory struct {
 
 **Why not EAV?** JSONB is simpler, faster to query (GIN index), and sufficient for single-tenant deployments. If multi-tenant with shared DB becomes a requirement, we can revisit.
 
+> **Status:** JSONB `fields` column exists on `leads` table (migration 003). Config-driven validation is implemented in `internal/config/validator.go`. Pattern is proven — needs to be applied to new Account and Activity tables.
+
 ---
 
-## 3. Database Migrations
+## 3. Database Migrations ❌
 
-### Migration 006: Accounts table
+> **Status:** Migrations 001–005 are implemented (users, teams, customers, leads with soft delete + JSONB fields + priority, calendar_events with RLS). Migrations 006–008 below are not yet created.
+
+### Migration 006: Accounts table ❌
 
 ```sql
 CREATE TABLE accounts (
@@ -304,7 +336,7 @@ CREATE POLICY accounts_rep ON accounts FOR ALL
            OR assignee_id = current_setting('app.user_id')::uuid);
 ```
 
-### Migration 007: Activities table
+### Migration 007: Activities table ❌
 
 ```sql
 CREATE TABLE activities (
@@ -340,7 +372,7 @@ CREATE POLICY activities_rep ON activities FOR ALL
            OR joint_visit_user_id = current_setting('app.user_id')::uuid);
 ```
 
-### Migration 008: Audit log (generalized from lead_events)
+### Migration 008: Audit log (generalized from lead_events) ❌
 
 ```sql
 CREATE TABLE audit_log (
@@ -363,43 +395,62 @@ CREATE INDEX idx_audit_created ON audit_log(created_at);
 
 ---
 
-## 4. Backend Implementation
+## 4. Backend Implementation 🔧
 
 ### 4.1 Package Structure (new/modified)
 
 ```
 internal/
-├── config/
-│   ├── tenant.go          # TenantConfig structs
-│   ├── loader.go          # YAML loading
-│   └── validator.go       # Field validation against config
+├── config/                    # ✅ IMPLEMENTED
+│   ├── tenant.go              # ✅ TenantConfig structs
+│   ├── loader.go              # ✅ JSON loading + validation
+│   ├── loader_test.go         # ✅ Tests
+│   ├── validator.go           # ✅ Field validation against config
+│   └── validator_test.go      # ✅ Tests
 ├── domain/
-│   ├── account.go         # Account entity (NEW)
-│   ├── activity.go        # Activity entity (NEW)
-│   ├── audit.go           # AuditEntry entity (NEW)
-│   ├── user.go            # (unchanged)
-│   ├── team.go            # (unchanged)
-│   └── ...                # lead.go, customer.go kept but deprioritized
+│   ├── account.go             # ❌ Account entity (NEW)
+│   ├── activity.go            # ❌ Activity entity (NEW)
+│   ├── audit.go               # ❌ AuditEntry entity (NEW)
+│   ├── user.go                # ✅ (unchanged)
+│   ├── team.go                # ✅ (unchanged)
+│   └── ...                    # ✅ lead.go, customer.go kept but deprioritized
 ├── service/
-│   ├── account_service.go  # Account CRUD + RBAC (NEW)
-│   ├── activity_service.go # Activity CRUD + validation + submit (NEW)
+│   ├── account_service.go     # ❌ Account CRUD + RBAC (NEW)
+│   ├── activity_service.go    # ❌ Activity CRUD + validation + submit (NEW)
+│   ├── lead_service.go        # ✅ Existing — full CRUD with event recording
+│   ├── customer_service.go    # ✅ Existing — full CRUD
+│   ├── calendar_event_service.go # ✅ Existing — event scheduling
+│   ├── dashboard_service.go   # ✅ Existing — stats aggregation
 │   └── ...
 ├── store/
-│   ├── account.go          # AccountRepository interface (NEW)
-│   ├── activity.go         # ActivityRepository interface (NEW)
-│   ├── audit.go            # AuditRepository interface (NEW)
+│   ├── account.go             # ❌ AccountRepository interface (NEW)
+│   ├── activity.go            # ❌ ActivityRepository interface (NEW)
+│   ├── audit.go               # ❌ AuditRepository interface (NEW)
 │   └── postgres/
-│       ├── account.go      # (NEW)
-│       ├── activity.go     # (NEW)
-│       └── audit.go        # (NEW)
+│       ├── account.go         # ❌ (NEW)
+│       ├── activity.go        # ❌ (NEW)
+│       ├── audit.go           # ❌ (NEW)
+│       ├── lead_repository.go    # ✅ Existing
+│       ├── customer_repository.go # ✅ Existing
+│       └── calendar_event_repository.go # ✅ Existing
 ├── api/
-│   ├── account_handler.go  # (NEW)
-│   ├── activity_handler.go # (NEW)
-│   ├── config_handler.go   # GET /config (NEW)
-│   └── router.go           # add new routes
+│   ├── account_handler.go     # ❌ (NEW)
+│   ├── activity_handler.go    # ❌ (NEW)
+│   ├── config_handler.go      # ❌ GET /config (NEW)
+│   ├── router.go              # ✅ Existing — add new routes when handlers ready
+│   ├── lead_handler.go        # ✅ Existing
+│   ├── customer_handler.go    # ✅ Existing
+│   ├── calendar_event_handler.go # ✅ Existing
+│   ├── dashboard_handler.go   # ✅ Existing
+│   ├── team_handler.go        # ✅ Existing
+│   └── user_handler.go        # ✅ Existing
+├── auth/                      # ✅ Existing — middleware, claims, static test auth
+├── rbac/                      # ✅ Existing — needs extension for Account/Activity
+├── events/                    # ✅ Existing — event types and recorder/querier interfaces
+└── metrics/                   # ✅ Existing — telemetry interfaces
 ```
 
-### 4.2 API Routes (new)
+### 4.2 API Routes (new) ❌
 
 ```
 GET    /api/v1/config                    # tenant config for frontend
@@ -416,7 +467,7 @@ POST   /api/v1/activities/{id}/submit    # submit report (locks activity, valida
 PATCH  /api/v1/activities/{id}/status    # status transition (validated against config transitions)
 ```
 
-### 4.3 Validation Flow
+### 4.3 Validation Flow ✅ (config layer) / ❌ (handler integration)
 
 ```
 Client POST/PUT /activities
@@ -436,7 +487,9 @@ Client POST/PUT /activities
 
 Submit flow adds `submit_required` field validation and sets `submitted_at`, making the activity read-only.
 
-### 4.4 Account Import
+> **Status:** The validation functions (`ValidateActivity`, `ValidateStatus`, `ValidateStatusTransition`, `ValidateDuration`) are implemented in `internal/config/validator.go` with full test coverage. Integration into actual activity handlers is pending (handlers don't exist yet).
+
+### 4.4 Account Import ❌
 
 Accounts (doctors, pharmacies) come from external data (TGA exports, Dr. Max internal DB). For MVP:
 
@@ -448,9 +501,11 @@ Accounts (doctors, pharmacies) come from external data (TGA exports, Dr. Max int
 
 ---
 
-## 5. Frontend Implementation
+## 5. Frontend Implementation 🔧
 
-### 5.1 New Pages / Routes
+> **Status:** The frontend foundation is fully implemented: React + TypeScript (strict), Vite, TanStack Router, TanStack Query, Tailwind CSS. Existing pages cover leads, customers, calendar, dashboard, team, and my-leads. The DrMax-specific pages (accounts, activities/planner) are not yet built.
+
+### 5.1 New Pages / Routes ❌
 
 | Route                          | Component              | Description                                                |
 | ------------------------------ | ---------------------- | ---------------------------------------------------------- |
@@ -465,7 +520,7 @@ Accounts (doctors, pharmacies) come from external data (TGA exports, Dr. Max int
 | `/activities/:id/edit`         | `ActivityForm`         | Edit activity (blocked if submitted)                       |
 | `/dashboard`                   | `Dashboard`            | Updated: planned vs realized, coverage, field vs non-field |
 
-### 5.2 Dynamic Form Rendering
+### 5.2 Dynamic Form Rendering ❌
 
 The `ActivityForm` component does not hardcode fields. It:
 
@@ -480,7 +535,7 @@ The `ActivityForm` component does not hardcode fields. It:
 4. Marks required fields with visual indicator
 5. On save: sends `{ activity_type, status, due_date, duration, fields: { ... } }` — backend validates
 
-### 5.3 New TypeScript Types
+### 5.3 New TypeScript Types ❌
 
 ```typescript
 // types/config.ts
@@ -548,7 +603,9 @@ interface Activity {
 }
 ```
 
-### 5.4 New TanStack Query Hooks
+### 5.4 New TanStack Query Hooks ❌
+
+> **Note:** Existing TanStack Query hooks are implemented for leads, customers, calendar events, dashboard, teams, and current user (`web/src/services/`). The pattern is established — new hooks follow the same structure.
 
 ```typescript
 // services/config.ts
@@ -574,45 +631,45 @@ usePatchActivityStatus()                       // PATCH /activities/:id/status
 
 ## 6. Implementation Phases
 
-### Phase 1 — Foundation (config + accounts)
+### Phase 1 — Foundation (config + accounts) 🔧
 
-1. **Tenant config system** — `internal/config/` package, YAML loading, validation, tests
-2. **Config API endpoint** — `GET /api/v1/config`
-3. **Account domain + store** — `Account` entity, PostgreSQL repo with JSONB fields, migration 006
-4. **Account API** — CRUD handlers, RBAC (rep sees own, manager sees team)
-5. **Account import endpoint** — bulk upsert for admin/scripts
-6. **Frontend: Account list + detail** — dynamic field rendering from config
-7. **Seed script** — import sample DrMax doctor/pharmacy data
+1. ✅ **Tenant config system** — `internal/config/` package, JSON loading, validation, tests
+2. ❌ **Config API endpoint** — `GET /api/v1/config`
+3. ❌ **Account domain + store** — `Account` entity, PostgreSQL repo with JSONB fields, migration 006
+4. ❌ **Account API** — CRUD handlers, RBAC (rep sees own, manager sees team)
+5. ❌ **Account import endpoint** — bulk upsert for admin/scripts
+6. ❌ **Frontend: Account list + detail** — dynamic field rendering from config
+7. 🔧 **Seed script** — `scripts/seed.sh` and `scripts/seed-data.sql` exist with sample users/teams/customers/leads; needs DrMax-specific doctor/pharmacy account data
 
-### Phase 2 — Activities (core workflow)
+### Phase 2 — Activities (core workflow) ❌
 
-8. **Activity domain + store** — `Activity` entity, PostgreSQL repo, migration 007
-9. **Activity API** — CRUD + status transitions + submit, all validated against config
-10. **Audit log** — migration 008, generic audit recording on activity changes
-11. **Business rules enforcement** — max activities/day, blocked days (vacation/holiday), status transitions
-12. **Frontend: Activity form** — dynamic form from config, per-type field rendering
-13. **Frontend: Planner** — weekly/monthly calendar view with activities
-14. **Frontend: Activity detail** — view + report/submit flow
+8. ❌ **Activity domain + store** — `Activity` entity, PostgreSQL repo, migration 007
+9. ❌ **Activity API** — CRUD + status transitions + submit, all validated against config
+10. ❌ **Audit log** — migration 008, generic audit recording on activity changes
+11. ❌ **Business rules enforcement** — max activities/day, blocked days (vacation/holiday), status transitions
+12. ❌ **Frontend: Activity form** — dynamic form from config, per-type field rendering
+13. ❌ **Frontend: Planner** — weekly/monthly calendar view with activities
+14. ❌ **Frontend: Activity detail** — view + report/submit flow
 
-### Phase 3 — Reporting & Dashboard
+### Phase 3 — Reporting & Dashboard ❌
 
-15. **Dashboard stats API** — planned vs realized, coverage, field vs non-field, per user/team/period
-16. **Frontend: Dashboard** — KPI cards, charts, filters
-17. **Joint visit** — co-visitor association, activity visible to both users
-18. **Frequency tracking** — visits per account vs target from config rules
+15. ❌ **Dashboard stats API** — planned vs realized, coverage, field vs non-field, per user/team/period
+16. 🔧 **Frontend: Dashboard** — basic dashboard with StatCard, UnassignedLeadCard, TeamPerformanceCard exists; needs DrMax KPIs
+17. ❌ **Joint visit** — co-visitor association, activity visible to both users
+18. ❌ **Frequency tracking** — visits per account vs target from config rules
 
-### Phase 4 — Phase 2 Optimizations (post go-live)
+### Phase 4 — Phase 2 Optimizations (post go-live) ❌
 
-19. Weekend activity + recovery days
-20. Drag & drop calendar
-21. Copy-paste activities
-22. Advanced filtering with saved filters
-23. Target group management (quarterly)
-24. Plan generation (rule-based monthly plan proposal)
+19. ❌ Weekend activity + recovery days
+20. ❌ Drag & drop calendar
+21. ❌ Copy-paste activities
+22. ❌ Advanced filtering with saved filters
+23. ❌ Target group management (quarterly)
+24. ❌ Plan generation (rule-based monthly plan proposal)
 
 ---
 
-## 7. Data Migration from Twenty CRM
+## 7. Data Migration from Twenty CRM ❌
 
 For go-live, existing Twenty CRM data needs to be imported:
 
@@ -626,16 +683,16 @@ Script in `scripts/import-twenty.sh` or a Go CLI tool under `cmd/import/`.
 
 ## 8. What Stays, What Goes
 
-| Current Code                | Decision     | Rationale                                                    |
-| --------------------------- | ------------ | ------------------------------------------------------------ |
-| `internal/domain/lead.go`   | **Keep**     | May be useful later; not in the way                          |
-| `internal/domain/customer.go`| **Keep**    | Account replaces it for DrMax, but no need to delete          |
-| `internal/api/lead_handler` | **Keep**     | Still functional, just not used by DrMax frontend             |
-| `internal/api/calendar_*`   | **Keep**     | Activity replaces it, but keep for backward compat            |
-| `internal/events/`          | **Keep**     | Event types still useful; audit_log extends this concept      |
-| `internal/rbac/`            | **Extend**   | Add `CanViewAccount`, `CanUpdateActivity`, `ScopeAccountQuery` |
-| `migrations/001-005`        | **Keep**     | Don't touch existing schema; add new tables alongside         |
-| Frontend routes             | **Extend**   | Add new routes; existing ones stay but won't be in DrMax nav  |
+| Current Code                | Decision     | Status | Rationale                                                    |
+| --------------------------- | ------------ | ------ | ------------------------------------------------------------ |
+| `internal/domain/lead.go`   | **Keep**     | ✅ Kept | May be useful later; not in the way                          |
+| `internal/domain/customer.go`| **Keep**    | ✅ Kept | Account replaces it for DrMax, but no need to delete          |
+| `internal/api/lead_handler` | **Keep**     | ✅ Kept | Still functional, just not used by DrMax frontend             |
+| `internal/api/calendar_*`   | **Keep**     | ✅ Kept | Activity replaces it, but keep for backward compat            |
+| `internal/events/`          | **Keep**     | ✅ Kept | Event types still useful; audit_log extends this concept      |
+| `internal/rbac/`            | **Extend**   | 🔧 Existing | Currently has lead-scoped methods. Needs `CanViewAccount`, `CanUpdateActivity`, `ScopeAccountQuery` |
+| `migrations/001-005`        | **Keep**     | ✅ Kept | Don't touch existing schema; add new tables alongside         |
+| Frontend routes             | **Extend**   | 🔧 Existing | Current routes (leads, customers, calendar, team, my-leads, dashboard) stay; DrMax-specific routes to be added |
 
 ---
 
