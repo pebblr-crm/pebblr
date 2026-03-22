@@ -1,0 +1,1106 @@
+openapi: "3.1.0"
+info:
+  title: Pebblr CRM API
+  description: |
+    REST API for the Pebblr field-sales CRM. All endpoints require a valid
+    Azure AD (Entra ID) OIDC bearer token.
+  version: "1.0.0"
+  contact:
+    name: Pebblr Team
+
+servers:
+  - url: /api/v1
+    description: Current API version
+
+security:
+  - bearerAuth: []
+
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+
+  schemas:
+    # ------------------------------------------------------------------ #
+    # Error
+    # ------------------------------------------------------------------ #
+    ErrorDetail:
+      type: object
+      required: [code, message]
+      properties:
+        code:
+          type: string
+          example: NOT_FOUND
+        message:
+          type: string
+          example: lead not found
+
+    ErrorResponse:
+      type: object
+      required: [error]
+      properties:
+        error:
+          $ref: "#/components/schemas/ErrorDetail"
+
+    # ------------------------------------------------------------------ #
+    # Lead
+    # ------------------------------------------------------------------ #
+    LeadStatus:
+      type: string
+      enum:
+        - new
+        - assigned
+        - in_progress
+        - visited
+        - closed_won
+        - closed_lost
+        - scheduled
+        - hot_lead
+        - follow_up
+        - inquiry
+
+    CustomerType:
+      type: string
+      enum:
+        - retail
+        - wholesale
+        - hospitality
+        - institutional
+        - other
+
+    Lead:
+      type: object
+      required: [id, title, status, teamId, customerId, customerType, createdAt, updatedAt]
+      properties:
+        id:
+          type: string
+          format: uuid
+        title:
+          type: string
+        description:
+          type: string
+        status:
+          $ref: "#/components/schemas/LeadStatus"
+        assigneeId:
+          type: string
+          format: uuid
+        teamId:
+          type: string
+          format: uuid
+        customerId:
+          type: string
+          format: uuid
+        customerType:
+          $ref: "#/components/schemas/CustomerType"
+        company:
+          type: string
+        industry:
+          type: string
+        location:
+          type: string
+        valueCents:
+          type: integer
+          format: int64
+          description: Deal value in the smallest currency unit (e.g. cents for USD).
+        valueCurrency:
+          type: string
+          default: USD
+          description: ISO 4217 currency code.
+        initials:
+          type: string
+          description: Short display label for the lead contact.
+        createdAt:
+          type: string
+          format: date-time
+        updatedAt:
+          type: string
+          format: date-time
+        deletedAt:
+          type: string
+          format: date-time
+          nullable: true
+
+    LeadInput:
+      type: object
+      required: [title, teamId, customerId]
+      properties:
+        title:
+          type: string
+        description:
+          type: string
+        assigneeId:
+          type: string
+          format: uuid
+        teamId:
+          type: string
+          format: uuid
+        customerId:
+          type: string
+          format: uuid
+        customerType:
+          $ref: "#/components/schemas/CustomerType"
+        status:
+          $ref: "#/components/schemas/LeadStatus"
+        company:
+          type: string
+        industry:
+          type: string
+        location:
+          type: string
+        valueCents:
+          type: integer
+          format: int64
+        valueCurrency:
+          type: string
+        initials:
+          type: string
+
+    LeadResponse:
+      type: object
+      required: [lead]
+      properties:
+        lead:
+          $ref: "#/components/schemas/Lead"
+
+    LeadListResponse:
+      type: object
+      required: [items, total, page, limit]
+      properties:
+        items:
+          type: array
+          items:
+            $ref: "#/components/schemas/Lead"
+        total:
+          type: integer
+        page:
+          type: integer
+        limit:
+          type: integer
+
+    StatusPatchInput:
+      type: object
+      required: [status]
+      properties:
+        status:
+          $ref: "#/components/schemas/LeadStatus"
+
+    # ------------------------------------------------------------------ #
+    # Customer
+    # ------------------------------------------------------------------ #
+    Address:
+      type: object
+      properties:
+        street:
+          type: string
+        city:
+          type: string
+        state:
+          type: string
+        country:
+          type: string
+        zip:
+          type: string
+
+    Customer:
+      type: object
+      required: [id, name, type, createdAt, updatedAt]
+      properties:
+        id:
+          type: string
+          format: uuid
+        name:
+          type: string
+        type:
+          $ref: "#/components/schemas/CustomerType"
+        address:
+          $ref: "#/components/schemas/Address"
+        phone:
+          type: string
+        email:
+          type: string
+        notes:
+          type: string
+        createdAt:
+          type: string
+          format: date-time
+        updatedAt:
+          type: string
+          format: date-time
+
+    CustomerInput:
+      type: object
+      required: [name]
+      properties:
+        name:
+          type: string
+        type:
+          $ref: "#/components/schemas/CustomerType"
+        address:
+          $ref: "#/components/schemas/Address"
+        phone:
+          type: string
+        email:
+          type: string
+        notes:
+          type: string
+
+    CustomerResponse:
+      type: object
+      required: [customer]
+      properties:
+        customer:
+          $ref: "#/components/schemas/Customer"
+
+    CustomerDetailResponse:
+      type: object
+      required: [customer, leads]
+      properties:
+        customer:
+          $ref: "#/components/schemas/Customer"
+        leads:
+          type: array
+          items:
+            $ref: "#/components/schemas/Lead"
+
+    CustomerListResponse:
+      type: object
+      required: [items, total, page, limit]
+      properties:
+        items:
+          type: array
+          items:
+            $ref: "#/components/schemas/Customer"
+        total:
+          type: integer
+        page:
+          type: integer
+        limit:
+          type: integer
+
+    # ------------------------------------------------------------------ #
+    # User
+    # ------------------------------------------------------------------ #
+    Role:
+      type: string
+      enum: [rep, manager, admin]
+
+    User:
+      type: object
+      required: [id, email, name, role, teamIds, onlineStatus]
+      properties:
+        id:
+          type: string
+          format: uuid
+        externalId:
+          type: string
+          description: Azure AD Object ID (OID).
+        email:
+          type: string
+          format: email
+        name:
+          type: string
+        role:
+          $ref: "#/components/schemas/Role"
+        teamIds:
+          type: array
+          items:
+            type: string
+            format: uuid
+        avatar:
+          type: string
+          format: uri
+        onlineStatus:
+          type: boolean
+
+    UserMetrics:
+      type: object
+      required: [userId, totalLeads, wonLeads, lostLeads, conversionRate, avgResponseTimeHours]
+      properties:
+        userId:
+          type: string
+          format: uuid
+        totalLeads:
+          type: integer
+        wonLeads:
+          type: integer
+        lostLeads:
+          type: integer
+        conversionRate:
+          type: number
+          format: double
+          description: Percentage of closed leads that were won (0–100).
+        avgResponseTimeHours:
+          type: number
+          format: double
+
+    UserResponse:
+      type: object
+      required: [user]
+      properties:
+        user:
+          $ref: "#/components/schemas/User"
+
+    UserListResponse:
+      type: object
+      required: [items, total]
+      properties:
+        items:
+          type: array
+          items:
+            $ref: "#/components/schemas/User"
+        total:
+          type: integer
+
+    # ------------------------------------------------------------------ #
+    # Team
+    # ------------------------------------------------------------------ #
+    Team:
+      type: object
+      required: [id, name, managerId]
+      properties:
+        id:
+          type: string
+          format: uuid
+        name:
+          type: string
+        managerId:
+          type: string
+          format: uuid
+
+    TeamDetailResponse:
+      type: object
+      required: [team, members]
+      properties:
+        team:
+          $ref: "#/components/schemas/Team"
+        members:
+          type: array
+          items:
+            $ref: "#/components/schemas/User"
+
+    TeamListResponse:
+      type: object
+      required: [items, total]
+      properties:
+        items:
+          type: array
+          items:
+            $ref: "#/components/schemas/Team"
+        total:
+          type: integer
+
+    # ------------------------------------------------------------------ #
+    # Calendar Event
+    # ------------------------------------------------------------------ #
+    CalendarEventType:
+      type: string
+      enum: [call, meeting, visit, other]
+
+    CalendarEvent:
+      type: object
+      required: [id, title, eventType, startTime, endTime, organizerId, attendeeIds, createdAt, updatedAt]
+      properties:
+        id:
+          type: string
+          format: uuid
+        title:
+          type: string
+        description:
+          type: string
+        eventType:
+          $ref: "#/components/schemas/CalendarEventType"
+        startTime:
+          type: string
+          format: date-time
+        endTime:
+          type: string
+          format: date-time
+        leadId:
+          type: string
+          format: uuid
+          nullable: true
+        organizerId:
+          type: string
+          format: uuid
+        attendeeIds:
+          type: array
+          items:
+            type: string
+            format: uuid
+        createdAt:
+          type: string
+          format: date-time
+        updatedAt:
+          type: string
+          format: date-time
+
+    CalendarEventInput:
+      type: object
+      required: [title, startTime, endTime]
+      properties:
+        title:
+          type: string
+        description:
+          type: string
+        eventType:
+          $ref: "#/components/schemas/CalendarEventType"
+        startTime:
+          type: string
+          format: date-time
+        endTime:
+          type: string
+          format: date-time
+        leadId:
+          type: string
+          format: uuid
+        attendeeIds:
+          type: array
+          items:
+            type: string
+            format: uuid
+
+    CalendarEventResponse:
+      type: object
+      required: [event]
+      properties:
+        event:
+          $ref: "#/components/schemas/CalendarEvent"
+
+    CalendarEventListResponse:
+      type: object
+      required: [items, total]
+      properties:
+        items:
+          type: array
+          items:
+            $ref: "#/components/schemas/CalendarEvent"
+        total:
+          type: integer
+
+    # ------------------------------------------------------------------ #
+    # Dashboard
+    # ------------------------------------------------------------------ #
+    DashboardStats:
+      type: object
+      required: [totalLeads, unassignedCount, conversionRate, avgResponseTimeHours]
+      properties:
+        totalLeads:
+          type: integer
+        unassignedCount:
+          type: integer
+        conversionRate:
+          type: number
+          format: double
+          description: Percentage of closed leads that were won (0–100).
+        avgResponseTimeHours:
+          type: number
+          format: double
+          description: Average hours from lead creation to close.
+
+  parameters:
+    PageParam:
+      name: page
+      in: query
+      schema:
+        type: integer
+        default: 1
+        minimum: 1
+    LimitParam:
+      name: limit
+      in: query
+      schema:
+        type: integer
+        default: 20
+        minimum: 1
+        maximum: 200
+    IdParam:
+      name: id
+      in: path
+      required: true
+      schema:
+        type: string
+        format: uuid
+
+  responses:
+    Unauthorized:
+      description: Missing or invalid authentication token.
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/ErrorResponse"
+    Forbidden:
+      description: Authenticated user lacks permission.
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/ErrorResponse"
+    NotFound:
+      description: Requested resource not found.
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/ErrorResponse"
+    BadRequest:
+      description: Invalid request body or query parameters.
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/ErrorResponse"
+    InternalError:
+      description: Unexpected server error.
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/ErrorResponse"
+
+# ======================================================================= #
+# Paths
+# ======================================================================= #
+paths:
+
+  # ------------------------------------------------------------------ #
+  # Health
+  # ------------------------------------------------------------------ #
+  /health:
+    get:
+      operationId: getHealth
+      summary: Health check
+      tags: [health]
+      security: []
+      responses:
+        "200":
+          description: Service is healthy.
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [status]
+                properties:
+                  status:
+                    type: string
+                    example: ok
+
+  # ------------------------------------------------------------------ #
+  # Leads
+  # ------------------------------------------------------------------ #
+  /leads:
+    get:
+      operationId: listLeads
+      summary: List leads
+      tags: [leads]
+      parameters:
+        - $ref: "#/components/parameters/PageParam"
+        - $ref: "#/components/parameters/LimitParam"
+        - name: status
+          in: query
+          schema:
+            $ref: "#/components/schemas/LeadStatus"
+        - name: assignee
+          in: query
+          schema:
+            type: string
+            format: uuid
+        - name: team
+          in: query
+          schema:
+            type: string
+            format: uuid
+      responses:
+        "200":
+          description: Paginated lead list.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/LeadListResponse"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "500":
+          $ref: "#/components/responses/InternalError"
+
+    post:
+      operationId: createLead
+      summary: Create a lead
+      tags: [leads]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/LeadInput"
+      responses:
+        "201":
+          description: Lead created.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/LeadResponse"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "500":
+          $ref: "#/components/responses/InternalError"
+
+  /leads/{id}:
+    parameters:
+      - $ref: "#/components/parameters/IdParam"
+
+    get:
+      operationId: getLead
+      summary: Get a lead by ID
+      tags: [leads]
+      responses:
+        "200":
+          description: Lead found.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/LeadResponse"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "500":
+          $ref: "#/components/responses/InternalError"
+
+    put:
+      operationId: updateLead
+      summary: Replace a lead's fields
+      tags: [leads]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/LeadInput"
+      responses:
+        "200":
+          description: Lead updated.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/LeadResponse"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "500":
+          $ref: "#/components/responses/InternalError"
+
+    delete:
+      operationId: deleteLead
+      summary: Soft-delete a lead
+      tags: [leads]
+      responses:
+        "204":
+          description: Lead deleted.
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "500":
+          $ref: "#/components/responses/InternalError"
+
+  /leads/{id}/status:
+    parameters:
+      - $ref: "#/components/parameters/IdParam"
+
+    patch:
+      operationId: patchLeadStatus
+      summary: Transition a lead's status
+      tags: [leads]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/StatusPatchInput"
+      responses:
+        "200":
+          description: Status updated.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/LeadResponse"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "500":
+          $ref: "#/components/responses/InternalError"
+
+  # ------------------------------------------------------------------ #
+  # Customers
+  # ------------------------------------------------------------------ #
+  /customers:
+    get:
+      operationId: listCustomers
+      summary: List customers
+      tags: [customers]
+      parameters:
+        - $ref: "#/components/parameters/PageParam"
+        - $ref: "#/components/parameters/LimitParam"
+        - name: type
+          in: query
+          schema:
+            $ref: "#/components/schemas/CustomerType"
+      responses:
+        "200":
+          description: Paginated customer list.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/CustomerListResponse"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "500":
+          $ref: "#/components/responses/InternalError"
+
+    post:
+      operationId: createCustomer
+      summary: Create a customer
+      tags: [customers]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CustomerInput"
+      responses:
+        "201":
+          description: Customer created.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/CustomerResponse"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "500":
+          $ref: "#/components/responses/InternalError"
+
+  /customers/{id}:
+    parameters:
+      - $ref: "#/components/parameters/IdParam"
+
+    get:
+      operationId: getCustomer
+      summary: Get a customer with associated leads
+      tags: [customers]
+      responses:
+        "200":
+          description: Customer with leads.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/CustomerDetailResponse"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "500":
+          $ref: "#/components/responses/InternalError"
+
+    put:
+      operationId: updateCustomer
+      summary: Replace a customer's fields
+      tags: [customers]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CustomerInput"
+      responses:
+        "200":
+          description: Customer updated.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/CustomerResponse"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "500":
+          $ref: "#/components/responses/InternalError"
+
+  # ------------------------------------------------------------------ #
+  # Users
+  # ------------------------------------------------------------------ #
+  /users:
+    get:
+      operationId: listUsers
+      summary: List users (managers and admins only)
+      tags: [users]
+      responses:
+        "200":
+          description: User list.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/UserListResponse"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "500":
+          $ref: "#/components/responses/InternalError"
+
+  /users/{id}:
+    parameters:
+      - $ref: "#/components/parameters/IdParam"
+
+    get:
+      operationId: getUser
+      summary: Get a user by ID
+      tags: [users]
+      responses:
+        "200":
+          description: User found.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/UserResponse"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "500":
+          $ref: "#/components/responses/InternalError"
+
+  # ------------------------------------------------------------------ #
+  # Teams
+  # ------------------------------------------------------------------ #
+  /teams:
+    get:
+      operationId: listTeams
+      summary: List teams
+      tags: [teams]
+      responses:
+        "200":
+          description: Team list.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/TeamListResponse"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "500":
+          $ref: "#/components/responses/InternalError"
+
+  /teams/{id}:
+    parameters:
+      - $ref: "#/components/parameters/IdParam"
+
+    get:
+      operationId: getTeam
+      summary: Get a team with its members
+      tags: [teams]
+      responses:
+        "200":
+          description: Team with members.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/TeamDetailResponse"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "500":
+          $ref: "#/components/responses/InternalError"
+
+  # ------------------------------------------------------------------ #
+  # Calendar Events
+  # ------------------------------------------------------------------ #
+  /events:
+    get:
+      operationId: listCalendarEvents
+      summary: List calendar events
+      tags: [events]
+      parameters:
+        - name: organizer
+          in: query
+          schema:
+            type: string
+            format: uuid
+        - name: lead
+          in: query
+          schema:
+            type: string
+            format: uuid
+        - name: from
+          in: query
+          schema:
+            type: string
+            format: date-time
+        - name: to
+          in: query
+          schema:
+            type: string
+            format: date-time
+      responses:
+        "200":
+          description: Calendar event list.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/CalendarEventListResponse"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "500":
+          $ref: "#/components/responses/InternalError"
+
+    post:
+      operationId: createCalendarEvent
+      summary: Create a calendar event
+      tags: [events]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CalendarEventInput"
+      responses:
+        "201":
+          description: Event created.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/CalendarEventResponse"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "500":
+          $ref: "#/components/responses/InternalError"
+
+  /events/{id}:
+    parameters:
+      - $ref: "#/components/parameters/IdParam"
+
+    get:
+      operationId: getCalendarEvent
+      summary: Get a calendar event by ID
+      tags: [events]
+      responses:
+        "200":
+          description: Event found.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/CalendarEventResponse"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "500":
+          $ref: "#/components/responses/InternalError"
+
+    put:
+      operationId: updateCalendarEvent
+      summary: Replace a calendar event's fields
+      tags: [events]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CalendarEventInput"
+      responses:
+        "200":
+          description: Event updated.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/CalendarEventResponse"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "500":
+          $ref: "#/components/responses/InternalError"
+
+    delete:
+      operationId: deleteCalendarEvent
+      summary: Delete a calendar event
+      tags: [events]
+      responses:
+        "204":
+          description: Event deleted.
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "500":
+          $ref: "#/components/responses/InternalError"
+
+  # ------------------------------------------------------------------ #
+  # Dashboard
+  # ------------------------------------------------------------------ #
+  /dashboard/stats:
+    get:
+      operationId: getDashboardStats
+      summary: Get aggregate dashboard statistics
+      tags: [dashboard]
+      responses:
+        "200":
+          description: Dashboard statistics.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/DashboardStats"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "500":
+          $ref: "#/components/responses/InternalError"
+
+tags:
+  - name: health
+    description: Service health checks
+  - name: leads
+    description: Sales lead management
+  - name: customers
+    description: Customer records
+  - name: users
+    description: User profiles and metrics
+  - name: teams
+    description: Team management
+  - name: events
+    description: Calendar events and scheduling
+  - name: dashboard
+    description: Aggregate statistics and KPIs
