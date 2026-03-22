@@ -2,6 +2,13 @@ import { useQuery, type UseQueryResult } from '@tanstack/react-query'
 import { api } from './api'
 import type { CalendarEvent, CalendarEventListParams } from '@/types/calendar'
 
+interface CalendarEventListResponse {
+  items: CalendarEvent[]
+  total: number
+  page: number
+  limit: number
+}
+
 export const calendarKeys = {
   all: ['events'] as const,
   lists: () => [...calendarKeys.all, 'list'] as const,
@@ -17,10 +24,11 @@ function buildCalendarPath(params: CalendarEventListParams): string {
   return query ? `/events?${query}` : '/events'
 }
 
-export function fetchCalendarEvents(
+export async function fetchCalendarEvents(
   params: CalendarEventListParams = {},
 ): Promise<CalendarEvent[]> {
-  return api.get<CalendarEvent[]>(buildCalendarPath(params))
+  const res = await api.get<CalendarEventListResponse>(buildCalendarPath(params))
+  return res.items
 }
 
 export function useCalendarEvents(

@@ -1,9 +1,9 @@
 @import "tailwindcss";
-@import url('https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&family=Inter:wght@300;400;500;600&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&family=DM+Sans:ital,wght@0,300;0,400;0,500;0,600;1,400&display=swap');
 
 @theme {
   --font-headline: "Manrope", sans-serif;
-  --font-body: "Inter", sans-serif;
+  --font-body: "DM Sans", sans-serif;
 
   --color-primary: #00355f;
   --color-primary-container: #0f4c81;

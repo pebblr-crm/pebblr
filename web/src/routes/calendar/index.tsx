@@ -94,7 +94,7 @@ export function CalendarPage() {
                 <div>
                   <p className="text-xs font-bold text-on-surface">
                     {events.filter((e) => {
-                      const d = new Date(e.date)
+                      const d = new Date(e.startTime)
                       return d.getDate() === now.getDate() && d.getMonth() === now.getMonth()
                     }).length} Events Today
                   </p>

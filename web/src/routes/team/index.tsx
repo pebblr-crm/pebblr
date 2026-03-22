@@ -1,86 +1,16 @@
 import { createRoute } from '@tanstack/react-router'
 import { motion } from 'motion/react'
-import { MoreVertical, UserPlus } from 'lucide-react'
+import { UserPlus } from 'lucide-react'
 import { Route as rootRoute } from '../__root'
 import { LoadingSpinner } from '../../components/LoadingSpinner'
+import { MemberCard } from '../../components/MemberCard'
 import { useTeamMembers } from '../../services/teams'
-import type { TeamMember } from '../../types/team'
 
 export const Route = createRoute({
   getParentRoute: () => rootRoute,
   path: '/team',
   component: TeamPage,
 })
-
-function MemberStatusDot({ status }: { status: TeamMember['status'] }) {
-  const colorMap = {
-    online: 'bg-tertiary-fixed',
-    away: 'bg-amber-400',
-    offline: 'bg-slate-300',
-  }
-  return <span className={`w-2.5 h-2.5 rounded-full ${colorMap[status]}`} />
-}
-
-function TeamMemberCard({ member }: { member: TeamMember }) {
-  const completionRate = member.metrics.assigned > 0
-    ? Math.round((member.metrics.completed / member.metrics.assigned) * 100)
-    : 0
-
-  return (
-    <div className="bg-surface-container-lowest p-6 rounded-xl shadow-sm border border-slate-50 hover:shadow-md transition-shadow">
-      <div className="flex items-start justify-between mb-4">
-        <div className="flex items-center space-x-3">
-          <div className="relative">
-            <img
-              src={member.avatar}
-              alt={member.name}
-              className="w-14 h-14 rounded-full object-cover"
-              referrerPolicy="no-referrer"
-            />
-            <span className="absolute bottom-0 right-0 w-3.5 h-3.5 border-2 border-white rounded-full">
-              <MemberStatusDot status={member.status} />
-            </span>
-          </div>
-          <div>
-            <p className="font-bold text-on-surface">{member.name}</p>
-            <p className="text-xs text-on-surface-variant">{member.role}</p>
-          </div>
-        </div>
-        <button className="p-2 text-slate-400 hover:text-primary transition-colors">
-          <MoreVertical className="w-4 h-4" />
-        </button>
-      </div>
-
-      <div className="grid grid-cols-3 gap-4 mt-4">
-        <div className="text-center">
-          <p className="text-[10px] font-bold text-on-surface-variant uppercase mb-1">Assigned</p>
-          <p className="text-lg font-extrabold text-primary font-headline">{member.metrics.assigned}</p>
-        </div>
-        <div className="text-center">
-          <p className="text-[10px] font-bold text-on-surface-variant uppercase mb-1">Completed</p>
-          <p className="text-lg font-extrabold text-tertiary-container font-headline">{member.metrics.completed}</p>
-        </div>
-        <div className="text-center">
-          <p className="text-[10px] font-bold text-on-surface-variant uppercase mb-1">Efficiency</p>
-          <p className="text-lg font-extrabold text-on-surface font-headline">{member.metrics.efficiency}%</p>
-        </div>
-      </div>
-
-      <div className="mt-4">
-        <div className="flex justify-between items-center mb-1">
-          <span className="text-[10px] font-medium text-on-surface-variant">Completion rate</span>
-          <span className="text-[10px] font-bold text-primary">{completionRate}%</span>
-        </div>
-        <div className="h-1.5 w-full bg-slate-100 rounded-full overflow-hidden">
-          <div
-            className="h-full bg-primary rounded-full"
-            style={{ width: `${completionRate}%` }}
-          />
-        </div>
-      </div>
-    </div>
-  )
-}
 
 export function TeamPage() {
   const { data, isLoading, isError } = useTeamMembers({ limit: 50 })
@@ -128,7 +58,7 @@ export function TeamPage() {
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
           {members.map((member) => (
-            <TeamMemberCard key={member.id} member={member} />
+            <MemberCard key={member.id} member={member} />
           ))}
         </div>
       )}

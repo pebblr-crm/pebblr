@@ -1,6 +1,7 @@
 package api
 
 import (
+	"encoding/json"
 	"io/fs"
 	"log/slog"
 	"net/http"
@@ -9,18 +10,22 @@ import (
 
 	"github.com/go-chi/chi/v5"
 	chimiddleware "github.com/go-chi/chi/v5/middleware"
+	"github.com/pebblr/pebblr/internal/rbac"
 )
 
 // RouterConfig holds dependencies for the HTTP router.
 type RouterConfig struct {
- Logger               *slog.Logger
-    LeadHandler          *LeadHandler
-    CustomerHandler      *CustomerHandler
-    CalendarEventHandler *CalendarEventHandler
-    TeamHandler          *TeamHandler
-    UserHandler          *UserHandler
-    DashboardHandler     *DashboardHandler
-    WebDistPath          string
+	Logger               *slog.Logger
+	LeadHandler          *LeadHandler
+	CustomerHandler      *CustomerHandler
+	CalendarEventHandler *CalendarEventHandler
+	TeamHandler          *TeamHandler
+	UserHandler          *UserHandler
+	DashboardHandler     *DashboardHandler
+	WebDistPath          string
+	// DevAuth bypasses token validation and injects a default admin user.
+	// Must only be used for local development.
+	DevAuth bool
 }
 
 // NewRouter constructs and returns the application HTTP router.
@@ -38,9 +43,17 @@ func NewRouter(cfg RouterConfig) http.Handler {
 	r.Get("/readyz", healthHandler)
 
 	r.Route("/api/v1", func(r chi.Router) {
-		r.Use(authMiddleware)
+		if cfg.DevAuth {
+			cfg.Logger.Warn("dev auth enabled — all requests use a default admin identity")
+			r.Use(devAuthMiddleware)
+		} else {
+			r.Use(authMiddleware)
+		}
 
 		r.Get("/health", healthHandler)
+
+		// Current user endpoint
+		r.Get("/me", meHandler)
 
 		// Lead routes
 		r.Route("/leads", func(r chi.Router) {
@@ -142,6 +155,17 @@ func healthHandler(w http.ResponseWriter, _ *http.Request) {
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(http.StatusOK)
 	_, _ = w.Write([]byte(`{"status":"ok"}`))
+}
+
+func meHandler(w http.ResponseWriter, r *http.Request) {
+	user, err := rbac.UserFromContext(r.Context())
+	if err != nil {
+		writeError(w, http.StatusUnauthorized, "UNAUTHORIZED", "missing authenticated user")
+		return
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(http.StatusOK)
+	_ = json.NewEncoder(w).Encode(user)
 }
 
 func notImplementedHandler(w http.ResponseWriter, _ *http.Request) {

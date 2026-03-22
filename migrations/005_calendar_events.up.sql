@@ -3,7 +3,7 @@
 CREATE TABLE IF NOT EXISTS calendar_events (
     id         UUID        PRIMARY KEY DEFAULT gen_random_uuid(),
     title      TEXT        NOT NULL,
-    event_type TEXT        NOT NULL CHECK (event_type IN ('sync', 'visit', 'review', 'callback', 'lunch', 'demo')),
+    event_type TEXT        NOT NULL CHECK (event_type IN ('call', 'meeting', 'sync', 'visit', 'review', 'callback', 'lunch', 'demo', 'other')),
     start_time TIMESTAMPTZ NOT NULL,
     end_time   TIMESTAMPTZ,
     client     TEXT        NOT NULL DEFAULT '',

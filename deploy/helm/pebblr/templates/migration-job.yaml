@@ -1,7 +1,7 @@
 apiVersion: batch/v1
 kind: Job
 metadata:
-  name: {{ include "pebblr.fullname" . }}-migrate-{{ .Release.Revision }}
+  name: {{ include "pebblr.fullname" . }}-migrate-{{ .Release.Revision }}-{{ now | date "20060102150405" }}
   namespace: {{ .Release.Namespace }}
   labels:
     {{- include "pebblr.labels" . | nindent 4 }}

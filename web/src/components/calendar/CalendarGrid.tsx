@@ -26,7 +26,7 @@ export function CalendarGrid({ events, year, month }: CalendarGridProps) {
         {Array.from({ length: daysInMonth }).map((_, i) => {
           const day = i + 1
           const dayEvents = events.filter((e) => {
-            const d = new Date(e.date)
+            const d = new Date(e.startTime)
             return d.getDate() === day && d.getMonth() + 1 === month
           })
           const isToday =

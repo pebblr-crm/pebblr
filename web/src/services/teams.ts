@@ -1,6 +1,6 @@
 import { useQuery, type UseQueryResult } from '@tanstack/react-query'
 import { api } from './api'
-import type { TeamMember, TeamListParams } from '@/types/team'
+import type { TeamMember, TeamListParams, MemberStatus } from '@/types/team'
 import type { PaginatedResponse } from '@/types/api'
 
 export const teamKeys = {
@@ -11,18 +11,39 @@ export const teamKeys = {
   detail: (id: string) => [...teamKeys.details(), id] as const,
 }
 
-function buildTeamPath(params: TeamListParams): string {
-  const qs = new URLSearchParams()
-  if (params.page !== undefined) qs.set('page', String(params.page))
-  if (params.limit !== undefined) qs.set('limit', String(params.limit))
-  const query = qs.toString()
-  return query ? `/teams?${query}` : '/teams'
+/** Raw user shape returned by GET /api/v1/users */
+interface ApiUser {
+  id: string
+  email: string
+  name: string
+  role: string
+  teamIds: string[]
+  avatar: string
+  onlineStatus: MemberStatus
 }
 
-export function fetchTeamMembers(
-  params: TeamListParams = {},
+interface ApiUserList {
+  items: ApiUser[]
+  total: number
+}
+
+function mapUserToMember(u: ApiUser): TeamMember {
+  return {
+    id: u.id,
+    name: u.name,
+    role: u.role,
+    avatar: u.avatar,
+    status: u.onlineStatus ?? 'offline',
+    metrics: { assigned: 0, completed: 0, efficiency: 0 },
+  }
+}
+
+export async function fetchTeamMembers(
+  _params: TeamListParams = {},
 ): Promise<PaginatedResponse<TeamMember>> {
-  return api.get<PaginatedResponse<TeamMember>>(buildTeamPath(params))
+  const data = await api.get<ApiUserList>('/users')
+  const members = data.items.map(mapUserToMember)
+  return { items: members, total: data.total, page: 1, limit: members.length }
 }
 
 export function useTeamMembers(

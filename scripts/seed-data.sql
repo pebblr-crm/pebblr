@@ -27,6 +27,7 @@ ON CONFLICT (id) DO NOTHING;
 -- Team Members
 -- ============================================================
 INSERT INTO team_members (team_id, user_id) VALUES
+  ('b0000000-0000-0000-0000-000000000001', 'a0000000-0000-0000-0000-000000000001'),
   ('b0000000-0000-0000-0000-000000000001', 'a0000000-0000-0000-0000-000000000002'),
   ('b0000000-0000-0000-0000-000000000001', 'a0000000-0000-0000-0000-000000000004'),
   ('b0000000-0000-0000-0000-000000000001', 'a0000000-0000-0000-0000-000000000005'),
@@ -58,7 +59,7 @@ INSERT INTO leads (id, title, description, status, assignee_id, team_id, custome
    'Greenfield Market — Q2 restock',
    'Replenish seasonal product line ahead of summer. Rep to confirm shelf space and new SKUs.',
    'in_progress',
-   'a0000000-0000-0000-0000-000000000004',
+   'a0000000-0000-0000-0000-000000000001',
    'b0000000-0000-0000-0000-000000000001',
    'c0000000-0000-0000-0000-000000000001',
    'retail',
@@ -68,7 +69,7 @@ INSERT INTO leads (id, title, description, status, assignee_id, team_id, custome
    'Pacific Wholesale — annual contract renewal',
    'Existing customer up for annual review. Discount structure needs renegotiation.',
    'visited',
-   'a0000000-0000-0000-0000-000000000005',
+   'a0000000-0000-0000-0000-000000000001',
    'b0000000-0000-0000-0000-000000000001',
    'c0000000-0000-0000-0000-000000000002',
    'wholesale',
@@ -78,7 +79,7 @@ INSERT INTO leads (id, title, description, status, assignee_id, team_id, custome
    'Northgate Grocers — new locations onboarding',
    'Two new store locations opening next quarter. Coordinate with buyer for consolidated setup.',
    'assigned',
-   'a0000000-0000-0000-0000-000000000004',
+   'a0000000-0000-0000-0000-000000000001',
    'b0000000-0000-0000-0000-000000000001',
    'c0000000-0000-0000-0000-000000000007',
    'retail',
@@ -88,7 +89,7 @@ INSERT INTO leads (id, title, description, status, assignee_id, team_id, custome
    'Pacific Wholesale — cold chain expansion',
    'Opportunity to upsell refrigerated line following warehouse upgrade.',
    'new',
-   NULL,
+   'a0000000-0000-0000-0000-000000000001',
    'b0000000-0000-0000-0000-000000000001',
    'c0000000-0000-0000-0000-000000000002',
    'wholesale',
@@ -98,7 +99,7 @@ INSERT INTO leads (id, title, description, status, assignee_id, team_id, custome
    'Northgate Grocers — holiday promo',
    'Pitch holiday display package; decision needed by end of month.',
    'closed_won',
-   'a0000000-0000-0000-0000-000000000005',
+   'a0000000-0000-0000-0000-000000000001',
    'b0000000-0000-0000-0000-000000000001',
    'c0000000-0000-0000-0000-000000000007',
    'retail',
@@ -276,4 +277,146 @@ INSERT INTO lead_events (id, lead_id, event_type, actor_id, payload) VALUES
   ('e0000000-0000-0000-0000-000000000027',
    'd0000000-0000-0000-0000-000000000011', 'closed',
    'a0000000-0000-0000-0000-000000000006', '{"outcome": "closed_won", "value": 18500}')
+ON CONFLICT (id) DO NOTHING;
+
+-- ============================================================
+-- Lead enrichment (migration 003 columns)
+-- ============================================================
+UPDATE leads SET company = 'Greenfield Market',        industry = 'Grocery',       location = 'Portland, OR',      value_cents = 320000,  initials = 'AA' WHERE id = 'd0000000-0000-0000-0000-000000000001';
+UPDATE leads SET company = 'Pacific Wholesale Co.',    industry = 'Distribution',  location = 'Seattle, WA',       value_cents = 1450000, initials = 'AA' WHERE id = 'd0000000-0000-0000-0000-000000000002';
+UPDATE leads SET company = 'Northgate Grocers',        industry = 'Grocery',       location = 'Tacoma, WA',        value_cents = 560000,  initials = 'AA' WHERE id = 'd0000000-0000-0000-0000-000000000003';
+UPDATE leads SET company = 'Pacific Wholesale Co.',    industry = 'Distribution',  location = 'Seattle, WA',       value_cents = 890000,  initials = 'AA' WHERE id = 'd0000000-0000-0000-0000-000000000004';
+UPDATE leads SET company = 'Northgate Grocers',        industry = 'Grocery',       location = 'Tacoma, WA',        value_cents = 420000,  initials = 'AA' WHERE id = 'd0000000-0000-0000-0000-000000000005';
+UPDATE leads SET company = 'The Grand Hotel',          industry = 'Hospitality',   location = 'San Francisco, CA', value_cents = 2200000, initials = 'CK' WHERE id = 'd0000000-0000-0000-0000-000000000006';
+UPDATE leads SET company = 'Riverside College Dining', industry = 'Education',     location = 'Eugene, OR',        value_cents = 780000,  initials = 'DO' WHERE id = 'd0000000-0000-0000-0000-000000000007';
+UPDATE leads SET company = 'Corner Deli & Café',       industry = 'Food Service',  location = 'Bend, OR',          value_cents = 85000,   initials = 'CK' WHERE id = 'd0000000-0000-0000-0000-000000000008';
+UPDATE leads SET company = 'Sunrise Hospitality Group',industry = 'Hospitality',   location = 'Las Vegas, NV',     value_cents = 8000000, initials = 'DO' WHERE id = 'd0000000-0000-0000-0000-000000000009';
+UPDATE leads SET company = 'Metro Supply Partners',    industry = 'Distribution',  location = 'Sacramento, CA',    value_cents = 620000,  initials = ''   WHERE id = 'd0000000-0000-0000-0000-000000000010';
+UPDATE leads SET company = 'The Grand Hotel',          industry = 'Hospitality',   location = 'San Francisco, CA', value_cents = 1850000, initials = 'CK' WHERE id = 'd0000000-0000-0000-0000-000000000011';
+UPDATE leads SET company = 'Riverside College Dining', industry = 'Education',     location = 'Eugene, OR',        value_cents = 750000,  initials = ''   WHERE id = 'd0000000-0000-0000-0000-000000000012';
+
+-- ============================================================
+-- User avatars and online status (migration 004 columns)
+-- ============================================================
+UPDATE users SET online_status = 'online'  WHERE id = 'a0000000-0000-0000-0000-000000000001';
+UPDATE users SET online_status = 'online'  WHERE id = 'a0000000-0000-0000-0000-000000000002';
+UPDATE users SET online_status = 'away'    WHERE id = 'a0000000-0000-0000-0000-000000000003';
+UPDATE users SET online_status = 'online'  WHERE id = 'a0000000-0000-0000-0000-000000000004';
+UPDATE users SET online_status = 'online'  WHERE id = 'a0000000-0000-0000-0000-000000000005';
+UPDATE users SET online_status = 'offline' WHERE id = 'a0000000-0000-0000-0000-000000000006';
+UPDATE users SET online_status = 'online'  WHERE id = 'a0000000-0000-0000-0000-000000000007';
+
+-- ============================================================
+-- Calendar Events
+-- ============================================================
+INSERT INTO calendar_events (id, title, event_type, start_time, end_time, client, creator_id, team_id) VALUES
+  -- This week: field visits and calls
+  ('f0000000-0000-0000-0000-000000000001',
+   'Greenfield Market — shelf audit',
+   'visit',
+   NOW() + INTERVAL '1 day' + TIME '09:00',
+   NOW() + INTERVAL '1 day' + TIME '10:30',
+   'Greenfield Market',
+   'a0000000-0000-0000-0000-000000000004',
+   'b0000000-0000-0000-0000-000000000001'),
+
+  ('f0000000-0000-0000-0000-000000000002',
+   'Pacific Wholesale — contract review call',
+   'call',
+   NOW() + INTERVAL '1 day' + TIME '14:00',
+   NOW() + INTERVAL '1 day' + TIME '14:45',
+   'Pacific Wholesale Co.',
+   'a0000000-0000-0000-0000-000000000005',
+   'b0000000-0000-0000-0000-000000000001'),
+
+  ('f0000000-0000-0000-0000-000000000003',
+   'North Region — weekly sync',
+   'sync',
+   NOW() + INTERVAL '2 days' + TIME '08:30',
+   NOW() + INTERVAL '2 days' + TIME '09:00',
+   '',
+   'a0000000-0000-0000-0000-000000000002',
+   'b0000000-0000-0000-0000-000000000001'),
+
+  ('f0000000-0000-0000-0000-000000000004',
+   'Northgate Grocers — new store walkthrough',
+   'visit',
+   NOW() + INTERVAL '3 days' + TIME '10:00',
+   NOW() + INTERVAL '3 days' + TIME '12:00',
+   'Northgate Grocers',
+   'a0000000-0000-0000-0000-000000000004',
+   'b0000000-0000-0000-0000-000000000001'),
+
+  ('f0000000-0000-0000-0000-000000000005',
+   'Grand Hotel — F&B proposal presentation',
+   'demo',
+   NOW() + INTERVAL '2 days' + TIME '11:00',
+   NOW() + INTERVAL '2 days' + TIME '12:00',
+   'The Grand Hotel',
+   'a0000000-0000-0000-0000-000000000006',
+   'b0000000-0000-0000-0000-000000000002'),
+
+  ('f0000000-0000-0000-0000-000000000006',
+   'Riverside College — dining director check-in',
+   'callback',
+   NOW() + INTERVAL '3 days' + TIME '13:00',
+   NOW() + INTERVAL '3 days' + TIME '13:30',
+   'Riverside College Dining',
+   'a0000000-0000-0000-0000-000000000007',
+   'b0000000-0000-0000-0000-000000000002'),
+
+  ('f0000000-0000-0000-0000-000000000007',
+   'South Region — weekly sync',
+   'sync',
+   NOW() + INTERVAL '2 days' + TIME '08:30',
+   NOW() + INTERVAL '2 days' + TIME '09:00',
+   '',
+   'a0000000-0000-0000-0000-000000000003',
+   'b0000000-0000-0000-0000-000000000002'),
+
+  ('f0000000-0000-0000-0000-000000000008',
+   'Sunrise Hospitality — quarterly review',
+   'review',
+   NOW() + INTERVAL '5 days' + TIME '10:00',
+   NOW() + INTERVAL '5 days' + TIME '11:30',
+   'Sunrise Hospitality Group',
+   'a0000000-0000-0000-0000-000000000007',
+   'b0000000-0000-0000-0000-000000000002'),
+
+  ('f0000000-0000-0000-0000-000000000009',
+   'Metro Supply — intro lunch',
+   'lunch',
+   NOW() + INTERVAL '4 days' + TIME '12:00',
+   NOW() + INTERVAL '4 days' + TIME '13:30',
+   'Metro Supply Partners',
+   'a0000000-0000-0000-0000-000000000003',
+   'b0000000-0000-0000-0000-000000000002'),
+
+  -- Past events (last week)
+  ('f0000000-0000-0000-0000-000000000010',
+   'Pacific Wholesale — site visit',
+   'visit',
+   NOW() - INTERVAL '5 days' + TIME '09:00',
+   NOW() - INTERVAL '5 days' + TIME '11:00',
+   'Pacific Wholesale Co.',
+   'a0000000-0000-0000-0000-000000000005',
+   'b0000000-0000-0000-0000-000000000001'),
+
+  ('f0000000-0000-0000-0000-000000000011',
+   'Grand Hotel — follow-up call',
+   'call',
+   NOW() - INTERVAL '3 days' + TIME '15:00',
+   NOW() - INTERVAL '3 days' + TIME '15:30',
+   'The Grand Hotel',
+   'a0000000-0000-0000-0000-000000000006',
+   'b0000000-0000-0000-0000-000000000002'),
+
+  ('f0000000-0000-0000-0000-000000000012',
+   'Corner Deli — product demo',
+   'demo',
+   NOW() - INTERVAL '7 days' + TIME '14:00',
+   NOW() - INTERVAL '7 days' + TIME '15:00',
+   'Corner Deli & Café',
+   'a0000000-0000-0000-0000-000000000006',
+   'b0000000-0000-0000-0000-000000000002')
 ON CONFLICT (id) DO NOTHING;

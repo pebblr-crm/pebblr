@@ -64,21 +64,15 @@ function DashboardPage() {
         <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
           <StatCard
             label="Total Active Leads"
-            value={stats ? String(stats.totalActiveLeads) : '—'}
+            value={stats ? String(stats.totalLeads) : '—'}
             change="+12%"
             progress={75}
           />
           <StatCard
             label="Conversion Rate"
-            value={stats ? `${stats.conversionRate}%` : '—'}
+            value={stats ? `${Math.round(stats.conversionRate * 100)}%` : '—'}
             change="+3.2%"
             progress={50}
-          />
-          <StatCard
-            label="Avg. Response Time"
-            value={stats ? `${stats.avgResponseTimeMinutes}m` : '—'}
-            change="-4m"
-            progress={66}
           />
           <StatCard
             label="Unassigned Queue"

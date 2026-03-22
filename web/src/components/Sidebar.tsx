@@ -1,8 +1,9 @@
 import { Link, useRouterState } from '@tanstack/react-router'
-import { LayoutDashboard, Users, CalendarDays, BarChart3, Settings, HelpCircle, Plus } from 'lucide-react'
+import { LayoutDashboard, Users, CalendarDays, BarChart3, Settings, HelpCircle, Plus, UserCheck } from 'lucide-react'
 
 const navItems = [
   { to: '/', label: 'Dashboard', icon: LayoutDashboard },
+  { to: '/my-leads', label: 'My Leads', icon: UserCheck },
   { to: '/leads', label: 'Leads', icon: BarChart3 },
   { to: '/calendar', label: 'Calendar', icon: CalendarDays },
   { to: '/team', label: 'Team', icon: Users },

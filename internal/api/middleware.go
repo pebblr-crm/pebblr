@@ -8,7 +8,25 @@ import (
 	"time"
 
 	"github.com/go-chi/chi/v5/middleware"
+	"github.com/pebblr/pebblr/internal/domain"
+	"github.com/pebblr/pebblr/internal/rbac"
 )
+
+// devAuthMiddleware injects a default admin user into the request context,
+// bypassing token validation. Only for local development.
+func devAuthMiddleware(next http.Handler) http.Handler {
+	devUser := &domain.User{
+		ID:       "a0000000-0000-0000-0000-000000000001",
+		Email:    "admin@pebblr.dev",
+		Name:     "Alex Admin",
+		Role:     domain.RoleAdmin,
+		TeamIDs:  []string{},
+	}
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		ctx := rbac.WithUser(r.Context(), devUser)
+		next.ServeHTTP(w, r.WithContext(ctx))
+	})
+}
 
 // authMiddleware validates Bearer tokens from the Authorization header.
 // TODO: wire up the auth.Authenticator once implemented.

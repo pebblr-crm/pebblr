@@ -1,6 +1,5 @@
 export interface DashboardStats {
-  totalActiveLeads: number
+  totalLeads: number
   conversionRate: number
-  avgResponseTimeMinutes: number
   unassignedCount: number
 }

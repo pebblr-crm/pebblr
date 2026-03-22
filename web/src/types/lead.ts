@@ -29,6 +29,11 @@ export interface Lead {
   teamId: string
   customerId: string
   customerType: CustomerType
+  company: string
+  industry: string
+  location: string
+  valueCents: number
+  initials: string
   createdAt: string
   updatedAt: string
   deletedAt?: string | null

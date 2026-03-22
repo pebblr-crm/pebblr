@@ -2,7 +2,7 @@
 # CI/CD pipelines call these targets only.
 
 .DEFAULT_GOAL := help
-.PHONY: help build test lint typecheck dev-api dev-web dev-db dev-db-stop dev-db-reset cluster-up deploy migrate clean helm-validate e2e e2e-teardown e2e-cluster e2e-db e2e-deploy
+.PHONY: help build test lint typecheck dev-api dev-web dev-db dev-db-stop dev-db-reset seed cluster-up deploy migrate clean helm-validate e2e e2e-teardown e2e-cluster e2e-db e2e-deploy
 
 # ── Pinned versions ───────────────────────────────────────────────────────────
 ESO_VERSION           := 0.12.1
@@ -50,6 +50,9 @@ dev-db-stop: ## Remove PostgreSQL from the pebblr namespace
 
 dev-db-reset: ## Destroy and recreate on-cluster PostgreSQL with fresh seed data
 	@scripts/cluster-db.sh pebblr reset
+
+seed: ## Load sample data (users, teams, customers, leads, calendar events) into on-cluster PostgreSQL
+	@scripts/seed.sh
 
 cluster-up: ## Recreate local Kind cluster; install cert-manager, ESO, and Envoy Gateway (pinned versions)
 	$(AKS_GUARD)

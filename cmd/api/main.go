@@ -67,16 +67,18 @@ func run() error {
 	dashboardHandler := api.NewDashboardHandler(dashboardSvc)
 
 	webDistPath := os.Getenv("WEB_DIST_PATH")
+	devAuth := os.Getenv("DEV_AUTH") == "true"
 
 	router := api.NewRouter(api.RouterConfig{
-         Logger:               logger,
-            LeadHandler:          leadHandler,
-            CustomerHandler:      customerHandler,
-            CalendarEventHandler: calendarEventHandler,
-            TeamHandler:          teamHandler,
-            UserHandler:          userHandler,
-            DashboardHandler:     dashboardHandler,
-            WebDistPath:          webDistPath,
+		Logger:               logger,
+		LeadHandler:          leadHandler,
+		CustomerHandler:      customerHandler,
+		CalendarEventHandler: calendarEventHandler,
+		TeamHandler:          teamHandler,
+		UserHandler:          userHandler,
+		DashboardHandler:     dashboardHandler,
+		WebDistPath:          webDistPath,
+		DevAuth:              devAuth,
 	})
 
 	srv := &http.Server{
