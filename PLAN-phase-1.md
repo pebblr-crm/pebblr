@@ -9,7 +9,7 @@
 3. ✅ **Target domain + store** — `Target` entity, PostgreSQL repo with JSONB fields, migration 006
 4. ✅ **Target API** — CRUD handlers, RBAC (rep sees own, manager sees team)
 5. ✅ **Target import endpoint** — bulk upsert for admin/scripts
-6. ❌ **Frontend: Target list + detail** — reuse `DataTable`, status badge, pagination from leads pages
+6. ✅ **Frontend: Target list + detail** — config-driven list with type filter, dynamic columns, detail page with resolved option labels
 7. ❌ **Remove dead code** — drop Lead, CalendarEvent, lead_events code + frontend pages
 8. 🔧 **Seed script** — exists with sample users/teams; needs DrMax-specific doctor/pharmacy target data
 
@@ -106,26 +106,32 @@ Implemented:
 - Response includes `created`/`updated` counts and the imported targets
 - Full test coverage at service and handler layers
 
-### 3.2 Frontend: Target List + Detail ❌
+### 3.2 Frontend: Target List + Detail ✅
 
-| Route                          | Component        | Description                            |
-| ------------------------------ | ---------------- | -------------------------------------- |
-| `/targets`                     | `TargetList`     | Filterable list of all targets         |
-| `/targets?type=doctor`         | (same, filtered) | Doctor list                            |
-| `/targets?type=pharmacy`       | (same, filtered) | Pharmacy list                          |
-| `/targets/:id`                 | `TargetDetail`   | Target detail + associated activities  |
+| Route                          | Component           | Description                            |
+| ------------------------------ | ------------------- | -------------------------------------- |
+| `/targets`                     | `TargetsPage`       | Filterable list of all targets         |
+| `/targets?type=doctor`         | (same, filtered)    | Doctor list                            |
+| `/targets?type=pharmacy`       | (same, filtered)    | Pharmacy list                          |
+| `/targets/:id`                 | `TargetDetailPage`  | Target detail + associated activities  |
 
-**Reuse from existing frontend:**
-- `DataTable.tsx` — generic TanStack Table wrapper (used by leads page, works as-is for targets)
-- Pagination UI pattern from leads list
-- Status badge styling approach
-- Initials avatar color hashing
-- Layout/Sidebar/TopBar unchanged
-
-**New:**
-- Dynamic field rendering from tenant config (`useConfig()` hook → render fields per target type)
-- Type filter (doctor/pharmacy) dropdown
-- Target detail page with associated activities (placeholder until Phase 2)
+**Implemented:**
+- `web/src/types/config.ts` — TypeScript types mirroring Go `TenantConfig`
+- `web/src/services/config.ts` — `useConfig()` hook (`GET /api/v1/config`, infinite staleTime)
+- `web/src/routes/targets/index.tsx` — Target list with:
+  - Config-driven type filter dropdown (doctor/pharmacy from tenant config)
+  - Dynamic columns that change based on selected type filter
+  - Config-resolved option labels (e.g. key "cardiology" → label "Cardiology")
+  - Location display from JSONB fields (city, county)
+  - Pagination, stats cards, empty/loading/error states
+- `web/src/routes/targets/$targetId.tsx` — Target detail with:
+  - Config-driven field rendering for all dynamic fields per target type
+  - Resolved option labels from config options map
+  - Location composite (address + city + county), type badge
+  - Activities section placeholder (wired up in Phase 2)
+  - Back-to-list navigation
+- Routes registered in `App.tsx`, "Targets" added to `Sidebar.tsx`
+- Full test coverage: `index.test.tsx` (14 tests), `$targetId.test.tsx` (8 tests)
 
 ### 3.3 Remove Dead Code ❌
 
