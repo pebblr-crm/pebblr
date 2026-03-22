@@ -1,8 +1,11 @@
 package api
 
 import (
+	"io/fs"
 	"log/slog"
 	"net/http"
+	"os"
+	"path/filepath"
 
 	"github.com/go-chi/chi/v5"
 	chimiddleware "github.com/go-chi/chi/v5/middleware"
@@ -10,13 +13,14 @@ import (
 
 // RouterConfig holds dependencies for the HTTP router.
 type RouterConfig struct {
-	Logger               *slog.Logger
-	LeadHandler          *LeadHandler
-	CustomerHandler      *CustomerHandler
-	CalendarEventHandler *CalendarEventHandler
-	TeamHandler          *TeamHandler
-	UserHandler          *UserHandler
-	DashboardHandler     *DashboardHandler
+ Logger               *slog.Logger
+    LeadHandler          *LeadHandler
+    CustomerHandler      *CustomerHandler
+    CalendarEventHandler *CalendarEventHandler
+    TeamHandler          *TeamHandler
+    UserHandler          *UserHandler
+    DashboardHandler     *DashboardHandler
+    WebDistPath          string
 }
 
 // NewRouter constructs and returns the application HTTP router.
@@ -28,6 +32,10 @@ func NewRouter(cfg RouterConfig) http.Handler {
 	r.Use(chimiddleware.RealIP)
 	r.Use(chimiddleware.Recoverer)
 	r.Use(requestLogger(cfg.Logger))
+
+	// Kubernetes probe endpoints — outside auth middleware.
+	r.Get("/healthz", healthHandler)
+	r.Get("/readyz", healthHandler)
 
 	r.Route("/api/v1", func(r chi.Router) {
 		r.Use(authMiddleware)
@@ -109,6 +117,23 @@ func NewRouter(cfg RouterConfig) http.Handler {
 			r.Get("/team/{id}", notImplementedHandler)
 		})
 	})
+
+	// Serve frontend SPA from WebDistPath if configured.
+	if cfg.WebDistPath != "" {
+		staticFS := http.Dir(cfg.WebDistPath)
+		fileServer := http.FileServer(staticFS)
+		r.NotFound(func(w http.ResponseWriter, r *http.Request) {
+			// Try to serve the requested file. If it doesn't exist,
+			// fall back to index.html for client-side routing.
+			path := filepath.Clean(r.URL.Path)
+			if _, err := fs.Stat(os.DirFS(cfg.WebDistPath), path[1:]); err == nil {
+				fileServer.ServeHTTP(w, r)
+				return
+			}
+			r.URL.Path = "/"
+			fileServer.ServeHTTP(w, r)
+		})
+	}
 
 	return r
 }

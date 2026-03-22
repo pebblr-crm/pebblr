@@ -90,10 +90,10 @@ jobs:
           kubectl get configmaps -n pebblr-e2e || true
           echo ""
           echo "=== PostgreSQL pod status ==="
-          kubectl get pods -n pebblr-e2e -l app=postgres -o wide || true
+          kubectl get pods -n pebblr-db -l app=postgres -o wide || true
           echo ""
           echo "=== PostgreSQL pod logs (last 50 lines) ==="
-          kubectl logs -n pebblr-e2e -l app=postgres --tail=50 || true
+          kubectl logs -n pebblr-db -l app=postgres --tail=50 || true
           echo ""
           echo "=== Events (sorted by time) ==="
           kubectl get events -n pebblr-e2e --sort-by='.lastTimestamp' || true

@@ -3,32 +3,41 @@
 # Migrations are handled by the Helm migration job (golang-migrate).
 # Works for both local dev (pebblr namespace) and e2e (pebblr-e2e namespace).
 #
+# PostgreSQL runs in a shared "pebblr-db" namespace so both dev and e2e
+# namespaces share a single instance. Each app namespace gets its own
+# Kubernetes Secret pointing at the shared database.
+#
 # Usage: scripts/cluster-db.sh <namespace> [up|stop|reset]
 set -euo pipefail
 
 NAMESPACE="${1:?Usage: $0 <namespace> [up|stop|reset]}"
 ACTION="${2:-up}"
 
+DB_NAMESPACE="pebblr-db"
 POSTGRES_MANIFEST="deploy/k8s/postgres.yaml"
 DB_PASSWORD="pebblr-local"
-DB_HOST="postgres.${NAMESPACE}.svc.cluster.local"
+DB_HOST="postgres.${DB_NAMESPACE}.svc.cluster.local"
 DB_DSN="postgres://pebblr:${DB_PASSWORD}@${DB_HOST}:5432/pebblr?sslmode=disable"
 TIMEOUT=120
 
 log() { echo "==> $*"; }
 
-do_up() {
-  # ── Namespace ───────────────────────────────────────────────────────────
-  kubectl create namespace "$NAMESPACE" --dry-run=client -o yaml | kubectl apply -f -
+ensure_postgres() {
+  # Deploy PostgreSQL into the shared namespace (idempotent).
+  kubectl create namespace "$DB_NAMESPACE" --dry-run=client -o yaml | kubectl apply -f -
 
-  # ── Deploy PostgreSQL ───────────────────────────────────────────────────
-  log "Deploying PostgreSQL into ${NAMESPACE}..."
-  kubectl apply -f "$POSTGRES_MANIFEST" -n "$NAMESPACE"
-  kubectl rollout status deployment/postgres -n "$NAMESPACE" --timeout="${TIMEOUT}s"
-  kubectl wait pod -l app=postgres -n "$NAMESPACE" --for=condition=Ready --timeout="${TIMEOUT}s"
+  if kubectl get deployment/postgres -n "$DB_NAMESPACE" &>/dev/null; then
+    log "PostgreSQL already running in ${DB_NAMESPACE}."
+  else
+    log "Deploying PostgreSQL into ${DB_NAMESPACE}..."
+    kubectl apply -f "$POSTGRES_MANIFEST" -n "$DB_NAMESPACE"
+  fi
 
-  # ── Create app secrets ──────────────────────────────────────────────────
-  log "Creating app secrets..."
+  kubectl rollout status deployment/postgres -n "$DB_NAMESPACE" --timeout="${TIMEOUT}s"
+  kubectl wait pod -l app=postgres -n "$DB_NAMESPACE" --for=condition=Ready --timeout="${TIMEOUT}s"
+}
+
+create_secret() {
   # Secret name must match Helm's {{ fullname }}-secrets.
   # For release "pebblr" in ns "pebblr" → "pebblr-secrets".
   # For release "pebblr-e2e" in ns "pebblr-e2e" → "pebblr-e2e-secrets".
@@ -39,6 +48,8 @@ do_up() {
     secret_name="${NAMESPACE}-secrets"
   fi
 
+  kubectl create namespace "$NAMESPACE" --dry-run=client -o yaml | kubectl apply -f -
+
   kubectl create secret generic "$secret_name" \
     --from-literal=db-dsn="$DB_DSN" \
     --from-literal=db-url="$DB_DSN" \
@@ -46,13 +57,17 @@ do_up() {
     --from-literal=jwt-secret="local-jwt-secret-not-for-production" \
     -n "$NAMESPACE" \
     --dry-run=client -o yaml | kubectl apply -f -
+}
 
-  log "Database ready in namespace ${NAMESPACE}."
+do_up() {
+  ensure_postgres
+  create_secret
+  log "Database ready in namespace ${NAMESPACE} (postgres in ${DB_NAMESPACE})."
 }
 
 do_stop() {
-  log "Removing PostgreSQL from ${NAMESPACE}..."
-  kubectl delete -f "$POSTGRES_MANIFEST" -n "$NAMESPACE" --ignore-not-found
+  log "Removing PostgreSQL from ${DB_NAMESPACE}..."
+  kubectl delete -f "$POSTGRES_MANIFEST" -n "$DB_NAMESPACE" --ignore-not-found
   log "Done."
 }
 

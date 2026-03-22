@@ -10,7 +10,7 @@ serviceAccount:
 podAnnotations: {}
 
 database:
-  host: postgres.pebblr.svc.cluster.local
+  host: postgres.pebblr-db.svc.cluster.local
   sslMode: disable
 
 auth:

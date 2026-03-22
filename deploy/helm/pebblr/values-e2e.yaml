@@ -10,7 +10,7 @@ serviceAccount:
 podAnnotations: {}
 
 database:
-  host: postgres.pebblr-e2e.svc.cluster.local
+  host: postgres.pebblr-db.svc.cluster.local
   port: "5432"
   name: pebblr
   user: pebblr
