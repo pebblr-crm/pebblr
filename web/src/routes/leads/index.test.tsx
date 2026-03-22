@@ -5,6 +5,17 @@ import { LeadsPage } from './index'
 import type { Lead } from '../../types/lead'
 import type { PaginatedResponse } from '../../types/api'
 
+// Mock the router's Link component so tests don't need a full RouterProvider
+vi.mock('@tanstack/react-router', async () => {
+  const actual = await vi.importActual('@tanstack/react-router')
+  return {
+    ...actual,
+    Link: ({ children, className, ...rest }: { children?: React.ReactNode; className?: string; to?: string }) => (
+      <a className={className} href={rest.to}>{children}</a>
+    ),
+  }
+})
+
 // Mock the leads service so tests don't hit the network
 vi.mock('../../services/leads', () => ({
   useLeads: vi.fn(),
