@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"context"
 	"encoding/json"
+	"fmt"
 	"net/http"
 	"net/http/httptest"
 	"testing"
@@ -57,6 +58,16 @@ func (s *stubTargetSvc) Update(_ context.Context, actor *domain.User, target *do
 		return nil, service.ErrForbidden
 	}
 	return target, nil
+}
+
+func (s *stubTargetSvc) Import(_ context.Context, actor *domain.User, targets []*domain.Target) (*store.ImportResult, error) {
+	if actor.Role != domain.RoleAdmin {
+		return nil, service.ErrForbidden
+	}
+	for i, t := range targets {
+		t.ID = fmt.Sprintf("imported-%d", i+1)
+	}
+	return &store.ImportResult{Created: len(targets), Imported: targets}, nil
 }
 
 func targetRouter() http.Handler {
@@ -201,5 +212,53 @@ func TestTargetUpdate_RepForbidden(t *testing.T) {
 	w := targetReqAsRep(t, "PUT", "/target-1", body)
 	if w.Code != http.StatusForbidden {
 		t.Fatalf("expected 403, got %d: %s", w.Code, w.Body.String())
+	}
+}
+
+// --- Import tests ---
+
+func TestTargetImport_AdminSucceeds(t *testing.T) {
+	t.Parallel()
+	body := map[string]any{
+		"targets": []map[string]any{
+			{"externalId": "ext-1", "targetType": "doctor", "name": "Dr. Import", "fields": map[string]any{}},
+			{"externalId": "ext-2", "targetType": "pharmacy", "name": "Central Pharmacy", "fields": map[string]any{}},
+		},
+	}
+	w := targetReq(t, "POST", "/import", body)
+	if w.Code != http.StatusOK {
+		t.Fatalf("expected 200, got %d: %s", w.Code, w.Body.String())
+	}
+
+	var resp map[string]any
+	if err := json.Unmarshal(w.Body.Bytes(), &resp); err != nil {
+		t.Fatalf("decoding response: %v", err)
+	}
+	if int(resp["created"].(float64)) != 2 {
+		t.Errorf("expected 2 created, got %v", resp["created"])
+	}
+}
+
+func TestTargetImport_RepForbidden(t *testing.T) {
+	t.Parallel()
+	body := map[string]any{
+		"targets": []map[string]any{
+			{"externalId": "ext-1", "targetType": "doctor", "name": "Dr. Import"},
+		},
+	}
+	w := targetReqAsRep(t, "POST", "/import", body)
+	if w.Code != http.StatusForbidden {
+		t.Fatalf("expected 403, got %d: %s", w.Code, w.Body.String())
+	}
+}
+
+func TestTargetImport_EmptyTargets(t *testing.T) {
+	t.Parallel()
+	body := map[string]any{
+		"targets": []map[string]any{},
+	}
+	w := targetReq(t, "POST", "/import", body)
+	if w.Code != http.StatusBadRequest {
+		t.Fatalf("expected 400, got %d: %s", w.Code, w.Body.String())
 	}
 }

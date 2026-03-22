@@ -20,6 +20,7 @@ type TargetServicer interface {
 	Get(ctx context.Context, actor *domain.User, id string) (*domain.Target, error)
 	List(ctx context.Context, actor *domain.User, filter store.TargetFilter, page, limit int) (*store.TargetPage, error)
 	Update(ctx context.Context, actor *domain.User, target *domain.Target) (*domain.Target, error)
+	Import(ctx context.Context, actor *domain.User, targets []*domain.Target) (*store.ImportResult, error)
 }
 
 // TargetHandler handles HTTP requests for target CRUD operations.
@@ -37,6 +38,7 @@ func NewTargetRouter(h *TargetHandler) http.Handler {
 	r := chi.NewRouter()
 	r.Get("/", h.List)
 	r.Post("/", h.Create)
+	r.Post("/import", h.Import)
 	r.Get("/{id}", h.Get)
 	r.Put("/{id}", h.Update)
 	return r
@@ -230,4 +232,78 @@ func (h *TargetHandler) Update(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(http.StatusOK)
 	_ = json.NewEncoder(w).Encode(targetResponse{Target: updated})
+}
+
+type importTargetItem struct {
+	ExternalID string         `json:"externalId"`
+	TargetType string         `json:"targetType"`
+	Name       string         `json:"name"`
+	Fields     map[string]any `json:"fields"`
+	AssigneeID string         `json:"assigneeId"`
+	TeamID     string         `json:"teamId"`
+}
+
+type importRequest struct {
+	Targets []importTargetItem `json:"targets"`
+}
+
+type importResponse struct {
+	Created int              `json:"created"`
+	Updated int              `json:"updated"`
+	Targets []*domain.Target `json:"targets"`
+}
+
+// Import handles POST /api/v1/targets/import
+func (h *TargetHandler) Import(w http.ResponseWriter, r *http.Request) {
+	actor, err := rbac.UserFromContext(r.Context())
+	if err != nil {
+		writeError(w, http.StatusUnauthorized, "UNAUTHORIZED", "missing authenticated user")
+		return
+	}
+
+	var req importRequest
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		writeError(w, http.StatusBadRequest, "BAD_REQUEST", "invalid request body")
+		return
+	}
+
+	if len(req.Targets) == 0 {
+		writeError(w, http.StatusBadRequest, "BAD_REQUEST", "targets array is required and must not be empty")
+		return
+	}
+
+	targets := make([]*domain.Target, len(req.Targets))
+	for i, item := range req.Targets {
+		fields := item.Fields
+		if fields == nil {
+			fields = map[string]any{}
+		}
+		targets[i] = &domain.Target{
+			ExternalID: item.ExternalID,
+			TargetType: item.TargetType,
+			Name:       item.Name,
+			Fields:     fields,
+			AssigneeID: item.AssigneeID,
+			TeamID:     item.TeamID,
+		}
+	}
+
+	result, err := h.svc.Import(r.Context(), actor, targets)
+	if err != nil {
+		mapTargetServiceError(w, err)
+		return
+	}
+
+	imported := result.Imported
+	if imported == nil {
+		imported = []*domain.Target{}
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(http.StatusOK)
+	_ = json.NewEncoder(w).Encode(importResponse{
+		Created: result.Created,
+		Updated: result.Updated,
+		Targets: imported,
+	})
 }

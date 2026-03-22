@@ -23,6 +23,13 @@ type TargetPage struct {
 	Limit   int
 }
 
+// ImportResult holds the outcome of a bulk import operation.
+type ImportResult struct {
+	Created  int
+	Updated  int
+	Imported []*domain.Target
+}
+
 // TargetRepository provides CRUD and scoped query access for targets.
 type TargetRepository interface {
 	// Get retrieves a single target by ID.
@@ -37,4 +44,8 @@ type TargetRepository interface {
 
 	// Update persists changes to an existing target.
 	Update(ctx context.Context, target *domain.Target) (*domain.Target, error)
+
+	// Upsert inserts or updates targets keyed by (target_type, external_id).
+	// Returns the number of created and updated records.
+	Upsert(ctx context.Context, targets []*domain.Target) (*ImportResult, error)
 }
