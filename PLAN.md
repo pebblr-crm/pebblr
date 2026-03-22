@@ -20,10 +20,10 @@
 | **Activity domain** | ❌ | Entity, repository, service, handler, submit flow, business rules |
 | **Frontend foundation** | ✅ Done | React + TypeScript strict, Vite, TanStack Router/Query/Table, Tailwind |
 | **Frontend pages (existing)** | ✅ Done | Dashboard, leads, calendar, team, my-leads — all with tests |
-| **Frontend pages (DrMax)** | ❌ | Targets list/detail, planner, activity form/detail |
+| **Frontend pages (DrMax)** | 🔧 Partial | Targets list/detail done; planner, activity form/detail not started |
 | **Helm / K8s / CI** | ✅ Done | Helm chart, Kind cluster, ExternalSecret, migration job, Makefile targets |
 | **Target import** | ✅ Done | `POST /api/v1/targets/import` — admin-only bulk upsert by external ID |
-| **Next step** | | Frontend target list/detail → dead code removal → Phase 2 (activities) |
+| **Next step** | | Dead code removal → Phase 2 (activities) |
 
 ## Context
 
@@ -46,7 +46,7 @@
 3. ✅ **Target domain + store** — `Target` entity, PostgreSQL repo with JSONB fields, migration 006
 4. ✅ **Target API** — CRUD handlers, RBAC (rep sees own, manager sees team)
 5. ✅ **Target import endpoint** — bulk upsert for admin/scripts
-6. ❌ **Frontend: Target list + detail** — reuse `DataTable`, status badge, pagination from leads pages
+6. ✅ **Frontend: Target list + detail** — config-driven list with type filter, dynamic columns, detail page with resolved option labels
 7. ❌ **Remove dead code** — drop Lead, CalendarEvent, lead_events, Customer code + migrations; remove frontend lead/calendar/my-leads pages
 8. 🔧 **Seed script** — exists with sample users/teams; needs DrMax-specific doctor/pharmacy target data
 
