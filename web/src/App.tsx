@@ -6,6 +6,8 @@ import { Route as leadsIndexRoute } from './routes/leads/index'
 import { Route as leadDetailRoute } from './routes/leads/$leadId'
 import { Route as customersIndexRoute } from './routes/customers/index'
 import { Route as customerDetailRoute } from './routes/customers/$customerId'
+import { Route as calendarRoute } from './routes/calendar/index'
+import { Route as teamRoute } from './routes/team/index'
 
 const routeTree = rootRoute.addChildren([
   indexRoute,
@@ -13,6 +15,8 @@ const routeTree = rootRoute.addChildren([
   leadDetailRoute,
   customersIndexRoute,
   customerDetailRoute,
+  calendarRoute,
+  teamRoute,
 ])
 
 const router = createRouter({ routeTree })
