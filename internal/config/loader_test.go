@@ -194,15 +194,15 @@ func TestLoad_SubmitRequiredUnknownField(t *testing.T) {
 	}
 }
 
-func TestLoad_DrMaxConfig(t *testing.T) {
+func TestLoad_SampleConfig(t *testing.T) {
 	t.Parallel()
 	path := filepath.Join("..", "..", "config", "tenant.json")
 	cfg, err := Load(path)
 	if err != nil {
-		t.Fatalf("DrMax config should be valid: %v", err)
+		t.Fatalf("sample config should be valid: %v", err)
 	}
-	if cfg.Tenant.Name != "DrMax Romania" {
-		t.Fatalf("expected %q, got %q", "DrMax Romania", cfg.Tenant.Name)
+	if cfg.Tenant.Name != "Pillzilla Pharmaceuticals" {
+		t.Fatalf("expected %q, got %q", "Pillzilla Pharmaceuticals", cfg.Tenant.Name)
 	}
 	if len(cfg.Activities.Types) != 10 {
 		t.Fatalf("expected 10 activity types, got %d", len(cfg.Activities.Types))
