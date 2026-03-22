@@ -1,4 +1,4 @@
-/* Legacy layout classes — kept for backwards compatibility with LeadsPage */
+/* Shared layout utility classes */
 
 .page-header {
   display: flex;

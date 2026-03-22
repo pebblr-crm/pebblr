@@ -1,11 +1,9 @@
 import { Link, useRouterState } from '@tanstack/react-router'
-import { LayoutDashboard, Users, CalendarDays, BarChart3, Settings, HelpCircle, Plus, UserCheck, Target } from 'lucide-react'
+import { LayoutDashboard, Users, CalendarDays, Settings, HelpCircle, Target } from 'lucide-react'
 
 const navItems = [
   { to: '/', label: 'Dashboard', icon: LayoutDashboard },
   { to: '/targets', label: 'Targets', icon: Target },
-  { to: '/my-leads', label: 'My Leads', icon: UserCheck },
-  { to: '/leads', label: 'Leads', icon: BarChart3 },
   { to: '/calendar', label: 'Calendar', icon: CalendarDays },
   { to: '/team', label: 'Team', icon: Users },
 ] as const
@@ -45,16 +43,6 @@ export function Sidebar() {
             )
           })}
         </nav>
-
-        <div className="mt-8 px-2">
-          <Link
-            to="/leads"
-            className="w-full primary-gradient text-white font-semibold py-3 px-4 rounded-xl flex items-center justify-center space-x-2 shadow-lg shadow-primary/20 hover:opacity-90 transition-opacity no-underline"
-          >
-            <Plus className="w-4 h-4" />
-            <span className="text-sm">New Lead</span>
-          </Link>
-        </div>
       </div>
 
       <div className="mt-auto p-6 border-t border-slate-50">

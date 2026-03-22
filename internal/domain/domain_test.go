@@ -6,55 +6,6 @@ import (
 	"github.com/pebblr/pebblr/internal/domain"
 )
 
-func TestLeadStatusValid(t *testing.T) {
-	t.Parallel()
-	valid := []domain.LeadStatus{
-		domain.LeadStatusNew,
-		domain.LeadStatusAssigned,
-		domain.LeadStatusInProgress,
-		domain.LeadStatusVisited,
-		domain.LeadStatusClosedWon,
-		domain.LeadStatusClosedLost,
-		domain.LeadStatusScheduled,
-		domain.LeadStatusDone,
-		domain.LeadStatusHotLead,
-		domain.LeadStatusFollowUp,
-		domain.LeadStatusInquiry,
-	}
-	for _, s := range valid {
-		s := s
-		t.Run(string(s), func(t *testing.T) {
-			t.Parallel()
-			if !s.Valid() {
-				t.Errorf("expected %q to be valid", s)
-			}
-		})
-	}
-
-	if domain.LeadStatus("unknown").Valid() {
-		t.Error("expected unknown status to be invalid")
-	}
-}
-
-func TestLeadStatusTerminal(t *testing.T) {
-	t.Parallel()
-	if !domain.LeadStatusClosedWon.Terminal() {
-		t.Error("closed_won should be terminal")
-	}
-	if !domain.LeadStatusClosedLost.Terminal() {
-		t.Error("closed_lost should be terminal")
-	}
-	if !domain.LeadStatusDone.Terminal() {
-		t.Error("done should be terminal")
-	}
-	if domain.LeadStatusNew.Terminal() {
-		t.Error("new should not be terminal")
-	}
-	if domain.LeadStatusScheduled.Terminal() {
-		t.Error("scheduled should not be terminal")
-	}
-}
-
 func TestCalendarEventTypeValid(t *testing.T) {
 	t.Parallel()
 	valid := []domain.CalendarEventType{
