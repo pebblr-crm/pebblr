@@ -43,6 +43,7 @@ func NewActivityRouter(h *ActivityHandler) http.Handler {
 	r := chi.NewRouter()
 	r.Get("/", h.List)
 	r.Post("/", h.Create)
+	r.Post("/batch", h.BatchCreate)
 	r.Get("/{id}", h.Get)
 	r.Put("/{id}", h.Update)
 	r.Patch("/{id}", h.Patch)
@@ -509,6 +510,73 @@ func (h *ActivityHandler) Patch(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(http.StatusOK)
 	_ = json.NewEncoder(w).Encode(activityResponse{Activity: updated})
+}
+
+// BatchCreate handles POST /api/v1/activities/batch
+// Creates multiple visit activities from a list of {targetId, dueDate} pairs.
+func (h *ActivityHandler) BatchCreate(w http.ResponseWriter, r *http.Request) {
+	actor, err := rbac.UserFromContext(r.Context())
+	if err != nil {
+		writeError(w, http.StatusUnauthorized, "UNAUTHORIZED", "missing authenticated user")
+		return
+	}
+
+	var req struct {
+		Items []struct {
+			TargetID string `json:"targetId"`
+			DueDate  string `json:"dueDate"`
+		} `json:"items"`
+	}
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		writeError(w, http.StatusBadRequest, "BAD_REQUEST", "invalid request body")
+		return
+	}
+	if len(req.Items) == 0 {
+		writeError(w, http.StatusBadRequest, "BAD_REQUEST", "items is required")
+		return
+	}
+
+	var created []*domain.Activity
+	var errors []map[string]string
+
+	for _, item := range req.Items {
+		dueDate, err := time.Parse("2006-01-02", item.DueDate)
+		if err != nil {
+			errors = append(errors, map[string]string{"targetId": item.TargetID, "error": "invalid date format"})
+			continue
+		}
+		activity := &domain.Activity{
+			ActivityType: "visit",
+			Status:       "",
+			DueDate:      dueDate,
+			Fields:       map[string]any{"visit_type": "f2f"},
+			TargetID:     item.TargetID,
+		}
+		result, err := h.svc.Create(r.Context(), actor, activity)
+		if err != nil {
+			errors = append(errors, map[string]string{"targetId": item.TargetID, "error": err.Error()})
+			continue
+		}
+		prepareActivities(result)
+		created = append(created, result)
+	}
+
+	if created == nil {
+		created = []*domain.Activity{}
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	status := http.StatusCreated
+	if len(errors) > 0 && len(created) == 0 {
+		status = http.StatusBadRequest
+	} else if len(errors) > 0 {
+		status = http.StatusMultiStatus
+	}
+	w.WriteHeader(status)
+	_ = json.NewEncoder(w).Encode(map[string]any{
+		"created": created,
+		"errors":  errors,
+	})
 }
 
 // PatchStatus handles PATCH /api/v1/activities/{id}/status
