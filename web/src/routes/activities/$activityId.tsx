@@ -21,6 +21,7 @@ import {
   getStatusBadgeColor,
 } from '@/utils/config'
 import type { FieldConfig, OptionDef, TenantConfig } from '@/types/config'
+import { usePlannerState } from '@/contexts/planner'
 
 export const Route = createRoute({
   getParentRoute: () => rootRoute,
@@ -30,6 +31,7 @@ export const Route = createRoute({
 
 export function ActivityDetailPage() {
   const { activityId } = Route.useParams()
+  const { state: { from } } = usePlannerState()
   const { data: activity, isLoading, isError, error } = useActivity(activityId)
   const { data: config } = useConfig()
 
@@ -65,7 +67,7 @@ export function ActivityDetailPage() {
     )
   }
 
-  return <ActivityDetailInner activityId={activityId} config={config} />
+  return <ActivityDetailInner activityId={activityId} config={config} from={from ?? undefined} />
 }
 
 // ── Inner component — rendered only when both activity + config are loaded ──
@@ -73,9 +75,10 @@ export function ActivityDetailPage() {
 interface InnerProps {
   activityId: string
   config: TenantConfig
+  from?: string
 }
 
-export function ActivityDetailInner({ activityId, config }: InnerProps) {
+export function ActivityDetailInner({ activityId, config, from }: InnerProps) {
   const { data: activity } = useActivity(activityId)
   const { showToast } = useToast()
 
@@ -195,11 +198,17 @@ export function ActivityDetailInner({ activityId, config }: InnerProps) {
     >
       {/* Back link */}
       <Link
-        to="/"
+        to={from === 'planner' ? '/planner'
+          : from === 'daily' ? '/planner/daily'
+          : from === 'map' ? '/planner/map'
+          : '/'}
         className="inline-flex items-center gap-2 text-sm font-medium text-on-surface-variant hover:text-primary transition-colors no-underline"
       >
         <ArrowLeft className="w-4 h-4" />
-        Back to dashboard
+        {from === 'planner' ? 'Back to planner'
+          : from === 'daily' ? 'Back to daily view'
+          : from === 'map' ? 'Back to map planner'
+          : 'Back to dashboard'}
       </Link>
 
       {/* Header card */}

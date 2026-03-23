@@ -1,4 +1,4 @@
-import { useState, useMemo } from 'react'
+import { useState, useMemo, useEffect } from 'react'
 import { createRoute, Link } from '@tanstack/react-router'
 import { motion } from 'motion/react'
 import { ChevronLeft, ChevronRight, PlusCircle, CalendarDays, TrendingUp } from 'lucide-react'
@@ -11,6 +11,7 @@ import { WeekGrid } from '../../components/planner/WeekGrid'
 import { ActivityList } from '../../components/planner/ActivityList'
 import { formatDate, addDays, getMonday, extractDate } from '@/utils/date'
 import { MONTH_NAMES, getStatusDotColor } from '@/utils/config'
+import { usePlannerState } from '@/contexts/planner'
 
 export const Route = createRoute({
   getParentRoute: () => rootRoute,
@@ -22,11 +23,27 @@ type ViewMode = 'week' | 'month' | 'list'
 
 
 export function PlannerPage() {
+  const { state: plannerState, setWeek, setFrom } = usePlannerState()
   const now = new Date()
   const [viewMode, setViewMode] = useState<ViewMode>('week')
-  const [year, setYear] = useState(now.getFullYear())
-  const [month, setMonth] = useState(now.getMonth() + 1)
-  const [weekStart, setWeekStart] = useState(() => getMonday(now))
+  const [year, setYear] = useState(() => {
+    if (plannerState.week) return new Date(plannerState.week + 'T00:00:00').getFullYear()
+    return now.getFullYear()
+  })
+  const [month, setMonth] = useState(() => {
+    if (plannerState.week) return new Date(plannerState.week + 'T00:00:00').getMonth() + 1
+    return now.getMonth() + 1
+  })
+  const [weekStart, setWeekStart] = useState(() => {
+    if (plannerState.week) return getMonday(new Date(plannerState.week + 'T00:00:00'))
+    return getMonday(now)
+  })
+
+  // Sync week to context so child routes can navigate back
+  useEffect(() => {
+    setWeek(formatDate(weekStart))
+    setFrom('planner')
+  }, [weekStart, setWeek, setFrom])
 
   const { data: config } = useConfig()
 

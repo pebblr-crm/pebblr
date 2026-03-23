@@ -25,6 +25,29 @@
   --color-error-container: #ffdad6;
 }
 
+/* Dark theme overrides — activated by .dark on <html> */
+.dark {
+  --color-primary: #a0cafd;
+  --color-primary-container: #1a5c99;
+  --color-primary-fixed: #d2e4ff;
+  --color-secondary: #b9c7dc;
+  --color-secondary-container: #3a485c;
+  --color-tertiary: #4edea3;
+  --color-tertiary-container: #004d34;
+  --color-tertiary-fixed: #6ffbbe;
+  --color-tertiary-fixed-dim: #4edea3;
+  --color-surface: #111416;
+  --color-surface-container-low: #191c1e;
+  --color-surface-container-lowest: #0d0f11;
+  --color-surface-container-high: #272a2d;
+  --color-surface-container-highest: #323538;
+  --color-on-surface: #e2e2e5;
+  --color-on-surface-variant: #c2c7cf;
+  --color-error: #ffb4ab;
+  --color-error-container: #93000a;
+  color-scheme: dark;
+}
+
 @layer base {
   body {
     font-family: var(--font-body);
@@ -61,9 +84,30 @@
   -webkit-backdrop-filter: blur(12px);
 }
 
+.dark .glass-panel {
+  background: rgba(0, 0, 0, 0.3);
+}
+
 .primary-gradient {
   background: linear-gradient(135deg, #00355f 0%, #0f4c81 100%);
 }
+
+.dark .primary-gradient {
+  background: linear-gradient(135deg, #1a5c99 0%, #a0cafd 100%);
+}
+
+/* Dark mode overrides for hardcoded Tailwind colors */
+.dark .bg-white { background-color: var(--color-surface-container-low) !important; }
+.dark .border-slate-100 { border-color: var(--color-surface-container-high) !important; }
+.dark .border-slate-50 { border-color: var(--color-surface-container-high) !important; }
+.dark .text-slate-400 { color: var(--color-on-surface-variant) !important; }
+.dark .text-slate-500 { color: var(--color-on-surface-variant) !important; }
+.dark .text-slate-600 { color: var(--color-on-surface-variant) !important; }
+.dark .hover\:bg-slate-50:hover { background-color: var(--color-surface-container-high) !important; }
+.dark .bg-slate-50 { background-color: var(--color-surface-container-high) !important; }
+.dark .bg-slate-200 { background-color: var(--color-surface-container-highest) !important; }
+.dark .bg-blue-50 { background-color: rgba(160, 202, 253, 0.15) !important; }
+.dark .border-slate-200 { border-color: var(--color-surface-container-highest) !important; }
 
 /* Scrollbar */
 ::-webkit-scrollbar {

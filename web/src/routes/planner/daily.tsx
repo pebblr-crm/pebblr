@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { createRoute, Link } from '@tanstack/react-router'
 import { motion } from 'motion/react'
 import { ChevronLeft, ChevronRight, ArrowLeft, PlusCircle } from 'lucide-react'
@@ -16,6 +16,7 @@ import {
   CATEGORY_COLORS,
   MONTH_NAMES,
 } from '@/utils/config'
+import { usePlannerState } from '@/contexts/planner'
 
 export const Route = createRoute({
   getParentRoute: () => rootRoute,
@@ -26,8 +27,11 @@ export const Route = createRoute({
 const DAY_NAMES = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday']
 
 export function PlannerDailyPage() {
+  const { setFrom } = usePlannerState()
   const [currentDate, setCurrentDate] = useState(() => new Date())
   const dateStr = formatDate(currentDate)
+
+  useEffect(() => { setFrom('daily') }, [setFrom])
 
   const { data: config } = useConfig()
   const { data, isLoading } = useActivities({ dateFrom: dateStr, dateTo: dateStr, limit: 50 })

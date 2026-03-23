@@ -1,5 +1,5 @@
 import { createRoute } from '@tanstack/react-router'
-import { useState, useMemo, useCallback } from 'react'
+import { useState, useMemo, useCallback, useEffect } from 'react'
 import { APIProvider, Map as GoogleMap, AdvancedMarker } from '@vis.gl/react-google-maps'
 import { MapPin, Check, GripVertical } from 'lucide-react'
 import { Route as rootRoute } from '../__root'
@@ -12,6 +12,7 @@ import { getStatusDotColor, getStatusLabel, getTypeCategory } from '@/utils/conf
 import type { TenantConfig } from '@/types/config'
 import type { Activity } from '@/types/activity'
 import type { Target } from '@/types/target'
+import { usePlannerState } from '@/contexts/planner'
 
 export const Route = createRoute({
   getParentRoute: () => rootRoute,
@@ -71,9 +72,16 @@ function MapPlannerPage() {
   const { data: visitStatus } = useTargetVisitStatus()
   const batchCreate = useBatchCreateActivities()
   const { showToast } = useToast()
+  const { state: plannerState, setWeek, setFrom } = usePlannerState()
 
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set())
-  const [weekOffset, setWeekOffset] = useState(0)
+  const [weekOffset, setWeekOffset] = useState(() => {
+    if (!plannerState.week) return 0
+    const target = new Date(plannerState.week + 'T00:00:00')
+    const now = new Date()
+    const diffDays = Math.round((target.getTime() - now.getTime()) / (1000 * 60 * 60 * 24))
+    return Math.round(diffDays / 7)
+  })
 
   // Compute week range for activity query.
   const weekRange = useMemo(() => {
@@ -85,6 +93,12 @@ function MapPlannerPage() {
       dateTo: formatDate(days[days.length - 1].date),
     }
   }, [weekOffset])
+
+  // Sync week to context for back navigation
+  useEffect(() => {
+    setWeek(weekRange.dateFrom)
+    setFrom('map')
+  }, [weekRange.dateFrom, setWeek, setFrom])
 
   const { data: weekActivities } = useActivities({
     dateFrom: weekRange.dateFrom,

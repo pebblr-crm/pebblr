@@ -16,6 +16,7 @@ const CORE_WIDGET_FIELDS = new Set(['duration', 'account_id'])
 
 interface ActivityFormProps {
   initialData?: Activity
+  initialDate?: string
   onSubmit: (data: CreateActivityInput) => void
   onCancel: () => void
   isSubmitting: boolean
@@ -42,6 +43,7 @@ interface InnerProps extends ActivityFormProps {
 
 function ActivityFormInner({
   initialData,
+  initialDate,
   onSubmit,
   onCancel,
   isSubmitting,
@@ -54,7 +56,7 @@ function ActivityFormInner({
 
   const [activityType, setActivityType] = useState(initialData?.activityType ?? '')
   const [status, setStatus] = useState(initialStatus)
-  const [dueDate, setDueDate] = useState(initialData?.dueDate ? extractDate(initialData.dueDate) : '')
+  const [dueDate, setDueDate] = useState(initialData?.dueDate ? extractDate(initialData.dueDate) : (initialDate ?? ''))
   const [duration, setDuration] = useState(initialData?.duration ?? '')
   const [targetId, setTargetId] = useState(initialData?.targetId ?? '')
   const [fields, setFields] = useState<Record<string, unknown>>(() => {
