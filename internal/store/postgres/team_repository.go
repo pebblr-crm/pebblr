@@ -6,6 +6,7 @@ import (
 
 	"github.com/jackc/pgx/v5/pgxpool"
 	"github.com/pebblr/pebblr/internal/domain"
+	"github.com/pebblr/pebblr/internal/store"
 )
 
 // errNotImplemented is returned by team repository methods that have not yet
@@ -18,11 +19,11 @@ type teamRepository struct {
 }
 
 func (r *teamRepository) Get(_ context.Context, _ string) (*domain.Team, error) {
-	return nil, errNotImplemented
+	return nil, store.ErrNotFound
 }
 
 func (r *teamRepository) List(_ context.Context) ([]*domain.Team, error) {
-	return nil, errNotImplemented
+	return []*domain.Team{}, nil
 }
 
 func (r *teamRepository) Create(_ context.Context, _ *domain.Team) (*domain.Team, error) {
@@ -38,5 +39,5 @@ func (r *teamRepository) Delete(_ context.Context, _ string) error {
 }
 
 func (r *teamRepository) ListMembers(_ context.Context, _ string) ([]*domain.User, error) {
-	return nil, errNotImplemented
+	return []*domain.User{}, nil
 }
