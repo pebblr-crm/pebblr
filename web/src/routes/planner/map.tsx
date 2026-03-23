@@ -199,7 +199,7 @@ function MapPlannerPage() {
       patchActivity.mutate(
         { id: dragActivityId, dueDate: dateStr },
         {
-          onSuccess: () => showToast('Activity rescheduled.'),
+          onSuccess: () => showToast('Activity rescheduled.', 'success'),
           onError: () => showToast('Failed to reschedule activity.'),
         },
       )
@@ -243,7 +243,7 @@ function MapPlannerPage() {
       if (errorCount > 0) {
         showToast(`Created ${createdCount} activities, ${errorCount} failed.`)
       } else {
-        showToast(`Created ${createdCount} activities.`)
+        showToast(`Created ${createdCount} activities.`, 'success')
       }
       setDayAssignments({})
       setSelectedIds(new Set())
