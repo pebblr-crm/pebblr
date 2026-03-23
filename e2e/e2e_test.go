@@ -292,16 +292,22 @@ func TestTeamListReturnsOK(t *testing.T) {
 
 // ── Activity Endpoint Tests ──────────────────────────────────────────────
 
-func TestActivityListReturnsNotImplemented(t *testing.T) {
+func TestActivityListReturnsOK(t *testing.T) {
 	resp := apiRequest(t, "GET", "/api/v1/activities", "")
+	body := readBody(t, resp)
 
-	if resp.StatusCode != http.StatusNotImplemented {
-		body := readBody(t, resp)
-		t.Fatalf("expected 501 for GET /activities, got %d: %s", resp.StatusCode, body)
+	if resp.StatusCode != http.StatusOK {
+		t.Fatalf("expected 200 for GET /activities, got %d: %s", resp.StatusCode, body)
+	}
+
+	var result map[string]any
+	if err := json.Unmarshal([]byte(body), &result); err != nil {
+		t.Fatalf("decoding activity list response: %v\nbody: %s", err, body)
+	}
+	if _, ok := result["items"]; !ok {
+		t.Error("expected 'items' key in activity list response")
 	}
 }
-
-// ── Placeholder Endpoint Tests (501 Not Implemented) ───────────────────
 
 // ── Routing Tests ────────────────────────────────────────────────────────
 
