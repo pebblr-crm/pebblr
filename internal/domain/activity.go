@@ -27,3 +27,56 @@ type Activity struct {
 func (a *Activity) IsSubmitted() bool {
 	return a.SubmittedAt != nil
 }
+
+// ActivityPatch holds a partial update payload for server-side apply PATCH semantics.
+// Nil pointer fields mean "not provided — leave the existing value untouched".
+// Non-nil pointer fields (including pointers to zero values) are applied to the existing record.
+// Fields uses merge semantics: when FieldsPresent is true, keys in Fields are applied
+// individually (nil values clear the key; non-nil values overwrite it). Absent sub-keys
+// in Fields are left untouched.
+type ActivityPatch struct {
+	Status        *string
+	DueDate       *time.Time
+	Duration      *string
+	Routing       *string
+	Fields        map[string]any
+	FieldsPresent bool // true when the "fields" key appeared in the PATCH body
+	TargetID      *string
+	JointVisitUID *string
+}
+
+// ApplyTo merges the patch into dst in-place, respecting server-side apply semantics.
+// Only non-nil pointer fields are applied. When FieldsPresent is true the Fields map
+// is merged key-by-key: nil values remove a key, non-nil values overwrite it.
+func (p *ActivityPatch) ApplyTo(dst *Activity) {
+	if p.Status != nil {
+		dst.Status = *p.Status
+	}
+	if p.DueDate != nil {
+		dst.DueDate = *p.DueDate
+	}
+	if p.Duration != nil {
+		dst.Duration = *p.Duration
+	}
+	if p.Routing != nil {
+		dst.Routing = *p.Routing
+	}
+	if p.FieldsPresent {
+		if dst.Fields == nil {
+			dst.Fields = map[string]any{}
+		}
+		for k, v := range p.Fields {
+			if v == nil {
+				delete(dst.Fields, k)
+			} else {
+				dst.Fields[k] = v
+			}
+		}
+	}
+	if p.TargetID != nil {
+		dst.TargetID = *p.TargetID
+	}
+	if p.JointVisitUID != nil {
+		dst.JointVisitUID = *p.JointVisitUID
+	}
+}

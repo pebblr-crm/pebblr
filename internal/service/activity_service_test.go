@@ -557,6 +557,166 @@ func TestActivitySubmit_AlreadySubmitted(t *testing.T) {
 	}
 }
 
+// --- PartialUpdate tests ---
+
+func TestActivityPartialUpdate_StatusOnly(t *testing.T) {
+	t.Parallel()
+	existing := sampleActivity()
+	repo := &stubActivityRepo{activity: existing}
+	audit := &stubAuditRepo{}
+	svc := newActivitySvc(repo, audit)
+
+	newStatus := "realizat"
+	patch := &domain.ActivityPatch{Status: &newStatus}
+	updated, err := svc.PartialUpdate(context.Background(), repUser(), "activity-1", patch)
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if updated.Status != "realizat" {
+		t.Errorf("expected realizat, got %s", updated.Status)
+	}
+	// DueDate should be unchanged.
+	if !updated.DueDate.Equal(existing.DueDate) {
+		t.Errorf("expected DueDate unchanged, got %v", updated.DueDate)
+	}
+}
+
+func TestActivityPartialUpdate_DueDate(t *testing.T) {
+	t.Parallel()
+	existing := sampleActivity()
+	repo := &stubActivityRepo{activity: existing}
+	audit := &stubAuditRepo{}
+	svc := newActivitySvc(repo, audit)
+
+	newDate := time.Date(2026, 3, 30, 0, 0, 0, 0, time.UTC)
+	patch := &domain.ActivityPatch{DueDate: &newDate}
+	updated, err := svc.PartialUpdate(context.Background(), repUser(), "activity-1", patch)
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if !updated.DueDate.Equal(newDate) {
+		t.Errorf("expected %v, got %v", newDate, updated.DueDate)
+	}
+}
+
+func TestActivityPartialUpdate_FieldsMerge(t *testing.T) {
+	t.Parallel()
+	existing := sampleActivity()
+	existing.Fields = map[string]any{"notes": "old note", "keep": "me"}
+	repo := &stubActivityRepo{activity: existing}
+	audit := &stubAuditRepo{}
+	svc := newActivitySvc(repo, audit)
+
+	patch := &domain.ActivityPatch{
+		Fields:        map[string]any{"notes": "new note"},
+		FieldsPresent: true,
+	}
+	updated, err := svc.PartialUpdate(context.Background(), repUser(), "activity-1", patch)
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if updated.Fields["notes"] != "new note" {
+		t.Errorf("expected notes=new note, got %v", updated.Fields["notes"])
+	}
+	// Unpatched key must survive.
+	if updated.Fields["keep"] != "me" {
+		t.Errorf("expected keep=me, got %v", updated.Fields["keep"])
+	}
+}
+
+func TestActivityPartialUpdate_FieldsNullClearsKey(t *testing.T) {
+	t.Parallel()
+	existing := sampleActivity()
+	existing.Fields = map[string]any{"notes": "old note"}
+	repo := &stubActivityRepo{activity: existing}
+	audit := &stubAuditRepo{}
+	svc := newActivitySvc(repo, audit)
+
+	patch := &domain.ActivityPatch{
+		Fields:        map[string]any{"notes": nil},
+		FieldsPresent: true,
+	}
+	updated, err := svc.PartialUpdate(context.Background(), repUser(), "activity-1", patch)
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if _, exists := updated.Fields["notes"]; exists {
+		t.Error("expected notes key to be cleared")
+	}
+}
+
+func TestActivityPartialUpdate_FieldsAbsentLeavesUntouched(t *testing.T) {
+	t.Parallel()
+	existing := sampleActivity()
+	existing.Fields = map[string]any{"notes": "preserved"}
+	repo := &stubActivityRepo{activity: existing}
+	audit := &stubAuditRepo{}
+	svc := newActivitySvc(repo, audit)
+
+	// Patch with no fields key.
+	newStatus := "realizat"
+	patch := &domain.ActivityPatch{Status: &newStatus}
+	updated, err := svc.PartialUpdate(context.Background(), repUser(), "activity-1", patch)
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if updated.Fields["notes"] != "preserved" {
+		t.Errorf("expected notes preserved, got %v", updated.Fields["notes"])
+	}
+}
+
+func TestActivityPartialUpdate_ForbiddenOtherRep(t *testing.T) {
+	t.Parallel()
+	other := sampleActivity()
+	other.CreatorID = "other-rep"
+	other.TeamID = "team-2"
+	repo := &stubActivityRepo{activity: other}
+	audit := &stubAuditRepo{}
+	svc := newActivitySvc(repo, audit)
+
+	newStatus := "realizat"
+	patch := &domain.ActivityPatch{Status: &newStatus}
+	_, err := svc.PartialUpdate(context.Background(), repUser(), "activity-1", patch)
+	if !errors.Is(err, service.ErrForbidden) {
+		t.Errorf("expected ErrForbidden, got %v", err)
+	}
+}
+
+func TestActivityPartialUpdate_SubmittedBlocked(t *testing.T) {
+	t.Parallel()
+	submitted := sampleActivity()
+	now := time.Now()
+	submitted.SubmittedAt = &now
+	repo := &stubActivityRepo{activity: submitted}
+	audit := &stubAuditRepo{}
+	svc := newActivitySvc(repo, audit)
+
+	newStatus := "anulat"
+	patch := &domain.ActivityPatch{Status: &newStatus}
+	_, err := svc.PartialUpdate(context.Background(), repUser(), "activity-1", patch)
+	if !errors.Is(err, service.ErrSubmitted) {
+		t.Errorf("expected ErrSubmitted, got %v", err)
+	}
+}
+
+func TestActivityPartialUpdate_AuditRecorded(t *testing.T) {
+	t.Parallel()
+	existing := sampleActivity()
+	repo := &stubActivityRepo{activity: existing}
+	audit := &stubAuditRepo{}
+	svc := newActivitySvc(repo, audit)
+
+	newStatus := "realizat"
+	patch := &domain.ActivityPatch{Status: &newStatus}
+	_, err := svc.PartialUpdate(context.Background(), repUser(), "activity-1", patch)
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if len(audit.entries) != 1 || audit.entries[0].EventType != "updated" {
+		t.Errorf("expected 1 updated audit entry, got %v", audit.entries)
+	}
+}
+
 // --- PatchStatus tests ---
 
 func TestActivityPatchStatus_ValidTransition(t *testing.T) {
