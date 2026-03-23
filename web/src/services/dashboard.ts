@@ -4,6 +4,7 @@ import type {
   ActivityStatsResponse,
   CoverageResponse,
   FrequencyResponse,
+  RecoveryBalanceResponse,
   DashboardFilter,
 } from '@/types/dashboard'
 
@@ -14,6 +15,7 @@ export const dashboardKeys = {
   activities: (filter: DashboardFilter) => [...dashboardKeys.all, 'activities', filter] as const,
   coverage: (filter: DashboardFilter) => [...dashboardKeys.all, 'coverage', filter] as const,
   frequency: (filter: DashboardFilter) => [...dashboardKeys.all, 'frequency', filter] as const,
+  recovery: (filter: DashboardFilter) => [...dashboardKeys.all, 'recovery', filter] as const,
 }
 
 // ── API functions ─────────────────────────────────────────────────────────────
@@ -67,5 +69,18 @@ export function useFrequency(
   return useQuery({
     queryKey: dashboardKeys.frequency(filter),
     queryFn: () => fetchFrequency(filter),
+  })
+}
+
+export function fetchRecoveryBalance(filter: DashboardFilter): Promise<RecoveryBalanceResponse> {
+  return api.get<RecoveryBalanceResponse>(buildDashboardPath('recovery', filter))
+}
+
+export function useRecoveryBalance(
+  filter: DashboardFilter,
+): UseQueryResult<RecoveryBalanceResponse> {
+  return useQuery({
+    queryKey: dashboardKeys.recovery(filter),
+    queryFn: () => fetchRecoveryBalance(filter),
   })
 }

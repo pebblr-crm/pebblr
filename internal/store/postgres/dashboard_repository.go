@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"strings"
+	"time"
 
 	"github.com/jackc/pgx/v5/pgxpool"
 	"github.com/pebblr/pebblr/internal/rbac"
@@ -237,6 +238,88 @@ func (r *dashboardRepository) FrequencyStats(ctx context.Context, scope rbac.Act
 	}
 
 	return result, nil
+}
+
+// WeekendFieldActivities returns dates of field-category activities on weekends.
+func (r *dashboardRepository) WeekendFieldActivities(ctx context.Context, scope rbac.ActivityScope, fieldTypes []string, filter store.DashboardFilter) ([]store.WeekendActivity, error) {
+	args := []any{}
+	argIdx := 1
+	conditions := []string{"deleted_at IS NULL"}
+
+	// Weekend: extract DOW (0=Sun, 6=Sat)
+	conditions = append(conditions, "EXTRACT(DOW FROM due_date) IN (0, 6)")
+
+	// Field activity types
+	args = append(args, fieldTypes)
+	conditions = append(conditions, fmt.Sprintf("activity_type = ANY($%d)", argIdx))
+	argIdx++
+
+	scopeSQL, args, argIdx := activityScopeConditions(scope, args, argIdx)
+	if scopeSQL != "" {
+		conditions = append(conditions, scopeSQL)
+	} else if !scope.AllActivities {
+		return nil, nil
+	}
+
+	conditions, args, _ = appendDashboardFilter(conditions, args, argIdx, filter)
+
+	where := "WHERE " + strings.Join(conditions, " AND ")
+	query := `SELECT DISTINCT due_date FROM activities ` + where + ` ORDER BY due_date`
+
+	rows, err := r.pool.Query(ctx, query, args...)
+	if err != nil {
+		return nil, fmt.Errorf("querying weekend field activities: %w", err)
+	}
+	defer rows.Close()
+
+	var result []store.WeekendActivity
+	for rows.Next() {
+		var wa store.WeekendActivity
+		if err := rows.Scan(&wa.DueDate); err != nil {
+			return nil, fmt.Errorf("scanning weekend activity: %w", err)
+		}
+		result = append(result, wa)
+	}
+	return result, rows.Err()
+}
+
+// RecoveryActivities returns dates of recovery-type activities taken.
+func (r *dashboardRepository) RecoveryActivities(ctx context.Context, scope rbac.ActivityScope, recoveryType string, filter store.DashboardFilter) ([]time.Time, error) {
+	args := []any{}
+	argIdx := 1
+	conditions := []string{"deleted_at IS NULL"}
+
+	args = append(args, recoveryType)
+	conditions = append(conditions, fmt.Sprintf("activity_type = $%d", argIdx))
+	argIdx++
+
+	scopeSQL, args, argIdx := activityScopeConditions(scope, args, argIdx)
+	if scopeSQL != "" {
+		conditions = append(conditions, scopeSQL)
+	} else if !scope.AllActivities {
+		return nil, nil
+	}
+
+	conditions, args, _ = appendDashboardFilter(conditions, args, argIdx, filter)
+
+	where := "WHERE " + strings.Join(conditions, " AND ")
+	query := `SELECT due_date FROM activities ` + where + ` ORDER BY due_date`
+
+	rows, err := r.pool.Query(ctx, query, args...)
+	if err != nil {
+		return nil, fmt.Errorf("querying recovery activities: %w", err)
+	}
+	defer rows.Close()
+
+	var result []time.Time
+	for rows.Next() {
+		var t time.Time
+		if err := rows.Scan(&t); err != nil {
+			return nil, fmt.Errorf("scanning recovery activity: %w", err)
+		}
+		result = append(result, t)
+	}
+	return result, rows.Err()
 }
 
 // appendDashboardFilter adds date range and user/team filter conditions.

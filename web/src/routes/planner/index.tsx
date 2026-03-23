@@ -1,10 +1,11 @@
 import { useState, useMemo, useEffect } from 'react'
 import { createRoute, Link } from '@tanstack/react-router'
 import { motion } from 'motion/react'
-import { ChevronLeft, ChevronRight, PlusCircle, CalendarDays, TrendingUp } from 'lucide-react'
+import { ChevronLeft, ChevronRight, PlusCircle, CalendarDays, TrendingUp, Sun } from 'lucide-react'
 import { Route as rootRoute } from '../__root'
 import { LoadingSpinner } from '../../components/LoadingSpinner'
 import { useActivities } from '../../services/activities'
+import { useRecoveryBalance } from '../../services/dashboard'
 import { useConfig } from '../../services/config'
 import { MonthGrid } from '../../components/planner/MonthGrid'
 import { WeekGrid } from '../../components/planner/WeekGrid'
@@ -61,6 +62,8 @@ export function PlannerPage() {
 
   const { data, isLoading } = useActivities({ dateFrom, dateTo, limit: 200 })
   const activities = data?.items ?? []
+
+  const { data: recoveryBalance } = useRecoveryBalance({ dateFrom, dateTo })
 
   function prevPeriod() {
     if (viewMode === 'month') {
@@ -235,6 +238,41 @@ export function PlannerPage() {
                 </div>
               </div>
             </div>
+
+            {/* Recovery balance */}
+            {recoveryBalance && recoveryBalance.earned > 0 && (
+              <div className="bg-surface-container-lowest p-6 rounded-xl shadow-sm border border-slate-100">
+                <h4 className="font-headline font-bold text-primary mb-4 text-sm">Recovery Days</h4>
+                <div className="flex items-start gap-3 mb-3">
+                  <Sun className="w-4 h-4 text-amber-500 mt-0.5" />
+                  <div>
+                    <p className="text-xs font-bold text-on-surface">
+                      {recoveryBalance.balance} available
+                    </p>
+                    <p className="text-[10px] text-on-surface-variant">
+                      {recoveryBalance.earned} earned, {recoveryBalance.taken} taken
+                    </p>
+                  </div>
+                </div>
+                {recoveryBalance.intervals.filter((iv) => !iv.claimed).length > 0 && (
+                  <div className="space-y-1.5">
+                    <p className="text-[9px] uppercase tracking-widest text-slate-400 font-bold">Claim by</p>
+                    {recoveryBalance.intervals
+                      .filter((iv) => !iv.claimed)
+                      .map((iv) => (
+                        <div key={iv.weekendDate} className="flex items-center justify-between text-[10px]">
+                          <span className="text-on-surface-variant">
+                            {new Date(iv.weekendDate).toLocaleDateString('en-GB', { weekday: 'short', day: 'numeric', month: 'short' })}
+                          </span>
+                          <span className="font-bold text-amber-600">
+                            by {new Date(iv.claimBy).toLocaleDateString('en-GB', { day: 'numeric', month: 'short' })}
+                          </span>
+                        </div>
+                      ))}
+                  </div>
+                )}
+              </div>
+            )}
           </div>
 
           {/* Calendar grid */}

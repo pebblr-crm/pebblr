@@ -34,6 +34,10 @@ func (s *stubDashboardService) Frequency(_ context.Context, _ *domain.User, _ st
 	return s.frequency, s.err
 }
 
+func (s *stubDashboardService) RecoveryBalance(_ context.Context, _ *domain.User, _ store.DashboardFilter) (*service.RecoveryBalanceResponse, error) {
+	return &service.RecoveryBalanceResponse{Intervals: []service.RecoveryClaimInterval{}}, nil
+}
+
 func TestDashboardHandler_ActivityStats_OK(t *testing.T) {
 	t.Parallel()
 	svc := &stubDashboardService{

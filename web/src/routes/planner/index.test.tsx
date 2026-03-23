@@ -24,6 +24,10 @@ vi.mock('../../services/config', () => ({
   useConfig: vi.fn(),
 }))
 
+vi.mock('../../services/dashboard', () => ({
+  useRecoveryBalance: vi.fn(() => ({ data: undefined })),
+}))
+
 import { useActivities } from '../../services/activities'
 import { useConfig } from '../../services/config'
 const mockUseActivities = vi.mocked(useActivities)
