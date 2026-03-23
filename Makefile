@@ -2,7 +2,7 @@
 # CI/CD pipelines call these targets only.
 
 .DEFAULT_GOAL := help
-.PHONY: help build test lint typecheck dev-api dev-web dev-db dev-db-stop dev-db-reset seed cluster-up deploy migrate validate-config clean helm-validate e2e e2e-teardown e2e-cluster e2e-db e2e-deploy
+.PHONY: help build test lint typecheck dev-api dev-web dev-db dev-db-stop dev-db-reset seed cluster-up cluster-deps deploy migrate validate-config clean helm-validate e2e e2e-teardown e2e-cluster e2e-db e2e-deploy
 
 # ── Pinned versions ───────────────────────────────────────────────────────────
 ESO_VERSION           := 0.12.1
@@ -58,10 +58,8 @@ seed: ## Load sample data (users, teams, customers, leads, calendar events) into
 	$(AKS_GUARD)
 	@scripts/seed.sh
 
-cluster-up: ## Recreate local Kind cluster; install cert-manager, ESO, and Envoy Gateway (pinned versions)
+cluster-deps: ## Install cert-manager, ESO, and Envoy Gateway into the current cluster (idempotent)
 	$(AKS_GUARD)
-	@kind delete cluster --name $(CLUSTER) 2>/dev/null || true
-	@kind create cluster --name $(CLUSTER) --config $(KIND_CFG)
 	@helm repo add external-secrets https://charts.external-secrets.io 2>/dev/null || true
 	@helm repo add jetstack https://charts.jetstack.io 2>/dev/null || true
 	@helm repo update
@@ -72,10 +70,16 @@ cluster-up: ## Recreate local Kind cluster; install cert-manager, ESO, and Envoy
 	@helm upgrade --install external-secrets external-secrets/external-secrets \
 		--version $(ESO_VERSION) \
 		--namespace external-secrets-operator --create-namespace --wait
-	@helm install eg oci://docker.io/envoyproxy/gateway-helm \
+	@helm upgrade --install eg oci://docker.io/envoyproxy/gateway-helm \
 		--version $(ENVOY_GW_VERSION) \
 		--namespace envoy-gateway-system --create-namespace --wait
 	@kubectl apply -f deploy/k8s/gateway/gatewayclass.yaml
+
+cluster-up: ## Recreate local Kind cluster and install all dependencies
+	$(AKS_GUARD)
+	@kind delete cluster --name $(CLUSTER) 2>/dev/null || true
+	@kind create cluster --name $(CLUSTER) --config $(KIND_CFG)
+	@$(MAKE) cluster-deps
 
 deploy: ## Build and deploy to local Kind cluster via Skaffold
 	$(AKS_GUARD)
