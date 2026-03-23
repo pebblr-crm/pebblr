@@ -28,6 +28,7 @@ export interface StatusDef {
   key: string
   label: string
   initial?: boolean
+  submittable?: boolean
 }
 
 export interface ActivityTypeConfig {

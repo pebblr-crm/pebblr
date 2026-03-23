@@ -27,6 +27,9 @@ var ErrTargetRequired = fmt.Errorf("target required")
 // (e.g. self-reference or non-existent user).
 var ErrInvalidJointVisitor = fmt.Errorf("invalid joint visit user")
 
+// ErrStatusNotSubmittable indicates the activity's current status does not allow submission.
+var ErrStatusNotSubmittable = fmt.Errorf("current status does not allow submission")
+
 // ValidationErrors wraps a slice of config.FieldError for returning from the service layer.
 type ValidationErrors struct {
 	Errors []config.FieldError
@@ -231,6 +234,11 @@ func (s *ActivityService) Submit(ctx context.Context, actor *domain.User, id str
 	}
 	if existing.IsSubmitted() {
 		return nil, ErrSubmitted
+	}
+
+	// Business rule: only closed statuses (e.g. completed, cancelled) allow submission.
+	if s.cfg != nil && !s.cfg.IsSubmittableStatus(existing.Status) {
+		return nil, ErrStatusNotSubmittable
 	}
 
 	// Validate with submit-phase strictness.

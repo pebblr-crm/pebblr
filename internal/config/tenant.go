@@ -42,9 +42,10 @@ type ActivitiesConfig struct {
 
 // StatusDef defines a valid activity status.
 type StatusDef struct {
-	Key     string `json:"key"`
-	Label   string `json:"label"`
-	Initial bool   `json:"initial,omitempty"`
+	Key         string `json:"key"`
+	Label       string `json:"label"`
+	Initial     bool   `json:"initial,omitempty"`
+	Submittable bool   `json:"submittable,omitempty"` // allows report submission
 }
 
 // OptionDef is a generic key/label pair used for select options,
@@ -127,6 +128,16 @@ func (c *TenantConfig) IsValidStatus(key string) bool {
 	for _, s := range c.Activities.Statuses {
 		if s.Key == key {
 			return true
+		}
+	}
+	return false
+}
+
+// IsSubmittableStatus reports whether the given status allows report submission.
+func (c *TenantConfig) IsSubmittableStatus(key string) bool {
+	for _, s := range c.Activities.Statuses {
+		if s.Key == key {
+			return s.Submittable
 		}
 	}
 	return false

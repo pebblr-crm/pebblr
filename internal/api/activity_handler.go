@@ -132,6 +132,10 @@ func mapActivityServiceError(w http.ResponseWriter, err error) {
 		writeError(w, http.StatusConflict, "CONFLICT", "day is blocked by a non-field activity")
 	case errors.Is(err, service.ErrTargetRequired):
 		writeError(w, http.StatusBadRequest, "BAD_REQUEST", "Please select a target before saving")
+	case errors.Is(err, service.ErrInvalidJointVisitor):
+		writeError(w, http.StatusBadRequest, "BAD_REQUEST", "invalid joint visit user")
+	case errors.Is(err, service.ErrStatusNotSubmittable):
+		writeError(w, http.StatusConflict, "CONFLICT", "set status to completed or cancelled before submitting")
 	default:
 		writeError(w, http.StatusInternalServerError, "INTERNAL_ERROR", "an unexpected error occurred")
 	}

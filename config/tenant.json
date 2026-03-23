@@ -33,8 +33,8 @@
   "activities": {
     "statuses": [
       { "key": "planned", "label": "Planned", "initial": true },
-      { "key": "completed", "label": "Completed" },
-      { "key": "cancelled", "label": "Cancelled" }
+      { "key": "completed", "label": "Completed", "submittable": true },
+      { "key": "cancelled", "label": "Cancelled", "submittable": true }
     ],
     "status_transitions": {
       "planned": ["completed", "cancelled"],

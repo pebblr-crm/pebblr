@@ -99,7 +99,9 @@ export function ActivityDetailInner({ activityId, config }: InnerProps) {
   const activityTitle = getActivityTitle(config, act)
   const statusLabel = getStatusLabel(config?.activities, localData.status ?? act.status)
   const statusColor = getStatusBadgeColor(config?.activities, localData.status ?? act.status)
-  const allowedTransitions = config?.activities.status_transitions[localData.status ?? act.status] ?? []
+  const currentStatus = localData.status ?? act.status
+  const allowedTransitions = config?.activities.status_transitions[currentStatus] ?? []
+  const isSubmittable = config?.activities.statuses.find((s) => s.key === currentStatus)?.submittable ?? false
 
   // Flash "Saved" for 500ms after transition from saving→idle
   const [showSavedFlash, setShowSavedFlash] = useState(false)
@@ -354,6 +356,7 @@ export function ActivityDetailInner({ activityId, config }: InnerProps) {
                 saveState={saveState}
                 isSubmitting={isSubmitting}
                 isStatusPending={statusMutation.isPending}
+                isSubmittable={isSubmittable}
                 onClick={requestSubmit}
               />
             </div>
@@ -373,6 +376,7 @@ export function ActivityDetailInner({ activityId, config }: InnerProps) {
               saveState={saveState}
               isSubmitting={isSubmitting}
               isStatusPending={statusMutation.isPending}
+              isSubmittable={isSubmittable}
               onClick={requestSubmit}
             />
           </div>
@@ -398,16 +402,18 @@ interface SubmitButtonProps {
   saveState: string
   isSubmitting: boolean
   isStatusPending: boolean
+  isSubmittable: boolean
   onClick: () => void
 }
 
-function SubmitButton({ saveState, isSubmitting, isStatusPending, onClick }: SubmitButtonProps) {
-  const disabled = isSubmitting || isStatusPending
+function SubmitButton({ saveState, isSubmitting, isStatusPending, isSubmittable, onClick }: SubmitButtonProps) {
+  const disabled = isSubmitting || isStatusPending || !isSubmittable
   return (
     <button
       type="button"
       onClick={onClick}
       disabled={disabled}
+      title={!isSubmittable ? 'Set status to completed or cancelled before submitting' : undefined}
       className="w-full sm:w-auto inline-flex items-center justify-center gap-2 px-6 py-3 min-h-[44px] text-sm font-medium text-white bg-primary rounded-xl hover:bg-primary/90 transition-colors disabled:opacity-50"
       data-testid="submit-report-button"
     >

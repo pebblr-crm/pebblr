@@ -120,8 +120,8 @@ func activityTestConfig() *config.TenantConfig {
 		Activities: config.ActivitiesConfig{
 			Statuses: []config.StatusDef{
 				{Key: "planificat", Label: "Planned", Initial: true},
-				{Key: "realizat", Label: "Realized"},
-				{Key: "anulat", Label: "Cancelled"},
+				{Key: "realizat", Label: "Realized", Submittable: true},
+				{Key: "anulat", Label: "Cancelled", Submittable: true},
 			},
 			StatusTransitions: map[string][]string{
 				"planificat": {"realizat", "anulat"},
@@ -544,6 +544,7 @@ func TestActivityDelete_SubmittedBlocked(t *testing.T) {
 func TestActivitySubmit_Succeeds(t *testing.T) {
 	t.Parallel()
 	existing := sampleActivity()
+	existing.Status = "realizat" // closed status required for submission
 	existing.Fields = map[string]any{"notes": "Visit completed successfully"}
 	repo := &stubActivityRepo{activity: existing}
 	audit := &stubAuditRepo{}
@@ -558,9 +559,24 @@ func TestActivitySubmit_Succeeds(t *testing.T) {
 	}
 }
 
+func TestActivitySubmit_PlannedStatusRejected(t *testing.T) {
+	t.Parallel()
+	existing := sampleActivity() // status is "planificat" (not submittable)
+	existing.Fields = map[string]any{"notes": "some notes"}
+	repo := &stubActivityRepo{activity: existing}
+	audit := &stubAuditRepo{}
+	svc := newActivitySvc(repo, audit)
+
+	_, err := svc.Submit(context.Background(), repUser(), "activity-1")
+	if !errors.Is(err, service.ErrStatusNotSubmittable) {
+		t.Errorf("expected ErrStatusNotSubmittable, got %v", err)
+	}
+}
+
 func TestActivitySubmit_MissingRequiredFields(t *testing.T) {
 	t.Parallel()
 	existing := sampleActivity()
+	existing.Status = "realizat" // closed status, but missing required fields
 	existing.Fields = map[string]any{} // "notes" is submit_required but missing
 	repo := &stubActivityRepo{activity: existing}
 	audit := &stubAuditRepo{}
