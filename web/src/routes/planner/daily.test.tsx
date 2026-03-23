@@ -2,6 +2,7 @@ import { render, screen } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { PlannerDailyPage } from './daily'
+import { formatDate } from '@/utils/date'
 import type { Activity } from '../../types/activity'
 import type { PaginatedResponse } from '../../types/api'
 import type { TenantConfig } from '../../types/config'
@@ -54,11 +55,7 @@ const testConfig: TenantConfig = {
 }
 
 function todayStr(): string {
-  const d = new Date()
-  const y = d.getFullYear()
-  const m = String(d.getMonth() + 1).padStart(2, '0')
-  const day = String(d.getDate()).padStart(2, '0')
-  return `${y}-${m}-${day}`
+  return formatDate(new Date())
 }
 
 function makeActivity(overrides: Partial<Activity> = {}): Activity {

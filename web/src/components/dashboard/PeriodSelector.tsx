@@ -1,4 +1,5 @@
 import { ChevronLeft, ChevronRight } from 'lucide-react'
+import { formatPeriod } from '@/utils/date'
 
 interface PeriodSelectorProps {
   /** Current period in YYYY-MM format */
@@ -14,10 +15,7 @@ function formatPeriodLabel(period: string): string {
 
 function shiftPeriod(period: string, delta: number): string {
   const [year, month] = period.split('-')
-  const date = new Date(Number(year), Number(month) - 1 + delta)
-  const y = date.getFullYear()
-  const m = String(date.getMonth() + 1).padStart(2, '0')
-  return `${y}-${m}`
+  return formatPeriod(new Date(Number(year), Number(month) - 1 + delta))
 }
 
 export function PeriodSelector({ period, onPeriodChange }: PeriodSelectorProps) {
