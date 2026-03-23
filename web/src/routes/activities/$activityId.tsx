@@ -7,7 +7,8 @@ import { Route as rootRoute } from '../__root'
 import { LoadingSpinner } from '../../components/LoadingSpinner'
 import { SaveStateIndicator, SaveSuccessFlash } from '../../components/SaveStateIndicator'
 import { useActivity, usePatchActivityStatus } from '../../services/activities'
-import { useTargets } from '../../services/targets'
+import { useTarget, useTargets } from '../../services/targets'
+import { useTeamMembers } from '../../services/teams'
 import { useConfig } from '../../services/config'
 import { useInlineActivityEditor } from '../../hooks/useInlineActivityEditor'
 import { extractDate } from '@/utils/date'
@@ -254,20 +255,6 @@ export function ActivityDetailInner({ activityId, config }: InnerProps) {
             </div>
           )}
 
-          {/* Joint visit user */}
-          <div>
-            <label className={labelClass}>Joint visit user</label>
-            <input
-              type="text"
-              value={localData.jointVisitUserId ?? ''}
-              onChange={(e) => handleFieldChange('jointVisitUserId', e.target.value)}
-              onBlur={handleFieldBlur}
-              disabled={isSubmitted}
-              placeholder="User ID (optional)"
-              className={inputClass()}
-              data-testid="joint-visit-input"
-            />
-          </div>
         </div>
       </div>
 
@@ -279,7 +266,7 @@ export function ActivityDetailInner({ activityId, config }: InnerProps) {
           </h2>
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
             {typeConfig.fields
-              .filter((f) => !['duration', 'account_id', 'joint_visit_user_id'].includes(f.key))
+              .filter((f) => !['duration', 'account_id'].includes(f.key))
               .map((f) => (
                 <DynamicField
                   key={f.key}
@@ -399,9 +386,9 @@ function TargetField({ value, onChange, onBlur, disabled, error }: TargetFieldPr
   const [search, setSearch] = useState('')
   const [modalOpen, setModalOpen] = useState(false)
   const { data: targetsResult } = useTargets({ q: search, limit: 20 })
-  const { data: selectedTargetsResult } = useTargets({ q: value, limit: 5 })
+  const { data: selectedTarget } = useTarget(value)
 
-  const selectedName = selectedTargetsResult?.items.find((t) => t.id === value)?.name ?? value
+  const selectedName = selectedTarget?.name ?? value
 
   if (disabled) {
     return <p className="text-sm text-on-surface py-2">{selectedName || '—'}</p>
@@ -481,6 +468,8 @@ interface DynamicFieldProps {
 }
 
 function DynamicField({ fieldDef, value, onChange, onBlur, disabled, error, config }: DynamicFieldProps) {
+  const { data: membersResult } = useTeamMembers()
+
   function resolveOptions(): OptionDef[] {
     if (fieldDef.options_ref) {
       if (config.options[fieldDef.options_ref]) return config.options[fieldDef.options_ref]
@@ -551,6 +540,41 @@ function DynamicField({ fieldDef, value, onChange, onBlur, disabled, error, conf
           {error && <p className="text-xs text-error mt-1">{error}</p>}
         </div>
       )
+    }
+
+    case 'relation': {
+      if (fieldDef.options_ref === 'users') {
+        const users = membersResult?.items ?? []
+        const selectedUser = users.find((u) => u.id === value)
+        if (disabled) {
+          return (
+            <div>
+              {labelEl}
+              <p className="text-sm text-on-surface py-2">{selectedUser?.name || (value as string) || '—'}</p>
+            </div>
+          )
+        }
+        return (
+          <div>
+            {labelEl}
+            <select
+              value={(value as string) ?? ''}
+              onChange={(e) => onChange(e.target.value || null)}
+              onBlur={onBlur}
+              disabled={disabled}
+              className={inputClass(error)}
+              data-testid={`field-${fieldDef.key}`}
+            >
+              <option value="">— Select —</option>
+              {users.map((u) => (
+                <option key={u.id} value={u.id}>{u.name}</option>
+              ))}
+            </select>
+            {error && <p className="text-xs text-error mt-1">{error}</p>}
+          </div>
+        )
+      }
+      return null
     }
 
     case 'date':

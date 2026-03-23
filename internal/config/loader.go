@@ -113,6 +113,12 @@ func validateConfig(cfg *TenantConfig) error {
 	return nil
 }
 
+// dbBackedRefs lists options_ref values that are resolved at runtime
+// from database entities rather than from static config option lists.
+var dbBackedRefs = map[string]bool{
+	"users": true,
+}
+
 // validateFieldConfigs checks that field configs are valid and that
 // options_ref values resolve to known option lists.
 func validateFieldConfigs(cfg *TenantConfig, fields []FieldConfig, context string) error {
@@ -128,7 +134,7 @@ func validateFieldConfigs(cfg *TenantConfig, fields []FieldConfig, context strin
 		if !validTypes[f.Type] {
 			return fmt.Errorf("%s: field %q has invalid type %q", context, f.Key, f.Type)
 		}
-		if f.OptionsRef != "" && cfg.ResolveOptions(f.OptionsRef) == nil {
+		if f.OptionsRef != "" && !dbBackedRefs[f.OptionsRef] && cfg.ResolveOptions(f.OptionsRef) == nil {
 			return fmt.Errorf("%s: field %q references unknown options_ref %q", context, f.Key, f.OptionsRef)
 		}
 	}

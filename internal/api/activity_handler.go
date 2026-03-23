@@ -53,14 +53,26 @@ func NewActivityRouter(h *ActivityHandler) http.Handler {
 }
 
 type activityRequest struct {
-	ActivityType  string         `json:"activityType"`
-	Status        string         `json:"status"`
-	DueDate       string         `json:"dueDate"`
-	Duration      string         `json:"duration"`
-	Routing       string         `json:"routing"`
-	Fields        map[string]any `json:"fields"`
-	TargetID      string         `json:"targetId"`
-	JointVisitUID string         `json:"jointVisitUserId"`
+	ActivityType string         `json:"activityType"`
+	Status       string         `json:"status"`
+	DueDate      string         `json:"dueDate"`
+	Duration     string         `json:"duration"`
+	Routing      string         `json:"routing"`
+	Fields       map[string]any `json:"fields"`
+	TargetID     string         `json:"targetId"`
+}
+
+// hoistJointVisitUID extracts "joint_visit_user_id" from a fields map and
+// returns the value. The key is removed from the map so it is not stored in
+// the JSONB column — the real DB column is used instead.
+func hoistJointVisitUID(fields map[string]any) string {
+	v, ok := fields["joint_visit_user_id"]
+	if !ok {
+		return ""
+	}
+	delete(fields, "joint_visit_user_id")
+	s, _ := v.(string)
+	return s
 }
 
 type activityResponse struct {
@@ -72,6 +84,16 @@ type activityListResponse struct {
 	Total int                `json:"total"`
 	Page  int                `json:"page"`
 	Limit int                `json:"limit"`
+}
+
+// prepareActivities injects hoisted column values back into Fields for
+// all activities before they are serialized to JSON.
+func prepareActivities(activities ...*domain.Activity) {
+	for _, a := range activities {
+		if a != nil {
+			a.PrepareForResponse()
+		}
+	}
 }
 
 type statusPatchRequest struct {
@@ -168,6 +190,7 @@ func (h *ActivityHandler) List(w http.ResponseWriter, r *http.Request) {
 	if activities == nil {
 		activities = []*domain.Activity{}
 	}
+	prepareActivities(activities...)
 
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(http.StatusOK)
@@ -221,7 +244,7 @@ func (h *ActivityHandler) Create(w http.ResponseWriter, r *http.Request) {
 		Routing:       req.Routing,
 		Fields:        fields,
 		TargetID:      req.TargetID,
-		JointVisitUID: req.JointVisitUID,
+		JointVisitUID: hoistJointVisitUID(fields),
 	}
 
 	created, err := h.svc.Create(r.Context(), actor, activity)
@@ -230,6 +253,7 @@ func (h *ActivityHandler) Create(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	prepareActivities(created)
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(http.StatusCreated)
 	_ = json.NewEncoder(w).Encode(activityResponse{Activity: created})
@@ -250,6 +274,7 @@ func (h *ActivityHandler) Get(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	prepareActivities(activity)
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(http.StatusOK)
 	_ = json.NewEncoder(w).Encode(activityResponse{Activity: activity})
@@ -299,7 +324,7 @@ func (h *ActivityHandler) Update(w http.ResponseWriter, r *http.Request) {
 		Routing:       req.Routing,
 		Fields:        fields,
 		TargetID:      req.TargetID,
-		JointVisitUID: req.JointVisitUID,
+		JointVisitUID: hoistJointVisitUID(fields),
 	}
 
 	updated, err := h.svc.Update(r.Context(), actor, id, activity)
@@ -308,6 +333,7 @@ func (h *ActivityHandler) Update(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	prepareActivities(updated)
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(http.StatusOK)
 	_ = json.NewEncoder(w).Encode(activityResponse{Activity: updated})
@@ -345,6 +371,7 @@ func (h *ActivityHandler) Submit(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	prepareActivities(activity)
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(http.StatusOK)
 	_ = json.NewEncoder(w).Encode(activityResponse{Activity: activity})
@@ -439,6 +466,16 @@ func (h *ActivityHandler) Patch(w http.ResponseWriter, r *http.Request) {
 				return
 			}
 		}
+		// Hoist joint_visit_user_id from fields into the dedicated column.
+		if jv, has := patch.Fields["joint_visit_user_id"]; has {
+			delete(patch.Fields, "joint_visit_user_id")
+			if jv == nil {
+				s := ""
+				patch.JointVisitUID = &s
+			} else if s, ok := jv.(string); ok {
+				patch.JointVisitUID = &s
+			}
+		}
 	}
 
 	if v, ok := raw["targetId"]; ok {
@@ -455,26 +492,13 @@ func (h *ActivityHandler) Patch(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 
-	if v, ok := raw["jointVisitUserId"]; ok {
-		if string(v) == "null" {
-			s := ""
-			patch.JointVisitUID = &s
-		} else {
-			var s string
-			if err := json.Unmarshal(v, &s); err != nil {
-				writeError(w, http.StatusBadRequest, "BAD_REQUEST", "invalid jointVisitUserId value")
-				return
-			}
-			patch.JointVisitUID = &s
-		}
-	}
-
 	updated, err := h.svc.PartialUpdate(r.Context(), actor, id, patch)
 	if err != nil {
 		mapActivityServiceError(w, err)
 		return
 	}
 
+	prepareActivities(updated)
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(http.StatusOK)
 	_ = json.NewEncoder(w).Encode(activityResponse{Activity: updated})
@@ -507,6 +531,7 @@ func (h *ActivityHandler) PatchStatus(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	prepareActivities(activity)
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(http.StatusOK)
 	_ = json.NewEncoder(w).Encode(activityResponse{Activity: activity})

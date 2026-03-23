@@ -12,7 +12,6 @@ export interface Activity {
   fields: Record<string, unknown>
   targetId?: string
   creatorId: string
-  jointVisitUserId?: string
   teamId?: string
   submittedAt?: string
   createdAt: string
@@ -27,7 +26,6 @@ export interface CreateActivityInput {
   routing?: string
   fields: Record<string, unknown>
   targetId?: string
-  jointVisitUserId?: string
 }
 
 export interface UpdateActivityInput extends CreateActivityInput {

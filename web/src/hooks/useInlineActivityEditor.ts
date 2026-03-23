@@ -6,6 +6,7 @@ import {
   useSubmitActivity,
 } from '../services/activities'
 import type { Activity, UpdateActivityInput, ValidationFieldError } from '../types/activity'
+import { extractDate } from '../utils/date'
 
 export type SaveState = 'idle' | 'dirty' | 'saving' | 'error'
 
@@ -32,12 +33,11 @@ export function useInlineActivityEditor(activity: Activity): InlineActivityEdito
   const [localData, setLocalData] = useState<Partial<UpdateActivityInput>>(() => ({
     activityType: activity.activityType,
     status: activity.status,
-    dueDate: activity.dueDate,
+    dueDate: extractDate(activity.dueDate),
     duration: activity.duration,
     routing: activity.routing,
     fields: { ...activity.fields },
     targetId: activity.targetId,
-    jointVisitUserId: activity.jointVisitUserId,
   }))
   const [saveState, setSaveState] = useState<SaveState>('idle')
   const [fieldErrors, setFieldErrors] = useState<ValidationFieldError[]>([])
@@ -101,7 +101,7 @@ export function useInlineActivityEditor(activity: Activity): InlineActivityEdito
     (key: string, value: unknown) => {
       setLocalData((prev) => {
         // Top-level fields vs nested fields
-        if (['activityType', 'status', 'dueDate', 'duration', 'routing', 'targetId', 'jointVisitUserId'].includes(key)) {
+        if (['activityType', 'status', 'dueDate', 'duration', 'routing', 'targetId'].includes(key)) {
           return { ...prev, [key]: value }
         }
         return { ...prev, fields: { ...(prev.fields ?? {}), [key]: value } }

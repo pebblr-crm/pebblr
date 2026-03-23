@@ -76,9 +76,8 @@ export function patchActivityStatus({ id, status }: StatusPatchInput): Promise<A
   return api.patch<ActivityDetailResponse>(`/activities/${id}/status`, { status }).then((r) => r.activity)
 }
 
-// TODO: Replace fallback to PUT once PATCH /activities/:id endpoint is merged in the backend.
 export function patchActivity({ id, ...input }: Partial<UpdateActivityInput> & { id: string }): Promise<Activity> {
-  return api.put<ActivityDetailResponse>(`/activities/${id}`, input).then((r) => r.activity)
+  return api.patch<ActivityDetailResponse>(`/activities/${id}`, input).then((r) => r.activity)
 }
 
 // ── TanStack Query hooks ──────────────────────────────────────────────────────

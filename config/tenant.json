@@ -57,8 +57,7 @@
           { "key": "feedback", "type": "text", "required": false },
           { "key": "details", "type": "text", "required": false },
           { "key": "duration", "type": "select", "required": true, "options_ref": "durations" },
-          { "key": "visit_partner", "type": "text", "required": false },
-          { "key": "joint_visit_user_id", "type": "relation", "required": false },
+          { "key": "joint_visit_user_id", "type": "relation", "required": false, "options_ref": "users" },
           { "key": "routing", "type": "select", "required": false, "options_ref": "routing_options" }
         ],
         "submit_required": ["promoted_products", "feedback"]

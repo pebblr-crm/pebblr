@@ -14,10 +14,16 @@ vi.mock('../services/targets', () => ({
   useTargets: vi.fn(),
 }))
 
+vi.mock('../services/teams', () => ({
+  useTeamMembers: vi.fn(),
+}))
+
 import { useConfig } from '../services/config'
 import { useTargets } from '../services/targets'
+import { useTeamMembers } from '../services/teams'
 const mockUseConfig = vi.mocked(useConfig)
 const mockUseTargets = vi.mocked(useTargets)
+const mockUseTeamMembers = vi.mocked(useTeamMembers)
 
 const testConfig: TenantConfig = {
   tenant: { name: 'Test', locale: 'en' },
@@ -109,6 +115,7 @@ describe('ActivityForm', () => {
     vi.clearAllMocks()
     mockUseConfig.mockReturnValue(queryResult(testConfig))
     mockUseTargets.mockReturnValue(targetsResult(emptyTargets))
+    mockUseTeamMembers.mockReturnValue({ data: { items: [], total: 0, page: 1, limit: 20 }, isLoading: false, isError: false, error: null } as unknown as ReturnType<typeof useTeamMembers>)
   })
 
   it('renders the form with core fields (status hidden on create)', () => {

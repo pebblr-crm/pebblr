@@ -26,7 +26,12 @@ vi.mock('../../services/config', () => ({
 }))
 
 vi.mock('../../services/targets', () => ({
+  useTarget: () => ({ data: undefined }),
   useTargets: () => ({ data: { items: [] } }),
+}))
+
+vi.mock('../../services/teams', () => ({
+  useTeamMembers: () => ({ data: { items: [], total: 0, page: 1, limit: 20 } }),
 }))
 
 vi.mock('motion/react', () => ({

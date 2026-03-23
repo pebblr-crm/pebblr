@@ -10,10 +10,7 @@ func testConfig(t *testing.T) *TenantConfig {
 func TestValidateActivity_ValidSave(t *testing.T) {
 	t.Parallel()
 	cfg := testConfig(t)
-	fields := map[string]any{
-		"account_id": "some-uuid",
-		"duration":   "full_day",
-	}
+	fields := map[string]any{}
 	errs := ValidateActivity(cfg, "visit", fields, "save")
 	if len(errs) != 0 {
 		t.Fatalf("expected no errors, got %v", errs)
@@ -23,22 +20,24 @@ func TestValidateActivity_ValidSave(t *testing.T) {
 func TestValidateActivity_MissingRequiredField(t *testing.T) {
 	t.Parallel()
 	cfg := testConfig(t)
-	fields := map[string]any{
-		"duration": "full_day",
-	}
+	// Add a required non-hoisted field to exercise required validation.
+	visitType := cfg.ActivityType("visit")
+	visitType.Fields = append(visitType.Fields, FieldConfig{
+		Key:      "visit_type",
+		Type:     "text",
+		Required: true,
+	})
+	fields := map[string]any{}
 	errs := ValidateActivity(cfg, "visit", fields, "save")
-	if len(errs) != 1 || errs[0].Field != "account_id" {
-		t.Fatalf("expected 1 error on account_id, got %v", errs)
+	if len(errs) != 1 || errs[0].Field != "visit_type" {
+		t.Fatalf("expected 1 error on visit_type, got %v", errs)
 	}
 }
 
 func TestValidateActivity_SubmitEnforcesExtraRequired(t *testing.T) {
 	t.Parallel()
 	cfg := testConfig(t)
-	fields := map[string]any{
-		"account_id": "some-uuid",
-		"duration":   "full_day",
-	}
+	fields := map[string]any{}
 
 	errs := ValidateActivity(cfg, "visit", fields, "save")
 	if len(errs) != 0 {
@@ -63,22 +62,35 @@ func TestValidateActivity_UnknownActivityType(t *testing.T) {
 func TestValidateActivity_InvalidSelectOption(t *testing.T) {
 	t.Parallel()
 	cfg := testConfig(t)
+	// Add a non-hoisted select field to exercise select validation.
+	visitType := cfg.ActivityType("visit")
+	visitType.Fields = append(visitType.Fields, FieldConfig{
+		Key:        "visit_type",
+		Type:       "select",
+		Required:   false,
+		Options:    []string{"f2f", "remote"},
+	})
 	fields := map[string]any{
-		"account_id": "some-uuid",
-		"duration":   "invalid_duration",
+		"visit_type": "bogus",
 	}
 	errs := ValidateActivity(cfg, "visit", fields, "save")
-	if len(errs) != 1 || errs[0].Field != "duration" {
-		t.Fatalf("expected error on duration, got %v", errs)
+	if len(errs) != 1 || errs[0].Field != "visit_type" {
+		t.Fatalf("expected error on visit_type, got %v", errs)
 	}
 }
 
 func TestValidateActivity_ValidSelectOption(t *testing.T) {
 	t.Parallel()
 	cfg := testConfig(t)
+	visitType := cfg.ActivityType("visit")
+	visitType.Fields = append(visitType.Fields, FieldConfig{
+		Key:      "visit_type",
+		Type:     "select",
+		Required: false,
+		Options:  []string{"f2f", "remote"},
+	})
 	fields := map[string]any{
-		"account_id": "some-uuid",
-		"duration":   "half_day",
+		"visit_type": "f2f",
 	}
 	errs := ValidateActivity(cfg, "visit", fields, "save")
 	if len(errs) != 0 {
@@ -98,9 +110,7 @@ func TestValidateActivity_InvalidMultiSelectOption(t *testing.T) {
 	})
 
 	fields := map[string]any{
-		"account_id": "some-uuid",
-		"duration":   "full_day",
-		"products":   []any{"cardiology", "bogus"},
+		"products": []any{"cardiology", "bogus"},
 	}
 	errs := ValidateActivity(cfg, "visit", fields, "save")
 	if len(errs) != 1 || errs[0].Field != "products" {
@@ -120,9 +130,7 @@ func TestValidateActivity_ValidMultiSelect(t *testing.T) {
 	})
 
 	fields := map[string]any{
-		"account_id": "some-uuid",
-		"duration":   "full_day",
-		"products":   []any{"cardiology", "neurology"},
+		"products": []any{"cardiology", "neurology"},
 	}
 	errs := ValidateActivity(cfg, "visit", fields, "save")
 	if len(errs) != 0 {

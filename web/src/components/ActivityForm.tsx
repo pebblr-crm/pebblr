@@ -1,5 +1,6 @@
 import { useState, type FormEvent } from 'react'
 import { useConfig } from '../services/config'
+import { useTeamMembers } from '../services/teams'
 import { useTargets } from '../services/targets'
 import type { Activity, CreateActivityInput } from '../types/activity'
 import type { FieldConfig, OptionDef, TenantConfig } from '../types/config'
@@ -49,7 +50,6 @@ function ActivityFormInner({
   const [dueDate, setDueDate] = useState(initialData?.dueDate ? extractDate(initialData.dueDate) : '')
   const [duration, setDuration] = useState(initialData?.duration ?? '')
   const [targetId, setTargetId] = useState(initialData?.targetId ?? '')
-  const [jointVisitUserId, setJointVisitUserId] = useState(initialData?.jointVisitUserId ?? '')
   const [fields, setFields] = useState<Record<string, unknown>>(() => {
     const f = { ...(initialData?.fields ?? {}) }
     // Seed routing into fields so the dynamic form pre-populates it.
@@ -59,6 +59,7 @@ function ActivityFormInner({
   const [targetSearch, setTargetSearch] = useState('')
 
   const { data: targetsResult } = useTargets({ q: targetSearch, limit: 20 })
+  const { data: membersResult } = useTeamMembers()
 
   const activityTypes = config.activities.types
   const statuses = config.activities.statuses
@@ -88,7 +89,6 @@ function ActivityFormInner({
       routing: (routingValue as string) || undefined,
       fields: restFields,
       targetId: targetId || undefined,
-      jointVisitUserId: jointVisitUserId || undefined,
     })
   }
 
@@ -197,6 +197,31 @@ function ActivityFormInner({
             {error && <p className="text-xs text-error mt-1">{error}</p>}
           </div>
         )
+      }
+
+      case 'relation': {
+        if (fieldDef.options_ref === 'users') {
+          const users = membersResult?.items ?? []
+          return (
+            <div key={fieldDef.key}>
+              {labelEl}
+              <select
+                value={(value as string) ?? ''}
+                onChange={(e) => setFieldValue(fieldDef.key, e.target.value || null)}
+                disabled={!editable}
+                className={inputClass(error)}
+                data-testid={`field-${fieldDef.key}`}
+              >
+                <option value="">— Select —</option>
+                {users.map((u) => (
+                  <option key={u.id} value={u.id}>{u.name}</option>
+                ))}
+              </select>
+              {error && <p className="text-xs text-error mt-1">{error}</p>}
+            </div>
+          )
+        }
+        return null
       }
 
       case 'date':
@@ -377,33 +402,18 @@ function ActivityFormInner({
             </div>
           )}
 
-          {/* Joint visit user ID */}
-          <div>
-            <label className="block text-xs font-bold uppercase tracking-widest text-slate-400 mb-1">
-              Joint visit user
-            </label>
-            <input
-              type="text"
-              value={jointVisitUserId}
-              onChange={(e) => setJointVisitUserId(e.target.value)}
-              placeholder="User ID (optional)"
-              disabled={isLocked}
-              className={inputClass()}
-              data-testid="joint-visit-input"
-            />
-          </div>
         </div>
       </div>
 
       {/* Dynamic fields based on activity type */}
-      {selectedType && selectedType.fields.filter((f) => !['duration', 'account_id', 'joint_visit_user_id'].includes(f.key)).length > 0 && (
+      {selectedType && selectedType.fields.filter((f) => !['duration', 'account_id'].includes(f.key)).length > 0 && (
         <div className="bg-surface-container-lowest p-8 rounded-xl shadow-[0px_24px_48px_rgba(25,28,30,0.06)]">
           <h2 className="text-lg font-bold text-on-surface mb-6 font-headline">
             {selectedType.label} Details
           </h2>
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
             {selectedType.fields
-              .filter((f) => !['duration', 'account_id', 'joint_visit_user_id'].includes(f.key))
+              .filter((f) => !['duration', 'account_id'].includes(f.key))
               .map((f) => renderDynamicField(f))}
           </div>
         </div>
