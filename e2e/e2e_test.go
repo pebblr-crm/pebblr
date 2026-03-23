@@ -318,22 +318,14 @@ func TestLeadGetNotFound(t *testing.T) {
 	}
 }
 
-// ── Calendar Event Endpoint Tests ────────────────────────────────────────
+// ── Activity Endpoint Tests ──────────────────────────────────────────────
 
-func TestCalendarEventListReturnsOK(t *testing.T) {
-	resp := apiRequest(t, "GET", "/api/v1/events", "")
-	body := readBody(t, resp)
+func TestActivityListReturnsNotImplemented(t *testing.T) {
+	resp := apiRequest(t, "GET", "/api/v1/activities", "")
 
-	if resp.StatusCode != http.StatusOK {
-		t.Fatalf("expected 200 for GET /events, got %d: %s", resp.StatusCode, body)
-	}
-
-	var result map[string]any
-	if err := json.Unmarshal([]byte(body), &result); err != nil {
-		t.Fatalf("decoding event list response: %v\nbody: %s", err, body)
-	}
-	if _, ok := result["items"]; !ok {
-		t.Error("expected 'items' key in event list response")
+	if resp.StatusCode != http.StatusNotImplemented {
+		body := readBody(t, resp)
+		t.Fatalf("expected 501 for GET /activities, got %d: %s", resp.StatusCode, body)
 	}
 }
 

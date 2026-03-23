@@ -71,6 +71,111 @@ func TestScopeTargetQueryForRep(t *testing.T) {
 	}
 }
 
+// ── Activity RBAC Tests ─────────────────────────────────────────────────
+
+func TestRepCanOnlySeeOwnActivities(t *testing.T) {
+	t.Parallel()
+	enforcer := rbac.NewEnforcer()
+	ctx := context.Background()
+
+	rep := &domain.User{ID: "rep-1", Role: domain.RoleRep}
+	ownActivity := &domain.Activity{ID: "act-1", CreatorID: "rep-1", TeamID: "team-1"}
+	jointActivity := &domain.Activity{ID: "act-2", CreatorID: "rep-2", JointVisitUID: "rep-1", TeamID: "team-1"}
+	otherActivity := &domain.Activity{ID: "act-3", CreatorID: "rep-2", TeamID: "team-1"}
+
+	if !enforcer.CanViewActivity(ctx, rep, ownActivity) {
+		t.Error("rep should view own activity")
+	}
+	if !enforcer.CanViewActivity(ctx, rep, jointActivity) {
+		t.Error("rep should view joint visit activity")
+	}
+	if enforcer.CanViewActivity(ctx, rep, otherActivity) {
+		t.Error("rep should not view another rep's activity")
+	}
+}
+
+func TestRepCanOnlyUpdateOwnActivities(t *testing.T) {
+	t.Parallel()
+	enforcer := rbac.NewEnforcer()
+	ctx := context.Background()
+
+	rep := &domain.User{ID: "rep-1", Role: domain.RoleRep}
+	ownActivity := &domain.Activity{ID: "act-1", CreatorID: "rep-1", TeamID: "team-1"}
+	jointActivity := &domain.Activity{ID: "act-2", CreatorID: "rep-2", JointVisitUID: "rep-1", TeamID: "team-1"}
+
+	if !enforcer.CanUpdateActivity(ctx, rep, ownActivity) {
+		t.Error("rep should update own activity")
+	}
+	if enforcer.CanUpdateActivity(ctx, rep, jointActivity) {
+		t.Error("rep should not update activity they didn't create (even as joint visitor)")
+	}
+}
+
+func TestManagerCanSeeTeamActivities(t *testing.T) {
+	t.Parallel()
+	enforcer := rbac.NewEnforcer()
+	ctx := context.Background()
+
+	manager := &domain.User{ID: "mgr-1", Role: domain.RoleManager, TeamIDs: []string{"team-1"}}
+	teamActivity := &domain.Activity{ID: "act-1", CreatorID: "rep-1", TeamID: "team-1"}
+	otherTeamActivity := &domain.Activity{ID: "act-2", CreatorID: "rep-2", TeamID: "team-2"}
+
+	if !enforcer.CanViewActivity(ctx, manager, teamActivity) {
+		t.Error("manager should see team activity")
+	}
+	if enforcer.CanViewActivity(ctx, manager, otherTeamActivity) {
+		t.Error("manager should not see activity from another team")
+	}
+}
+
+func TestAdminCanSeeAllActivities(t *testing.T) {
+	t.Parallel()
+	enforcer := rbac.NewEnforcer()
+	ctx := context.Background()
+
+	admin := &domain.User{ID: "admin-1", Role: domain.RoleAdmin}
+	anyActivity := &domain.Activity{ID: "act-1", CreatorID: "someone", TeamID: "any-team"}
+
+	if !enforcer.CanViewActivity(ctx, admin, anyActivity) {
+		t.Error("admin should see all activities")
+	}
+	if !enforcer.CanUpdateActivity(ctx, admin, anyActivity) {
+		t.Error("admin should update all activities")
+	}
+	if !enforcer.CanDeleteActivity(ctx, admin, anyActivity) {
+		t.Error("admin should delete all activities")
+	}
+}
+
+func TestScopeActivityQueryForRep(t *testing.T) {
+	t.Parallel()
+	enforcer := rbac.NewEnforcer()
+	ctx := context.Background()
+
+	rep := &domain.User{ID: "rep-1", Role: domain.RoleRep}
+	scope := enforcer.ScopeActivityQuery(ctx, rep)
+
+	if scope.AllActivities {
+		t.Error("rep scope should not be all activities")
+	}
+	if len(scope.CreatorIDs) != 1 || scope.CreatorIDs[0] != rep.ID {
+		t.Errorf("rep scope should restrict to own ID, got %v", scope.CreatorIDs)
+	}
+}
+
+func TestScopeActivityQueryForAdmin(t *testing.T) {
+	t.Parallel()
+	enforcer := rbac.NewEnforcer()
+	ctx := context.Background()
+
+	admin := &domain.User{ID: "admin-1", Role: domain.RoleAdmin}
+	scope := enforcer.ScopeActivityQuery(ctx, admin)
+
+	if !scope.AllActivities {
+		t.Error("admin scope should be all activities")
+	}
+}
+
 func TestContextUserRoundtrip(t *testing.T) {
 	t.Parallel()
 	user := &domain.User{ID: "user-1", Role: domain.RoleRep}
