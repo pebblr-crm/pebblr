@@ -95,6 +95,8 @@ function MapPlannerPage() {
   const [dayAssignments, setDayAssignments] = useState<Record<string, string[]>>({})
   const [dragTargetId, setDragTargetId] = useState<string | null>(null)
   const [dragActivityId, setDragActivityId] = useState<string | null>(null)
+  const [hoveredTargetId, setHoveredTargetId] = useState<string | null>(null)
+  const [showCadenced, setShowCadenced] = useState(false)
 
   const patchActivity = usePatchActivity()
 
@@ -305,27 +307,38 @@ function MapPlannerPage() {
                 const isAssigned = assignedIds.has(target.id)
                 const lastVisit = visitStatusMap.get(target.id)
                 const isCadenced = isWithinCadence(lastVisit, cadenceDays)
+                const isHovered = hoveredTargetId === target.id
+
+                const cadenceLocked = isCadenced && !showCadenced
+
+                if (cadenceLocked && !isSelected && !isAssigned) return null
 
                 return (
                   <AdvancedMarker
                     key={target.id}
                     position={{ lat, lng }}
                     onClick={() => {
-                      if (!isCadenced && !isAssigned) toggleTarget(target.id)
+                      if (!cadenceLocked && !isAssigned) toggleTarget(target.id)
                     }}
                     title={`${target.name}${isCadenced ? ' (recently visited)' : ''}`}
                   >
                     <div
-                      className={`w-7 h-7 rounded-full flex items-center justify-center border-2 transition-colors cursor-pointer ${
+                      onMouseEnter={() => setHoveredTargetId(target.id)}
+                      onMouseLeave={() => setHoveredTargetId(null)}
+                      className={`rounded-full flex items-center justify-center border-2 transition-all cursor-pointer ${
+                        isHovered ? 'w-9 h-9 shadow-lg ring-2 ring-primary/40' : 'w-7 h-7'
+                      } ${
                         isAssigned
                           ? 'bg-green-500 border-green-700 text-white'
                           : isSelected
                             ? 'bg-primary border-primary text-white'
-                            : isCadenced
+                            : cadenceLocked
                               ? 'bg-slate-200 border-slate-300 text-slate-400 cursor-not-allowed'
-                              : target.targetType === 'pharmacy'
-                                ? 'bg-amber-100 border-amber-400 text-amber-700'
-                                : 'bg-blue-100 border-blue-400 text-blue-700'
+                              : isCadenced
+                                ? 'bg-slate-100 border-slate-300 text-slate-500 border-dashed'
+                                : target.targetType === 'pharmacy'
+                                  ? 'bg-amber-100 border-amber-400 text-amber-700'
+                                  : 'bg-blue-100 border-blue-400 text-blue-700'
                       }`}
                     >
                       {isAssigned ? (
@@ -344,10 +357,19 @@ function MapPlannerPage() {
 
           {/* Target list (1/4) */}
           <div className="w-1/4 border-l border-slate-200 flex flex-col bg-white">
-            <div className="p-3 border-b border-slate-100">
+            <div className="p-3 border-b border-slate-100 space-y-2">
               <h2 className="text-sm font-bold text-on-surface">
                 Selected ({selectedIds.size})
               </h2>
+              <label className="flex items-center gap-1.5 text-[10px] text-slate-500 cursor-pointer">
+                <input
+                  type="checkbox"
+                  checked={showCadenced}
+                  onChange={(e) => setShowCadenced(e.target.checked)}
+                  className="rounded border-slate-300"
+                />
+                Allow recently visited
+              </label>
             </div>
             <div className="flex-1 overflow-y-auto">
               {/* Selected targets first */}
@@ -360,6 +382,8 @@ function MapPlannerPage() {
                     target={target}
                     lastVisit={visitStatusMap.get(id)}
                     isSelected
+                    isHovered={hoveredTargetId === id}
+                    onHover={(h) => setHoveredTargetId(h ? id : null)}
                     onToggle={() => toggleTarget(id)}
                     onDragStart={() => setDragTargetId(id)}
                     onDragEnd={() => setDragTargetId(null)}
@@ -374,26 +398,34 @@ function MapPlannerPage() {
                 </div>
               )}
               {/* Available targets sorted by proximity to selection */}
-              {sortedAvailable.map((target) => {
-                const lastVisit = visitStatusMap.get(target.id)
-                const isCadenced = isWithinCadence(lastVisit, cadenceDays)
-                const dist = distanceMap.get(target.id)
-                return (
-                  <TargetListItem
-                    key={target.id}
-                    target={target}
-                    lastVisit={lastVisit}
-                    isSelected={false}
-                    isCadenced={isCadenced}
-                    distanceKm={dist}
-                    onToggle={() => {
-                      if (!isCadenced) toggleTarget(target.id)
-                    }}
-                    onDragStart={() => setDragTargetId(target.id)}
-                    onDragEnd={() => setDragTargetId(null)}
-                  />
-                )
-              })}
+              {sortedAvailable
+                .filter((t) => {
+                  if (showCadenced) return true
+                  return !isWithinCadence(visitStatusMap.get(t.id), cadenceDays)
+                })
+                .map((target) => {
+                  const lastVisit = visitStatusMap.get(target.id)
+                  const isCadenced = isWithinCadence(lastVisit, cadenceDays)
+                  const cadenceLocked = isCadenced && !showCadenced
+                  const dist = distanceMap.get(target.id)
+                  return (
+                    <TargetListItem
+                      key={target.id}
+                      target={target}
+                      lastVisit={lastVisit}
+                      isSelected={false}
+                      isCadenced={cadenceLocked}
+                      isHovered={hoveredTargetId === target.id}
+                      distanceKm={dist}
+                      onHover={(h) => setHoveredTargetId(h ? target.id : null)}
+                      onToggle={() => {
+                        if (!cadenceLocked) toggleTarget(target.id)
+                      }}
+                      onDragStart={() => setDragTargetId(target.id)}
+                      onDragEnd={() => setDragTargetId(null)}
+                    />
+                  )
+                })}
             </div>
           </div>
         </div>
@@ -468,7 +500,9 @@ interface TargetListItemProps {
   lastVisit?: string
   isSelected: boolean
   isCadenced?: boolean
+  isHovered?: boolean
   distanceKm?: number
+  onHover?: (hovered: boolean) => void
   onToggle: () => void
   onDragStart: () => void
   onDragEnd: () => void
@@ -479,7 +513,9 @@ function TargetListItem({
   lastVisit,
   isSelected,
   isCadenced,
+  isHovered,
   distanceKm,
+  onHover,
   onToggle,
   onDragStart,
   onDragEnd,
@@ -493,12 +529,16 @@ function TargetListItem({
       }}
       onDragEnd={onDragEnd}
       onClick={onToggle}
+      onMouseEnter={() => onHover?.(true)}
+      onMouseLeave={() => onHover?.(false)}
       className={`flex items-center gap-2 px-3 py-2 border-b border-slate-50 text-xs cursor-pointer transition-colors ${
-        isCadenced
-          ? 'opacity-40 cursor-not-allowed'
-          : isSelected
-            ? 'bg-primary-fixed'
-            : 'hover:bg-slate-50'
+        isHovered
+          ? 'bg-primary/10 ring-1 ring-inset ring-primary/30'
+          : isCadenced
+            ? 'opacity-40 cursor-not-allowed'
+            : isSelected
+              ? 'bg-primary-fixed'
+              : 'hover:bg-slate-50'
       }`}
     >
       {isSelected && <GripVertical className="w-3 h-3 text-slate-400 shrink-0 cursor-grab" />}
