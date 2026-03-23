@@ -5,6 +5,7 @@ import { Route as rootRoute } from './routes/__root'
 import { Route as indexRoute } from './routes/index'
 import { Route as plannerRoute } from './routes/planner/index'
 import { Route as plannerDailyRoute } from './routes/planner/daily'
+import { Route as plannerMapRoute } from './routes/planner/map'
 import { Route as teamRoute } from './routes/team/index'
 import { Route as targetsIndexRoute } from './routes/targets/index'
 import { Route as targetDetailRoute } from './routes/targets/$targetId'
@@ -16,6 +17,7 @@ const routeTree = rootRoute.addChildren([
   indexRoute,
   plannerRoute,
   plannerDailyRoute,
+  plannerMapRoute,
   teamRoute,
   targetsIndexRoute,
   targetDetailRoute,

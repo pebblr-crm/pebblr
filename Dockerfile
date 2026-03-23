@@ -25,6 +25,8 @@ RUN npm install -g bun && bun install --frozen-lockfile
 COPY web/ ./
 ARG VITE_STATIC_TOKEN=""
 ENV VITE_STATIC_TOKEN=${VITE_STATIC_TOKEN}
+ARG VITE_GOOGLE_MAPS_API_KEY=""
+ENV VITE_GOOGLE_MAPS_API_KEY=${VITE_GOOGLE_MAPS_API_KEY}
 RUN bun run build
 
 # ── Stage 3: Runtime ──────────────────────────────────────────────────────────

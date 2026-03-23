@@ -1,11 +1,12 @@
 import { Link, useRouterState } from '@tanstack/react-router'
-import { LayoutDashboard, Users, CalendarDays, Settings, HelpCircle, Target, ClipboardList } from 'lucide-react'
+import { LayoutDashboard, Users, CalendarDays, Settings, HelpCircle, Target, ClipboardList, MapPin } from 'lucide-react'
 
 const navItems = [
   { to: '/', label: 'Dashboard', icon: LayoutDashboard },
   { to: '/targets', label: 'Targets', icon: Target },
   { to: '/activities/new', label: 'New Activity', icon: ClipboardList },
   { to: '/planner', label: 'Planner', icon: CalendarDays },
+  { to: '/planner/map', label: 'Map Planner', icon: MapPin },
   { to: '/team', label: 'Team', icon: Users },
 ] as const
 

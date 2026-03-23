@@ -98,3 +98,18 @@ export function useUpdateTarget(): UseMutationResult<Target, Error, UpdateTarget
     },
   })
 }
+
+// ── Visit status ─────────────────────────────────────────────────────────────
+
+export interface TargetVisitStatus {
+  targetId: string
+  lastVisitDate: string
+}
+
+export function useTargetVisitStatus(): UseQueryResult<TargetVisitStatus[]> {
+  return useQuery({
+    queryKey: [...targetKeys.all, 'visit-status'] as const,
+    queryFn: () =>
+      api.get<{ items: TargetVisitStatus[] }>('/targets/visit-status').then((r) => r.items),
+  })
+}

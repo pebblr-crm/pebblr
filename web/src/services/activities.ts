@@ -152,6 +152,32 @@ export function usePatchActivityStatus(): UseMutationResult<Activity, Error, Sta
   })
 }
 
+// ── Batch create ─────────────────────────────────────────────────────────────
+
+export interface BatchCreateItem {
+  targetId: string
+  dueDate: string
+}
+
+export interface BatchCreateResult {
+  created: Activity[]
+  errors: Array<{ targetId: string; error: string }>
+}
+
+export function batchCreateActivities(items: BatchCreateItem[]): Promise<BatchCreateResult> {
+  return api.post<BatchCreateResult>('/activities/batch', { items })
+}
+
+export function useBatchCreateActivities(): UseMutationResult<BatchCreateResult, Error, BatchCreateItem[]> {
+  const queryClient = useQueryClient()
+  return useMutation({
+    mutationFn: batchCreateActivities,
+    onSuccess: () => {
+      void queryClient.invalidateQueries({ queryKey: activityKeys.lists() })
+    },
+  })
+}
+
 export function usePatchActivity(): UseMutationResult<Activity, Error, Partial<UpdateActivityInput> & { id: string }> {
   const queryClient = useQueryClient()
   return useMutation({
