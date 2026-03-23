@@ -18,12 +18,13 @@ import (
 // --- stub target repo ---
 
 type stubTargetRepo struct {
-	target   *domain.Target
-	created  *domain.Target
-	updated  *domain.Target
-	upserted []*domain.Target
-	getErr   error
-	saveErr  error
+	target          *domain.Target
+	created         *domain.Target
+	updated         *domain.Target
+	upserted        []*domain.Target
+	frequencyStatus []store.TargetFrequencyStatus
+	getErr          error
+	saveErr         error
 }
 
 func (r *stubTargetRepo) Get(_ context.Context, _ string) (*domain.Target, error) {
@@ -76,6 +77,11 @@ func (r *stubTargetRepo) VisitStatus(_ context.Context, _ rbac.TargetScope, _ []
 	return nil, nil
 }
 
+func (r *stubTargetRepo) FrequencyStatus(_ context.Context, _ rbac.TargetScope, _ []string, _, _ time.Time) ([]store.TargetFrequencyStatus, error) {
+	return r.frequencyStatus, nil
+}
+
+
 // --- test config ---
 
 func testConfig() *config.TenantConfig {
@@ -85,6 +91,14 @@ func testConfig() *config.TenantConfig {
 				{Key: "doctor", Label: "Doctor"},
 				{Key: "pharmacy", Label: "Pharmacy"},
 			},
+		},
+		Activities: config.ActivitiesConfig{
+			Types: []config.ActivityTypeConfig{
+				{Key: "visit", Label: "Visit", Category: "field"},
+			},
+		},
+		Rules: config.RulesConfig{
+			Frequency: map[string]int{"a": 4, "b": 2, "c": 1},
 		},
 	}
 }
@@ -425,5 +439,129 @@ func TestTargetImport_GeocodingFailureDoesNotBlock(t *testing.T) {
 	}
 	if _, hasLat := targets[0].Fields["lat"]; hasLat {
 		t.Error("expected no lat field after geocoding failure")
+	}
+}
+
+// --- FrequencyStatus tests ---
+
+func TestFrequencyStatus_CalculatesCompliance(t *testing.T) {
+	t.Parallel()
+	repo := &stubTargetRepo{
+		frequencyStatus: []store.TargetFrequencyStatus{
+			{TargetID: "t1", Classification: "a", VisitCount: 4},
+			{TargetID: "t2", Classification: "a", VisitCount: 2},
+			{TargetID: "t3", Classification: "b", VisitCount: 0},
+		},
+	}
+	svc := service.NewTargetService(repo, rbac.NewEnforcer(), testConfig())
+
+	from := time.Date(2026, 3, 1, 0, 0, 0, 0, time.UTC)
+	to := time.Date(2026, 3, 31, 0, 0, 0, 0, time.UTC)
+	items, err := svc.FrequencyStatus(context.Background(), adminUser(), from, to)
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if len(items) != 3 {
+		t.Fatalf("expected 3 items, got %d", len(items))
+	}
+
+	// t1: classification "a", required 4, visited 4 → 100%
+	if items[0].Compliance != 100 {
+		t.Errorf("t1 compliance = %f, want 100", items[0].Compliance)
+	}
+	// t2: classification "a", required 4, visited 2 → 50%
+	if items[1].Compliance != 50 {
+		t.Errorf("t2 compliance = %f, want 50", items[1].Compliance)
+	}
+	// t3: classification "b", required 2, visited 0 → 0%
+	if items[2].Compliance != 0 {
+		t.Errorf("t3 compliance = %f, want 0", items[2].Compliance)
+	}
+}
+
+func TestFrequencyStatus_MultiMonth(t *testing.T) {
+	t.Parallel()
+	repo := &stubTargetRepo{
+		frequencyStatus: []store.TargetFrequencyStatus{
+			{TargetID: "t1", Classification: "a", VisitCount: 6},
+		},
+	}
+	svc := service.NewTargetService(repo, rbac.NewEnforcer(), testConfig())
+
+	// Q1: 3 months, "a" requires 4/month → expected 12
+	from := time.Date(2026, 1, 1, 0, 0, 0, 0, time.UTC)
+	to := time.Date(2026, 3, 31, 0, 0, 0, 0, time.UTC)
+	items, err := svc.FrequencyStatus(context.Background(), adminUser(), from, to)
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+
+	// 6 / 12 = 50%
+	if items[0].Compliance != 50 {
+		t.Errorf("compliance = %f, want 50", items[0].Compliance)
+	}
+}
+
+func TestFrequencyStatus_NoConfigRule(t *testing.T) {
+	t.Parallel()
+	repo := &stubTargetRepo{
+		frequencyStatus: []store.TargetFrequencyStatus{
+			{TargetID: "t1", Classification: "x", VisitCount: 3},
+		},
+	}
+	svc := service.NewTargetService(repo, rbac.NewEnforcer(), testConfig())
+
+	from := time.Date(2026, 3, 1, 0, 0, 0, 0, time.UTC)
+	to := time.Date(2026, 3, 31, 0, 0, 0, 0, time.UTC)
+	items, err := svc.FrequencyStatus(context.Background(), adminUser(), from, to)
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+
+	if items[0].Required != 0 {
+		t.Errorf("required = %d, want 0", items[0].Required)
+	}
+	if items[0].Compliance != 0 {
+		t.Errorf("compliance = %f, want 0", items[0].Compliance)
+	}
+}
+
+func TestFrequencyStatus_CapsAt100Percent(t *testing.T) {
+	t.Parallel()
+	repo := &stubTargetRepo{
+		frequencyStatus: []store.TargetFrequencyStatus{
+			{TargetID: "t1", Classification: "c", VisitCount: 10},
+		},
+	}
+	svc := service.NewTargetService(repo, rbac.NewEnforcer(), testConfig())
+
+	from := time.Date(2026, 3, 1, 0, 0, 0, 0, time.UTC)
+	to := time.Date(2026, 3, 31, 0, 0, 0, 0, time.UTC)
+	items, err := svc.FrequencyStatus(context.Background(), adminUser(), from, to)
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+
+	// "c" requires 1/month, 10 visits → capped at 100%
+	if items[0].Compliance != 100 {
+		t.Errorf("compliance = %f, want 100", items[0].Compliance)
+	}
+}
+
+func TestFrequencyStatus_EmptyResult(t *testing.T) {
+	t.Parallel()
+	repo := &stubTargetRepo{
+		frequencyStatus: []store.TargetFrequencyStatus{},
+	}
+	svc := service.NewTargetService(repo, rbac.NewEnforcer(), testConfig())
+
+	from := time.Date(2026, 3, 1, 0, 0, 0, 0, time.UTC)
+	to := time.Date(2026, 3, 31, 0, 0, 0, 0, time.UTC)
+	items, err := svc.FrequencyStatus(context.Background(), adminUser(), from, to)
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if len(items) != 0 {
+		t.Errorf("expected 0 items, got %d", len(items))
 	}
 }

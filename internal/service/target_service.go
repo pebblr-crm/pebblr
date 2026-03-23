@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"log/slog"
+	"time"
 
 	"github.com/pebblr/pebblr/internal/config"
 	"github.com/pebblr/pebblr/internal/domain"
@@ -179,6 +180,63 @@ func (s *TargetService) VisitStatus(ctx context.Context, actor *domain.User) ([]
 		return nil, fmt.Errorf("querying visit status: %w", err)
 	}
 	return result, nil
+}
+
+// TargetFrequencyItem holds per-target frequency compliance for the API response.
+type TargetFrequencyItem struct {
+	TargetID       string  `json:"targetId"`
+	Classification string  `json:"classification"`
+	VisitCount     int     `json:"visitCount"`
+	Required       int     `json:"required"`
+	Compliance     float64 `json:"compliance"`
+}
+
+// FrequencyStatus returns per-target visit compliance for the given period.
+func (s *TargetService) FrequencyStatus(ctx context.Context, actor *domain.User, dateFrom, dateTo time.Time) ([]TargetFrequencyItem, error) {
+	scope := s.enforcer.ScopeTargetQuery(ctx, actor)
+	fieldTypes := s.fieldActivityTypes()
+
+	rows, err := s.targets.FrequencyStatus(ctx, scope, fieldTypes, dateFrom, dateTo)
+	if err != nil {
+		return nil, fmt.Errorf("querying frequency status: %w", err)
+	}
+
+	months := frequencyMonths(dateFrom, dateTo)
+	items := make([]TargetFrequencyItem, 0, len(rows))
+	for _, row := range rows {
+		required := 0
+		if s.cfg != nil {
+			required = s.cfg.Rules.Frequency[row.Classification]
+		}
+		expected := required * months
+		var compliance float64
+		if expected > 0 {
+			compliance = float64(row.VisitCount) / float64(expected) * 100
+			if compliance > 100 {
+				compliance = 100
+			}
+		}
+		items = append(items, TargetFrequencyItem{
+			TargetID:       row.TargetID,
+			Classification: row.Classification,
+			VisitCount:     row.VisitCount,
+			Required:       required,
+			Compliance:     compliance,
+		})
+	}
+	return items, nil
+}
+
+// frequencyMonths returns the number of calendar months spanned by the date range (minimum 1).
+func frequencyMonths(from, to time.Time) int {
+	if to.Before(from) {
+		return 1
+	}
+	months := (to.Year()-from.Year())*12 + int(to.Month()) - int(from.Month()) + 1
+	if months < 1 {
+		return 1
+	}
+	return months
 }
 
 // fieldActivityTypes returns the keys of all field-category activity types from config.

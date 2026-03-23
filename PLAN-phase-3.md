@@ -7,7 +7,7 @@
 16. ✅ **Dashboard stats API** — planned vs realized, coverage, field vs non-field, per user/team/period
 17. ✅ **Frontend: Dashboard** — activity KPIs, coverage, frequency compliance, period selector, 15 tests
 18. ✅ **Joint visit** — co-visitor validation, planner indicator, detail badge, 7 service tests
-19. ❌ **Frequency tracking** — visits per target vs frequency from config rules
+19. ✅ **Frequency tracking** — visits per target vs frequency from config rules
 20. ❌ **Target collections** — user-created saved groups of targets for reuse across planning cycles
 21. ❌ **Clone week** — duplicate a planned week's activities 3 weeks forward
 22. ❌ **Activity display name** — auto-generated label: type + target name + date
@@ -66,7 +66,7 @@ When a visit has `joint_visit_user_id` set:
 
 ---
 
-## 4. Frequency Tracking ❌
+## 4. Frequency Tracking ✅
 
 Config defines minimum visit frequency per target classification:
 
