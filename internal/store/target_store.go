@@ -14,6 +14,13 @@ type TargetVisitStatus struct {
 	LastVisitDate time.Time `json:"lastVisitDate"`
 }
 
+// TargetFrequencyStatus holds per-target visit count for a period.
+type TargetFrequencyStatus struct {
+	TargetID       string `json:"targetId"`
+	Classification string `json:"classification"`
+	VisitCount     int    `json:"visitCount"`
+}
+
 // TargetFilter specifies optional filter criteria for target list queries.
 type TargetFilter struct {
 	TargetType *string
@@ -59,4 +66,8 @@ type TargetRepository interface {
 	// VisitStatus returns the most recent visit date for each target in the given scope.
 	// Only considers non-deleted, field-category activities (visits).
 	VisitStatus(ctx context.Context, scope rbac.TargetScope, fieldTypes []string) ([]TargetVisitStatus, error)
+
+	// FrequencyStatus returns per-target visit counts for a given period.
+	// Only considers non-deleted, field-category activities.
+	FrequencyStatus(ctx context.Context, scope rbac.TargetScope, fieldTypes []string, dateFrom, dateTo time.Time) ([]TargetFrequencyStatus, error)
 }

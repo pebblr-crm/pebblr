@@ -11,6 +11,7 @@ import type {
   CreateTargetInput,
   UpdateTargetInput,
   TargetListParams,
+  TargetFrequencyItem,
 } from '@/types/target'
 import type { PaginatedResponse } from '@/types/api'
 
@@ -111,5 +112,18 @@ export function useTargetVisitStatus(): UseQueryResult<TargetVisitStatus[]> {
     queryKey: [...targetKeys.all, 'visit-status'] as const,
     queryFn: () =>
       api.get<{ items: TargetVisitStatus[] }>('/targets/visit-status').then((r) => r.items),
+  })
+}
+
+// ── Frequency status ──────────────────────────────────────────────────────────
+
+export function useTargetFrequencyStatus(
+  period?: string,
+): UseQueryResult<TargetFrequencyItem[]> {
+  const qs = period ? `?period=${period}` : ''
+  return useQuery({
+    queryKey: [...targetKeys.all, 'frequency-status', period] as const,
+    queryFn: () =>
+      api.get<{ items: TargetFrequencyItem[] }>(`/targets/frequency-status${qs}`).then((r) => r.items),
   })
 }

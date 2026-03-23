@@ -39,3 +39,11 @@ export interface TargetListParams {
   assignee?: string
   q?: string
 }
+
+export interface TargetFrequencyItem {
+  targetId: string
+  classification: string
+  visitCount: number
+  required: number
+  compliance: number
+}

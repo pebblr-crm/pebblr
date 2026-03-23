@@ -6,6 +6,7 @@ import (
 	"errors"
 	"fmt"
 	"strings"
+	"time"
 
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
@@ -304,6 +305,87 @@ func (r *targetRepository) VisitStatus(ctx context.Context, scope rbac.TargetSco
 			return nil, fmt.Errorf("scanning visit status: %w", err)
 		}
 		result = append(result, vs)
+	}
+	return result, rows.Err()
+}
+
+func (r *targetRepository) FrequencyStatus(ctx context.Context, scope rbac.TargetScope, fieldTypes []string, dateFrom, dateTo time.Time) ([]store.TargetFrequencyStatus, error) {
+	if len(fieldTypes) == 0 {
+		return nil, nil
+	}
+
+	args := []any{}
+	argIdx := 1
+	var conditions []string
+
+	// Scope targets.
+	if !scope.AllTargets {
+		if len(scope.AssigneeIDs) > 0 {
+			phs := make([]string, len(scope.AssigneeIDs))
+			for i, id := range scope.AssigneeIDs {
+				phs[i] = fmt.Sprintf("$%d", argIdx)
+				args = append(args, id)
+				argIdx++
+			}
+			conditions = append(conditions, fmt.Sprintf("t.assignee_id::TEXT = ANY(ARRAY[%s])", strings.Join(phs, ",")))
+		}
+		if len(scope.TeamIDs) > 0 {
+			phs := make([]string, len(scope.TeamIDs))
+			for i, id := range scope.TeamIDs {
+				phs[i] = fmt.Sprintf("$%d", argIdx)
+				args = append(args, id)
+				argIdx++
+			}
+			conditions = append(conditions, fmt.Sprintf("t.team_id::TEXT = ANY(ARRAY[%s])", strings.Join(phs, ",")))
+		}
+		if len(conditions) == 0 {
+			return nil, nil
+		}
+	}
+
+	// Only targets with a classification.
+	conditions = append(conditions, "t.fields->>'potential' IS NOT NULL", "t.fields->>'potential' != ''")
+
+	// Field activity types and date range for the LEFT JOIN.
+	args = append(args, fieldTypes)
+	typesArg := fmt.Sprintf("$%d", argIdx)
+	argIdx++
+
+	args = append(args, dateFrom)
+	dateFromArg := fmt.Sprintf("$%d", argIdx)
+	argIdx++
+
+	args = append(args, dateTo)
+	dateToArg := fmt.Sprintf("$%d", argIdx)
+
+	where := ""
+	if len(conditions) > 0 {
+		where = " AND (" + strings.Join(conditions, " AND ") + ")"
+	}
+
+	query := `SELECT t.id::TEXT, t.fields->>'potential', COUNT(a.id)
+		FROM targets t
+		LEFT JOIN activities a ON a.target_id = t.id
+			AND a.deleted_at IS NULL
+			AND a.activity_type = ANY(` + typesArg + `)
+			AND a.due_date >= ` + dateFromArg + `
+			AND a.due_date <= ` + dateToArg + `
+		WHERE TRUE` + where + `
+		GROUP BY t.id, t.fields->>'potential'`
+
+	rows, err := r.pool.Query(ctx, query, args...)
+	if err != nil {
+		return nil, fmt.Errorf("querying frequency status: %w", err)
+	}
+	defer rows.Close()
+
+	var result []store.TargetFrequencyStatus
+	for rows.Next() {
+		var fs store.TargetFrequencyStatus
+		if err := rows.Scan(&fs.TargetID, &fs.Classification, &fs.VisitCount); err != nil {
+			return nil, fmt.Errorf("scanning frequency status: %w", err)
+		}
+		result = append(result, fs)
 	}
 	return result, rows.Err()
 }

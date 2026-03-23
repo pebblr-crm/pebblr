@@ -4,7 +4,7 @@ import { APIProvider, Map as GoogleMap, AdvancedMarker } from '@vis.gl/react-goo
 import { MapPin, Check, GripVertical } from 'lucide-react'
 import { Route as rootRoute } from '../__root'
 import { LoadingSpinner } from '../../components/LoadingSpinner'
-import { useTargets, useTargetVisitStatus } from '../../services/targets'
+import { useTargets, useTargetVisitStatus, useTargetFrequencyStatus } from '../../services/targets'
 import { useActivities, useBatchCreateActivities, usePatchActivity } from '../../services/activities'
 import { useConfig } from '../../services/config'
 import { useToast } from '../../hooks/useToast'
@@ -127,6 +127,23 @@ function MapPlannerPage() {
     }
     return map
   }, [visitStatus])
+
+  // Frequency compliance for current month — drives marker color intensity
+  const currentPeriod = useMemo(() => {
+    const base = new Date()
+    base.setDate(base.getDate() + weekOffset * 7)
+    return `${base.getFullYear()}-${String(base.getMonth() + 1).padStart(2, '0')}`
+  }, [weekOffset])
+  const { data: frequencyData } = useTargetFrequencyStatus(currentPeriod)
+  const frequencyMap = useMemo(() => {
+    const map = new Map<string, number>()
+    if (frequencyData) {
+      for (const item of frequencyData) {
+        map.set(item.targetId, item.compliance)
+      }
+    }
+    return map
+  }, [frequencyData])
 
   // Targets with geo coordinates
   const geoTargets = useMemo(
@@ -309,10 +326,23 @@ function MapPlannerPage() {
                 const lastVisit = visitStatusMap.get(target.id)
                 const isCadenced = isWithinCadence(lastVisit, cadenceDays, weekDates[0].date)
                 const isHovered = hoveredTargetId === target.id
+                const compliance = frequencyMap.get(target.id)
 
                 const cadenceLocked = isCadenced && !showCadenced
 
                 if (cadenceLocked && !isSelected && !isAssigned) return null
+
+                // Frequency-based marker color: red = behind, amber = partial, green = on track
+                const frequencyMarkerColor =
+                  compliance == null
+                    ? target.targetType === 'pharmacy'
+                      ? 'bg-amber-100 border-amber-400 text-amber-700'
+                      : 'bg-blue-100 border-blue-400 text-blue-700'
+                    : compliance >= 80
+                      ? 'bg-emerald-200 border-emerald-500 text-emerald-800'
+                      : compliance >= 50
+                        ? 'bg-amber-100 border-amber-400 text-amber-700'
+                        : 'bg-red-200 border-red-500 text-red-800'
 
                 return (
                   <AdvancedMarker
@@ -321,7 +351,7 @@ function MapPlannerPage() {
                     onClick={() => {
                       if (!cadenceLocked && !isAssigned) toggleTarget(target.id)
                     }}
-                    title={`${target.name}${isCadenced ? ' (recently visited)' : ''}`}
+                    title={`${target.name}${compliance != null ? ` (${Math.round(compliance)}% compliance)` : ''}${isCadenced ? ' (recently visited)' : ''}`}
                   >
                     <div
                       onMouseEnter={() => setHoveredTargetId(target.id)}
@@ -337,9 +367,7 @@ function MapPlannerPage() {
                               ? 'bg-slate-200 border-slate-300 text-slate-400 cursor-not-allowed'
                               : isCadenced
                                 ? 'bg-slate-100 border-slate-300 text-slate-500 border-dashed'
-                                : target.targetType === 'pharmacy'
-                                  ? 'bg-amber-100 border-amber-400 text-amber-700'
-                                  : 'bg-blue-100 border-blue-400 text-blue-700'
+                                : frequencyMarkerColor
                       }`}
                     >
                       {isAssigned ? (
@@ -375,6 +403,7 @@ function MapPlannerPage() {
                     lastVisit={visitStatusMap.get(id)}
                     isSelected
                     isHovered={hoveredTargetId === id}
+                    compliance={frequencyMap.get(id)}
                     onHover={(h) => setHoveredTargetId(h ? id : null)}
                     onToggle={() => toggleTarget(id)}
                     onDragStart={() => setDragTargetId(id)}
@@ -404,6 +433,7 @@ function MapPlannerPage() {
                         isSelected={false}
                         isHovered={hoveredTargetId === target.id}
                         distanceKm={distance}
+                        compliance={frequencyMap.get(target.id)}
                         onHover={(h) => setHoveredTargetId(h ? target.id : null)}
                         onToggle={() => toggleTarget(target.id)}
                         onDragStart={() => setDragTargetId(target.id)}
@@ -417,6 +447,7 @@ function MapPlannerPage() {
                         showCadenced={showCadenced}
                         setShowCadenced={setShowCadenced}
                         visitStatusMap={visitStatusMap}
+                        frequencyMap={frequencyMap}
                         hoveredTargetId={hoveredTargetId}
                         setHoveredTargetId={setHoveredTargetId}
                         toggleTarget={toggleTarget}
@@ -500,6 +531,7 @@ interface CadencedSectionProps {
   showCadenced: boolean
   setShowCadenced: (v: boolean) => void
   visitStatusMap: Map<string, string>
+  frequencyMap: Map<string, number>
   hoveredTargetId: string | null
   setHoveredTargetId: (id: string | null) => void
   toggleTarget: (id: string) => void
@@ -511,6 +543,7 @@ function CadencedSection({
   showCadenced,
   setShowCadenced,
   visitStatusMap,
+  frequencyMap,
   hoveredTargetId,
   setHoveredTargetId,
   toggleTarget,
@@ -550,6 +583,7 @@ function CadencedSection({
               isCadenced={!showCadenced}
               isHovered={hoveredTargetId === target.id}
               distanceKm={distance}
+              compliance={frequencyMap.get(target.id)}
               onHover={(h) => setHoveredTargetId(h ? target.id : null)}
               onToggle={() => {
                 if (showCadenced) toggleTarget(target.id)
@@ -573,6 +607,7 @@ interface TargetListItemProps {
   isCadenced?: boolean
   isHovered?: boolean
   distanceKm?: number
+  compliance?: number
   onHover?: (hovered: boolean) => void
   onToggle: () => void
   onDragStart: () => void
@@ -586,6 +621,7 @@ function TargetListItem({
   isCadenced,
   isHovered,
   distanceKm,
+  compliance,
   onHover,
   onToggle,
   onDragStart,
@@ -634,6 +670,19 @@ function TargetListItem({
         >
           {(target.fields?.potential as string) ?? target.targetType}
         </span>
+        {compliance != null && (
+          <span
+            className={`text-[9px] font-bold px-1 py-0.5 rounded ${
+              compliance >= 80
+                ? 'text-emerald-600'
+                : compliance >= 50
+                  ? 'text-amber-600'
+                  : 'text-red-600'
+            }`}
+          >
+            {Math.round(compliance)}%
+          </span>
+        )}
         {distanceKm != null && (
           <span className="text-[9px] text-slate-400">
             {distanceKm < 1 ? `${Math.round(distanceKm * 1000)}m` : `${distanceKm.toFixed(1)}km`}

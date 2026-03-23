@@ -6,6 +6,7 @@ import (
 	"errors"
 	"net/http"
 	"strconv"
+	"time"
 
 	"github.com/go-chi/chi/v5"
 	"github.com/pebblr/pebblr/internal/domain"
@@ -22,6 +23,7 @@ type TargetServicer interface {
 	Update(ctx context.Context, actor *domain.User, target *domain.Target) (*domain.Target, error)
 	Import(ctx context.Context, actor *domain.User, targets []*domain.Target) (*store.ImportResult, error)
 	VisitStatus(ctx context.Context, actor *domain.User) ([]store.TargetVisitStatus, error)
+	FrequencyStatus(ctx context.Context, actor *domain.User, dateFrom, dateTo time.Time) ([]service.TargetFrequencyItem, error)
 }
 
 // TargetHandler handles HTTP requests for target CRUD operations.
@@ -39,6 +41,7 @@ func NewTargetRouter(h *TargetHandler) http.Handler {
 	r := chi.NewRouter()
 	r.Get("/", h.List)
 	r.Get("/visit-status", h.VisitStatus)
+	r.Get("/frequency-status", h.FrequencyStatus)
 	r.Post("/", h.Create)
 	r.Post("/import", h.Import)
 	r.Get("/{id}", h.Get)
@@ -308,6 +311,33 @@ func (h *TargetHandler) Import(w http.ResponseWriter, r *http.Request) {
 		Updated: result.Updated,
 		Targets: imported,
 	})
+}
+
+// FrequencyStatus handles GET /api/v1/targets/frequency-status
+func (h *TargetHandler) FrequencyStatus(w http.ResponseWriter, r *http.Request) {
+	actor, err := rbac.UserFromContext(r.Context())
+	if err != nil {
+		writeError(w, http.StatusUnauthorized, "UNAUTHORIZED", "missing authenticated user")
+		return
+	}
+
+	filter, err := parseDashboardFilter(r)
+	if err != nil {
+		writeError(w, http.StatusBadRequest, "BAD_REQUEST", "invalid period or date format")
+		return
+	}
+
+	result, err := h.svc.FrequencyStatus(r.Context(), actor, filter.DateFrom, filter.DateTo)
+	if err != nil {
+		writeError(w, http.StatusInternalServerError, "INTERNAL_ERROR", "failed to query frequency status")
+		return
+	}
+	if result == nil {
+		result = []service.TargetFrequencyItem{}
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	_ = json.NewEncoder(w).Encode(map[string]any{"items": result})
 }
 
 // VisitStatus handles GET /api/v1/targets/visit-status

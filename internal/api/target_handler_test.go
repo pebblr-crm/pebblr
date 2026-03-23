@@ -8,6 +8,7 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"testing"
+	"time"
 
 	"github.com/pebblr/pebblr/internal/api"
 	"github.com/pebblr/pebblr/internal/domain"
@@ -72,6 +73,10 @@ func (s *stubTargetSvc) Import(_ context.Context, actor *domain.User, targets []
 
 func (s *stubTargetSvc) VisitStatus(_ context.Context, _ *domain.User) ([]store.TargetVisitStatus, error) {
 	return []store.TargetVisitStatus{}, nil
+}
+
+func (s *stubTargetSvc) FrequencyStatus(_ context.Context, _ *domain.User, _, _ time.Time) ([]service.TargetFrequencyItem, error) {
+	return []service.TargetFrequencyItem{}, nil
 }
 
 func targetRouter() http.Handler {

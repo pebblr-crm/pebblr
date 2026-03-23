@@ -1,10 +1,10 @@
-import { useState } from 'react'
+import { useState, useMemo } from 'react'
 import { createRoute, Link } from '@tanstack/react-router'
 import { motion } from 'motion/react'
 import { Target, Download, ChevronLeft, ChevronRight, MapPin } from 'lucide-react'
 import { Route as rootRoute } from '../__root'
 import { LoadingSpinner } from '../../components/LoadingSpinner'
-import { useTargets } from '../../services/targets'
+import { useTargets, useTargetFrequencyStatus } from '../../services/targets'
 import { useConfig } from '../../services/config'
 
 export const Route = createRoute({
@@ -44,6 +44,29 @@ function TypeBadge({ targetType, label }: { targetType: string; label?: string }
   )
 }
 
+function FrequencyBadge({ freq }: { freq?: { compliance: number; visitCount: number; required: number } }) {
+  if (!freq || freq.required === 0) {
+    return <span className="text-sm text-slate-300">—</span>
+  }
+  const pct = Math.round(freq.compliance)
+  const color =
+    pct >= 80
+      ? 'bg-emerald-100 text-emerald-700'
+      : pct >= 50
+        ? 'bg-amber-100 text-amber-700'
+        : 'bg-red-100 text-red-700'
+  return (
+    <div className="flex items-center gap-2">
+      <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold ${color}`}>
+        {pct}%
+      </span>
+      <span className="text-[10px] text-slate-400">
+        {freq.visitCount}/{freq.required}
+      </span>
+    </div>
+  )
+}
+
 export function TargetsPage() {
   const [page, setPage] = useState(1)
   const [typeFilter, setTypeFilter] = useState('')
@@ -54,6 +77,26 @@ export function TargetsPage() {
     limit: PAGE_SIZE,
     ...(typeFilter ? { type: typeFilter } : {}),
   })
+
+  // Current month period for frequency status
+  const currentPeriod = useMemo(() => {
+    const now = new Date()
+    return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`
+  }, [])
+  const { data: frequencyData } = useTargetFrequencyStatus(currentPeriod)
+  const frequencyMap = useMemo(() => {
+    const map = new Map<string, { compliance: number; visitCount: number; required: number }>()
+    if (frequencyData) {
+      for (const item of frequencyData) {
+        map.set(item.targetId, {
+          compliance: item.compliance,
+          visitCount: item.visitCount,
+          required: item.required,
+        })
+      }
+    }
+    return map
+  }, [frequencyData])
 
   const targets = data?.items ?? []
   const total = data?.total ?? 0
@@ -216,6 +259,9 @@ export function TargetsPage() {
                         Location
                       </th>
                     )}
+                    <th className="px-6 py-4 text-[11px] font-bold uppercase tracking-widest text-slate-400">
+                      Frequency
+                    </th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-slate-50">
@@ -265,6 +311,9 @@ export function TargetsPage() {
                           )}
                         </td>
                       )}
+                      <td className="px-6 py-5">
+                        <FrequencyBadge freq={frequencyMap.get(target.id)} />
+                      </td>
                     </tr>
                   ))}
                 </tbody>
