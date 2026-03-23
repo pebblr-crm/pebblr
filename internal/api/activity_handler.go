@@ -537,12 +537,12 @@ func (h *ActivityHandler) BatchCreate(w http.ResponseWriter, r *http.Request) {
 	}
 
 	var created []*domain.Activity
-	var errors []map[string]string
+	var batchErrors []map[string]string
 
 	for _, item := range req.Items {
 		dueDate, err := time.Parse("2006-01-02", item.DueDate)
 		if err != nil {
-			errors = append(errors, map[string]string{"targetId": item.TargetID, "error": "invalid date format"})
+			batchErrors = append(batchErrors, map[string]string{"targetId": item.TargetID, "error": "invalid date format"})
 			continue
 		}
 		activity := &domain.Activity{
@@ -554,7 +554,7 @@ func (h *ActivityHandler) BatchCreate(w http.ResponseWriter, r *http.Request) {
 		}
 		result, err := h.svc.Create(r.Context(), actor, activity)
 		if err != nil {
-			errors = append(errors, map[string]string{"targetId": item.TargetID, "error": err.Error()})
+			batchErrors = append(batchErrors, map[string]string{"targetId": item.TargetID, "error": err.Error()})
 			continue
 		}
 		prepareActivities(result)
@@ -567,15 +567,15 @@ func (h *ActivityHandler) BatchCreate(w http.ResponseWriter, r *http.Request) {
 
 	w.Header().Set("Content-Type", "application/json")
 	status := http.StatusCreated
-	if len(errors) > 0 && len(created) == 0 {
+	if len(batchErrors) > 0 && len(created) == 0 {
 		status = http.StatusBadRequest
-	} else if len(errors) > 0 {
+	} else if len(batchErrors) > 0 {
 		status = http.StatusMultiStatus
 	}
 	w.WriteHeader(status)
 	_ = json.NewEncoder(w).Encode(map[string]any{
 		"created": created,
-		"errors":  errors,
+		"errors":  batchErrors,
 	})
 }
 

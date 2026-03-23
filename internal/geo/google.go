@@ -50,7 +50,7 @@ func (g *GoogleGeocoder) Geocode(ctx context.Context, address string) (*Result, 
 		url.QueryEscape(g.apiKey),
 	)
 
-	req, err := http.NewRequestWithContext(ctx, http.MethodGet, u, nil)
+	req, err := http.NewRequestWithContext(ctx, http.MethodGet, u, http.NoBody)
 	if err != nil {
 		return nil, fmt.Errorf("creating geocode request: %w", err)
 	}
@@ -59,7 +59,7 @@ func (g *GoogleGeocoder) Geocode(ctx context.Context, address string) (*Result, 
 	if err != nil {
 		return nil, fmt.Errorf("geocoding request: %w", err)
 	}
-	defer resp.Body.Close()
+	defer func() { _ = resp.Body.Close() }()
 
 	if resp.StatusCode != http.StatusOK {
 		return nil, fmt.Errorf("geocoding API returned status %d", resp.StatusCode)

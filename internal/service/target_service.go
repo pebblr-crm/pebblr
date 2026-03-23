@@ -187,9 +187,9 @@ func (s *TargetService) fieldActivityTypes() []string {
 		return []string{"visit"}
 	}
 	var types []string
-	for _, at := range s.cfg.Activities.Types {
-		if at.Category == "field" {
-			types = append(types, at.Key)
+	for i := range s.cfg.Activities.Types {
+		if s.cfg.Activities.Types[i].Category == "field" {
+			types = append(types, s.cfg.Activities.Types[i].Key)
 		}
 	}
 	if len(types) == 0 {
