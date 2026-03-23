@@ -1,6 +1,7 @@
 import type { Activity } from '@/types/activity'
 import type { TenantConfig } from '@/types/config'
 import { ActivityCard } from './ActivityCard'
+import { formatDateStr, extractDate } from '@/utils/date'
 
 interface MonthGridProps {
   activities: Activity[]
@@ -39,8 +40,8 @@ export function MonthGrid({ activities, year, month, config }: MonthGridProps) {
         ))}
         {Array.from({ length: daysInMonth }).map((_, i) => {
           const day = i + 1
-          const dateStr = `${year}-${String(month).padStart(2, '0')}-${String(day).padStart(2, '0')}`
-          const dayActivities = activities.filter((a) => a.dueDate.split('T')[0] === dateStr)
+          const dateStr = formatDateStr(year, month, day)
+          const dayActivities = activities.filter((a) => extractDate(a.dueDate) === dateStr)
           const isToday = isCurrentMonth && today.getDate() === day
 
           return (

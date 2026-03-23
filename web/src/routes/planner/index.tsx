@@ -8,6 +8,7 @@ import { useActivities } from '../../services/activities'
 import { useConfig } from '../../services/config'
 import { MonthGrid } from '../../components/planner/MonthGrid'
 import { WeekGrid } from '../../components/planner/WeekGrid'
+import { formatDate, addDays, getMonday, extractDate } from '@/utils/date'
 
 export const Route = createRoute({
   getParentRoute: () => rootRoute,
@@ -21,29 +22,6 @@ const MONTH_NAMES = [
   'January', 'February', 'March', 'April', 'May', 'June',
   'July', 'August', 'September', 'October', 'November', 'December',
 ]
-
-/** Returns the Monday of the week containing `date`. */
-function getMonday(date: Date): Date {
-  const d = new Date(date)
-  const day = d.getDay()
-  const diff = day === 0 ? -6 : 1 - day
-  d.setDate(d.getDate() + diff)
-  d.setHours(0, 0, 0, 0)
-  return d
-}
-
-function addDays(d: Date, n: number): Date {
-  const result = new Date(d)
-  result.setDate(result.getDate() + n)
-  return result
-}
-
-function formatDate(d: Date): string {
-  const y = d.getFullYear()
-  const m = String(d.getMonth() + 1).padStart(2, '0')
-  const day = String(d.getDate()).padStart(2, '0')
-  return `${y}-${m}-${day}`
-}
 
 export function PlannerPage() {
   const now = new Date()
@@ -101,7 +79,7 @@ export function PlannerPage() {
 
   // Stats
   const todayStr = formatDate(now)
-  const todayCount = activities.filter((a) => a.dueDate.split('T')[0] === todayStr).length
+  const todayCount = activities.filter((a) => extractDate(a.dueDate) === todayStr).length
 
   // Status legend from config
   const statusLegend = config?.activities.statuses.map((s) => {

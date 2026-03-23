@@ -6,25 +6,13 @@ import { Route as rootRoute } from '../__root'
 import { LoadingSpinner } from '../../components/LoadingSpinner'
 import { useActivities } from '../../services/activities'
 import { useConfig } from '../../services/config'
+import { formatDate, addDays } from '@/utils/date'
 
 export const Route = createRoute({
   getParentRoute: () => rootRoute,
   path: '/planner/daily',
   component: PlannerDailyPage,
 })
-
-function formatDate(d: Date): string {
-  const y = d.getFullYear()
-  const m = String(d.getMonth() + 1).padStart(2, '0')
-  const day = String(d.getDate()).padStart(2, '0')
-  return `${y}-${m}-${day}`
-}
-
-function addDays(d: Date, n: number): Date {
-  const result = new Date(d)
-  result.setDate(result.getDate() + n)
-  return result
-}
 
 const DAY_NAMES = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday']
 const MONTH_NAMES = [

@@ -5,6 +5,7 @@ import { Route as rootRoute } from '../__root'
 import { LoadingSpinner } from '../../components/LoadingSpinner'
 import { useActivity, useSubmitActivity, usePatchActivityStatus } from '../../services/activities'
 import { useConfig } from '../../services/config'
+import { displayDate } from '@/utils/date'
 
 export const Route = createRoute({
   getParentRoute: () => rootRoute,
@@ -106,7 +107,7 @@ export function ActivityDetailPage() {
                 {statusLabel}
               </span>
               <span className="text-sm text-on-surface-variant">
-                {new Date(activity.dueDate).toLocaleDateString()}
+                {displayDate(activity.dueDate)}
               </span>
               <span className="text-sm text-on-surface-variant">
                 {durationLabel}
@@ -154,7 +155,7 @@ export function ActivityDetailPage() {
           </div>
           <div>
             <dt className="text-xs font-bold uppercase tracking-widest text-slate-400 mb-1">Date</dt>
-            <dd className="text-sm text-on-surface">{new Date(activity.dueDate).toLocaleDateString()}</dd>
+            <dd className="text-sm text-on-surface">{displayDate(activity.dueDate)}</dd>
           </div>
           <div>
             <dt className="text-xs font-bold uppercase tracking-widest text-slate-400 mb-1">Duration</dt>

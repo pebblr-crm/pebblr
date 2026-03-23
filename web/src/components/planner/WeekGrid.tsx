@@ -2,6 +2,7 @@ import { Link } from '@tanstack/react-router'
 import type { Activity } from '@/types/activity'
 import type { TenantConfig } from '@/types/config'
 import { ActivityCard } from './ActivityCard'
+import { formatDate, addDays, extractDate } from '@/utils/date'
 
 interface WeekGridProps {
   activities: Activity[]
@@ -10,19 +11,6 @@ interface WeekGridProps {
 }
 
 const DAY_LABELS = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun']
-
-function formatDate(d: Date): string {
-  const y = d.getFullYear()
-  const m = String(d.getMonth() + 1).padStart(2, '0')
-  const day = String(d.getDate()).padStart(2, '0')
-  return `${y}-${m}-${day}`
-}
-
-function addDays(d: Date, n: number): Date {
-  const result = new Date(d)
-  result.setDate(result.getDate() + n)
-  return result
-}
 
 export function WeekGrid({ activities, weekStart, config }: WeekGridProps) {
   const today = formatDate(new Date())
@@ -34,7 +22,7 @@ export function WeekGrid({ activities, weekStart, config }: WeekGridProps) {
         {days.map((day, i) => {
           const dateStr = formatDate(day)
           const isToday = dateStr === today
-          const dayActivities = activities.filter((a) => a.dueDate.split('T')[0] === dateStr)
+          const dayActivities = activities.filter((a) => extractDate(a.dueDate) === dateStr)
 
           return (
             <div key={i} className={`min-h-[400px] ${isToday ? 'bg-primary/5' : ''}`}>

@@ -13,6 +13,7 @@ import { useActivityStats, useCoverage, useFrequency } from '../services/dashboa
 import { useConfig } from '../services/config'
 import { useTeamMembers } from '../services/teams'
 import type { DashboardFilter } from '../types/dashboard'
+import { formatPeriod } from '../utils/date'
 
 export const Route = createRoute({
   getParentRoute: () => rootRoute,
@@ -21,10 +22,7 @@ export const Route = createRoute({
 })
 
 function currentPeriod(): string {
-  const now = new Date()
-  const y = now.getFullYear()
-  const m = String(now.getMonth() + 1).padStart(2, '0')
-  return `${y}-${m}`
+  return formatPeriod(new Date())
 }
 
 export function DashboardPage() {

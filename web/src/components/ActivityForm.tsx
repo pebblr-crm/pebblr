@@ -4,6 +4,7 @@ import { useTargets } from '../services/targets'
 import type { Activity, CreateActivityInput } from '../types/activity'
 import type { FieldConfig, OptionDef, TenantConfig } from '../types/config'
 import { LoadingSpinner } from './LoadingSpinner'
+import { extractDate } from '@/utils/date'
 
 interface ActivityFormProps {
   initialData?: Activity
@@ -45,7 +46,7 @@ function ActivityFormInner({
 
   const [activityType, setActivityType] = useState(initialData?.activityType ?? '')
   const [status, setStatus] = useState(initialStatus)
-  const [dueDate, setDueDate] = useState(initialData?.dueDate?.split('T')[0] ?? '')
+  const [dueDate, setDueDate] = useState(initialData?.dueDate ? extractDate(initialData.dueDate) : '')
   const [duration, setDuration] = useState(initialData?.duration ?? '')
   const [targetId, setTargetId] = useState(initialData?.targetId ?? '')
   const [jointVisitUserId, setJointVisitUserId] = useState(initialData?.jointVisitUserId ?? '')
