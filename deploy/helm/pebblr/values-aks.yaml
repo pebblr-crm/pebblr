@@ -5,16 +5,21 @@ gateway:
 
 istio:
   enabled: true
-  host: "*"
+  host: "demo.pebblr.net"
   gatewayName: pebblr-gateway
   gatewayNamespace: istio-system
   createGateway: true
 
 tls:
-  enabled: false
+  enabled: true
+  mode: origin
+  hostname: "demo.pebblr.net"
+  origin:
+    certKeyVaultKey: "origin-tls-cert"
+    privateKeyKeyVaultKey: "origin-tls-key"
 
 externalSecrets:
-  enabled: false  # Enable once ESO is installed and SecretStore is configured
+  enabled: false
 
 database:
   host: postgres.pebblr-db.svc.cluster.local

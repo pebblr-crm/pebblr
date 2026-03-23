@@ -16,6 +16,10 @@ spec:
         protocol: HTTP
       hosts:
         - {{ .Values.istio.host | quote }}
+      {{- if .Values.tls.enabled }}
+      tls:
+        httpsRedirect: true
+      {{- end }}
     {{- if .Values.tls.enabled }}
     - port:
         number: 443

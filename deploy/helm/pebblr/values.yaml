@@ -36,13 +36,17 @@ istio:
   gatewayNamespace: istio-system
   createGateway: false
 
-# TLS via cert-manager
-# mode: "selfsigned" — self-signed CA chain (local dev)
-# mode: "letsencrypt" — ACME (not yet implemented)
+# TLS
+# mode: "selfsigned" — self-signed CA chain via cert-manager (local dev)
+# mode: "origin"     — Cloudflare Origin CA cert from Azure KeyVault via ESO (production)
 tls:
   enabled: false
   mode: selfsigned
   hostname: ""
+  # Origin CA settings (mode: "origin") — cert+key stored in Azure KeyVault
+  origin:
+    certKeyVaultKey: "origin-tls-cert"
+    privateKeyKeyVaultKey: "origin-tls-key"
 
 resources:
   requests:

@@ -59,8 +59,8 @@ spec:
     kind: ClusterIssuer
     group: cert-manager.io
 {{- end }}
-{{- if eq .Values.tls.mode "letsencrypt" }}
-# Placeholder for future Let's Encrypt integration.
-# Will use a ClusterIssuer backed by ACME.
+{{- if eq .Values.tls.mode "origin" }}
+# Cloudflare Origin CA — cert/key loaded from Azure KeyVault via ESO.
+# No cert-manager resources needed; the TLS secret is created by ExternalSecret.
 {{- end }}
 {{- end }}
