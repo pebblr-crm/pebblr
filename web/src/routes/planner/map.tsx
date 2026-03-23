@@ -358,11 +358,11 @@ function MapPlannerPage() {
 
   return (
     <APIProvider apiKey={API_KEY}>
-      <div className="flex flex-col h-[calc(100vh-64px)]">
+      <div className="flex flex-col h-[calc(100vh-56px)] sm:h-[calc(100vh-64px)]">
         {/* Top section: map + target list */}
-        <div className="flex flex-1 min-h-0">
-          {/* Map (3/4) */}
-          <div className="w-3/4 relative">
+        <div className="flex flex-col sm:flex-row flex-1 min-h-0">
+          {/* Map */}
+          <div className="flex-1 sm:w-3/4 relative min-h-[300px]">
             <GoogleMap
               defaultCenter={BUCHAREST_CENTER}
               defaultZoom={12}
@@ -438,7 +438,7 @@ function MapPlannerPage() {
           </div>
 
           {/* Target list (1/4) */}
-          <div className="w-1/4 border-l border-slate-200 flex flex-col bg-white">
+          <div className="sm:w-1/4 border-t sm:border-t-0 sm:border-l border-slate-200 flex flex-col bg-white max-h-[40vh] sm:max-h-none overflow-y-auto">
             {/* Collections section */}
             {collections && collections.length > 0 && (
               <div className="border-b border-slate-100">

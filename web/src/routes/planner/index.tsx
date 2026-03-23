@@ -109,17 +109,17 @@ export function PlannerPage() {
     <motion.div
       initial={{ opacity: 0, scale: 0.95 }}
       animate={{ opacity: 1, scale: 1 }}
-      className="p-8 space-y-6"
+      className="p-4 sm:p-8 space-y-6"
     >
       {/* Header */}
       <div className="flex flex-col md:flex-row md:items-end justify-between gap-4">
         <div>
-          <h1 className="text-4xl font-headline font-extrabold text-primary tracking-tight">
+          <h1 className="text-2xl sm:text-4xl font-headline font-extrabold text-primary tracking-tight">
             Planner
           </h1>
           <p className="text-on-surface-variant mt-1">Plan and track field activities.</p>
         </div>
-        <div className="flex items-center gap-3">
+        <div className="flex flex-wrap items-center gap-3">
           {/* View toggle */}
           <div className="flex bg-surface-container-low rounded-lg p-0.5" data-testid="view-toggle">
             <button

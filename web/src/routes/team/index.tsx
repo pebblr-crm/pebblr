@@ -20,11 +20,11 @@ export function TeamPage() {
     <motion.div
       initial={{ opacity: 0, y: 20 }}
       animate={{ opacity: 1, y: 0 }}
-      className="p-8 space-y-8"
+      className="p-4 sm:p-8 space-y-6 sm:space-y-8"
     >
-      <div className="flex justify-between items-end">
+      <div className="flex flex-col sm:flex-row sm:justify-between sm:items-end gap-4">
         <div>
-          <h1 className="text-4xl font-extrabold tracking-tight text-primary leading-tight font-headline">
+          <h1 className="text-2xl sm:text-4xl font-extrabold tracking-tight text-primary leading-tight font-headline">
             Team Management
           </h1>
           <p className="text-on-surface-variant mt-1 font-medium">

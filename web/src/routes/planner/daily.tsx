@@ -48,7 +48,7 @@ export function PlannerDailyPage() {
     <motion.div
       initial={{ opacity: 0, y: 20 }}
       animate={{ opacity: 1, y: 0 }}
-      className="p-8 max-w-4xl mx-auto w-full space-y-6"
+      className="p-4 sm:p-8 max-w-4xl mx-auto w-full space-y-6"
     >
       {/* Back to planner */}
       <Link
@@ -60,9 +60,9 @@ export function PlannerDailyPage() {
       </Link>
 
       {/* Header */}
-      <div className="flex items-end justify-between">
+      <div className="flex flex-col sm:flex-row sm:items-end sm:justify-between gap-4">
         <div>
-          <h1 className="text-3xl font-headline font-extrabold text-primary tracking-tight">
+          <h1 className="text-2xl sm:text-3xl font-headline font-extrabold text-primary tracking-tight">
             {dayName}
           </h1>
           <p className="text-on-surface-variant mt-1">
@@ -70,7 +70,7 @@ export function PlannerDailyPage() {
             {isToday && <span className="ml-2 text-xs font-bold text-primary">(Today)</span>}
           </p>
         </div>
-        <div className="flex items-center gap-3">
+        <div className="flex flex-wrap items-center gap-3">
           {!isToday && (
             <button
               onClick={goToToday}

@@ -25,15 +25,15 @@ export function MonthGrid({ activities, year, month, config }: MonthGridProps) {
   const isCurrentMonth = today.getMonth() + 1 === month && today.getFullYear() === year
 
   return (
-    <div className="bg-surface-container-lowest rounded-xl shadow-sm border border-slate-100 overflow-hidden" data-testid="month-grid">
-      <div className="grid grid-cols-7 bg-surface-container-low border-b border-slate-100">
+    <div className="bg-surface-container-lowest rounded-xl shadow-sm border border-slate-100 overflow-x-auto" data-testid="month-grid">
+      <div className="grid grid-cols-7 bg-surface-container-low border-b border-slate-100 min-w-[560px]">
         {DAYS.map((day) => (
           <div key={day} className="py-4 text-center text-[10px] font-bold text-on-surface-variant uppercase tracking-widest">
             {day}
           </div>
         ))}
       </div>
-      <div className="grid grid-cols-7">
+      <div className="grid grid-cols-7 min-w-[560px]">
         {/* empty cells before first day */}
         {Array.from({ length: offset }).map((_, i) => (
           <div key={`pad-${i}`} className="min-h-[120px] p-2 border-r border-b border-slate-50 bg-slate-50/30" />
