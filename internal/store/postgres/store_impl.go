@@ -36,3 +36,8 @@ func (db *DB) Audit() store.AuditRepository {
 func (db *DB) Dashboard() store.DashboardRepository {
 	return &dashboardRepository{pool: db.pool}
 }
+
+// Collections returns the PostgreSQL-backed collection repository.
+func (db *DB) Collections() store.CollectionRepository {
+	return &collectionRepository{pool: db.pool}
+}
