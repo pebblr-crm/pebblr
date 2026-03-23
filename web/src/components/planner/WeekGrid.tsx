@@ -34,7 +34,7 @@ export function WeekGrid({ activities, weekStart, config }: WeekGridProps) {
         {days.map((day, i) => {
           const dateStr = formatDate(day)
           const isToday = dateStr === today
-          const dayActivities = activities.filter((a) => a.dueDate === dateStr)
+          const dayActivities = activities.filter((a) => a.dueDate.split('T')[0] === dateStr)
 
           return (
             <div key={i} className={`min-h-[400px] ${isToday ? 'bg-primary/5' : ''}`}>

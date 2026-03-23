@@ -101,7 +101,7 @@ export function PlannerPage() {
 
   // Stats
   const todayStr = formatDate(now)
-  const todayCount = activities.filter((a) => a.dueDate === todayStr).length
+  const todayCount = activities.filter((a) => a.dueDate.split('T')[0] === todayStr).length
 
   // Status legend from config
   const statusLegend = config?.activities.statuses.map((s) => {

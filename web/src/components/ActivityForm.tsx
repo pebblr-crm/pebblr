@@ -47,10 +47,14 @@ function ActivityFormInner({
   const [status, setStatus] = useState(initialStatus)
   const [dueDate, setDueDate] = useState(initialData?.dueDate?.split('T')[0] ?? '')
   const [duration, setDuration] = useState(initialData?.duration ?? '')
-  const [routing, setRouting] = useState(initialData?.routing ?? '')
   const [targetId, setTargetId] = useState(initialData?.targetId ?? '')
   const [jointVisitUserId, setJointVisitUserId] = useState(initialData?.jointVisitUserId ?? '')
-  const [fields, setFields] = useState<Record<string, unknown>>(initialData?.fields ?? {})
+  const [fields, setFields] = useState<Record<string, unknown>>(() => {
+    const f = { ...(initialData?.fields ?? {}) }
+    // Seed routing into fields so the dynamic form pre-populates it.
+    if (initialData?.routing) f.routing = initialData.routing
+    return f
+  })
   const [targetSearch, setTargetSearch] = useState('')
 
   const { data: targetsResult } = useTargets({ q: targetSearch, limit: 20 })
@@ -58,7 +62,6 @@ function ActivityFormInner({
   const activityTypes = config.activities.types
   const statuses = config.activities.statuses
   const durations = config.activities.durations
-  const routingOptions = config.activities.routing_options ?? []
   const selectedType = activityTypes.find((t) => t.key === activityType)
   const isFieldActivity = selectedType?.category === 'field'
   const isEditing = Boolean(initialData)
@@ -74,13 +77,15 @@ function ActivityFormInner({
 
   function handleSubmit(e: FormEvent) {
     e.preventDefault()
+    // Extract routing from dynamic fields → top-level property for backend.
+    const { routing: routingValue, ...restFields } = fields as Record<string, unknown> & { routing?: string }
     onSubmit({
       activityType,
-      status,
+      status: isEditing ? status : '',
       dueDate,
       duration,
-      routing: routing || undefined,
-      fields,
+      routing: (routingValue as string) || undefined,
+      fields: restFields,
       targetId: targetId || undefined,
       jointVisitUserId: jointVisitUserId || undefined,
     })
@@ -88,7 +93,15 @@ function ActivityFormInner({
 
   function resolveOptions(fieldDef: FieldConfig): OptionDef[] {
     if (fieldDef.options_ref) {
-      return config.options[fieldDef.options_ref] ?? []
+      // Check top-level options map first, then special-case refs
+      // that live outside the options map (mirrors backend ResolveOptions).
+      if (config.options[fieldDef.options_ref]) {
+        return config.options[fieldDef.options_ref]
+      }
+      if (fieldDef.options_ref === 'durations') {
+        return config.activities.durations
+      }
+      return []
     }
     if (fieldDef.options) {
       return fieldDef.options.map((o) => ({ key: o, label: o }))
@@ -255,25 +268,27 @@ function ActivityFormInner({
             )}
           </div>
 
-          {/* Status */}
-          <div>
-            <label className="block text-xs font-bold uppercase tracking-widest text-slate-400 mb-1">
-              Status <span className="text-error">*</span>
-            </label>
-            <select
-              value={status}
-              onChange={(e) => setStatus(e.target.value)}
-              disabled={isLocked}
-              className={inputClass(getFieldError('status'))}
-              data-testid="status-select"
-              required
-            >
-              <option value="">— Select status —</option>
-              {statuses.map((s) => (
-                <option key={s.key} value={s.key}>{s.label}</option>
-              ))}
-            </select>
-          </div>
+          {/* Status — only shown when editing; on create the backend defaults to initial status */}
+          {isEditing && (
+            <div>
+              <label className="block text-xs font-bold uppercase tracking-widest text-slate-400 mb-1">
+                Status <span className="text-error">*</span>
+              </label>
+              <select
+                value={status}
+                onChange={(e) => setStatus(e.target.value)}
+                disabled={isLocked}
+                className={inputClass(getFieldError('status'))}
+                data-testid="status-select"
+                required
+              >
+                <option value="">— Select status —</option>
+                {statuses.map((s) => (
+                  <option key={s.key} value={s.key}>{s.label}</option>
+                ))}
+              </select>
+            </div>
+          )}
 
           {/* Due date */}
           <div>
@@ -313,27 +328,6 @@ function ActivityFormInner({
               ))}
             </select>
           </div>
-
-          {/* Routing */}
-          {routingOptions.length > 0 && (
-            <div>
-              <label className="block text-xs font-bold uppercase tracking-widest text-slate-400 mb-1">
-                Routing
-              </label>
-              <select
-                value={routing}
-                onChange={(e) => setRouting(e.target.value)}
-                disabled={isLocked}
-                className={inputClass()}
-                data-testid="routing-select"
-              >
-                <option value="">— None —</option>
-                {routingOptions.map((r) => (
-                  <option key={r.key} value={r.key}>{r.label}</option>
-                ))}
-              </select>
-            </div>
-          )}
 
           {/* Target (for field activities) */}
           {isFieldActivity && (
@@ -401,13 +395,15 @@ function ActivityFormInner({
       </div>
 
       {/* Dynamic fields based on activity type */}
-      {selectedType && selectedType.fields.length > 0 && (
+      {selectedType && selectedType.fields.filter((f) => !['duration', 'account_id', 'joint_visit_user_id'].includes(f.key)).length > 0 && (
         <div className="bg-surface-container-lowest p-8 rounded-xl shadow-[0px_24px_48px_rgba(25,28,30,0.06)]">
           <h2 className="text-lg font-bold text-on-surface mb-6 font-headline">
             {selectedType.label} Details
           </h2>
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
-            {selectedType.fields.map((f) => renderDynamicField(f))}
+            {selectedType.fields
+              .filter((f) => !['duration', 'account_id', 'joint_visit_user_id'].includes(f.key))
+              .map((f) => renderDynamicField(f))}
           </div>
         </div>
       )}

@@ -58,7 +58,8 @@
           { "key": "details", "type": "text", "required": false },
           { "key": "duration", "type": "select", "required": true, "options_ref": "durations" },
           { "key": "visit_partner", "type": "text", "required": false },
-          { "key": "joint_visit_user_id", "type": "relation", "required": false }
+          { "key": "joint_visit_user_id", "type": "relation", "required": false },
+          { "key": "routing", "type": "select", "required": false, "options_ref": "routing_options" }
         ],
         "submit_required": ["promoted_products", "feedback"]
       },
@@ -143,13 +144,14 @@
         ]
       }
     ],
+    "routing_options": []
+  },
+  "options": {
     "routing_options": [
       { "key": "week_1", "label": "Week 1" },
       { "key": "week_2", "label": "Week 2" },
       { "key": "week_3", "label": "Week 3" }
-    ]
-  },
-  "options": {
+    ],
     "specialties": [
       { "key": "cardiology", "label": "Cardiology" },
       { "key": "internal_medicine", "label": "Internal Medicine" },
