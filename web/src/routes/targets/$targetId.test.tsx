@@ -43,10 +43,23 @@ const testConfig: TenantConfig = {
       },
     ],
   },
+  activities: {
+    statuses: [{ key: 'planificat', label: 'Planned', initial: true }],
+    status_transitions: {},
+    durations: [{ key: 'full_day', label: 'Full Day' }],
+    types: [],
+    routing_options: [],
+  },
   options: {
     specialties: [
       { key: 'cardiology', label: 'Cardiology' },
     ],
+  },
+  rules: {
+    frequency: {},
+    max_activities_per_day: 10,
+    default_visit_duration_minutes: {},
+    visit_duration_step_minutes: 30,
   },
 }
 
