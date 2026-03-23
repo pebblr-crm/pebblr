@@ -1,26 +1,26 @@
 -- Seed data for local development
 -- Pharmaceutical field-sales CRM: users, teams, targets (doctors/pharmacies), activities.
--- Uses fixed UUIDs for deterministic, idempotent inserts.
+-- All targets are in Bucharest, Romania. Uses fixed UUIDs for deterministic, idempotent inserts.
 
 -- ============================================================
 -- Users
 -- ============================================================
 INSERT INTO users (id, external_id, email, name, role, avatar, online_status) VALUES
-  ('a0000000-0000-0000-0000-000000000001', 'oid-admin-001',   'admin@pebblr.dev',     'Alex Admin',    'admin',   '', 'online'),
-  ('a0000000-0000-0000-0000-000000000002', 'oid-mgr-001',     'mgr.north@pebblr.dev', 'Morgan North',  'manager', '', 'online'),
-  ('a0000000-0000-0000-0000-000000000003', 'oid-mgr-002',     'mgr.south@pebblr.dev', 'Sam South',     'manager', '', 'away'),
-  ('a0000000-0000-0000-0000-000000000004', 'oid-rep-001',     'rep.alice@pebblr.dev', 'Alice Reyes',   'rep',     '', 'online'),
-  ('a0000000-0000-0000-0000-000000000005', 'oid-rep-002',     'rep.bob@pebblr.dev',   'Bob Tran',      'rep',     '', 'online'),
-  ('a0000000-0000-0000-0000-000000000006', 'oid-rep-003',     'rep.carol@pebblr.dev', 'Carol Kim',     'rep',     '', 'offline'),
-  ('a0000000-0000-0000-0000-000000000007', 'oid-rep-004',     'rep.dan@pebblr.dev',   'Dan Osei',      'rep',     '', 'online')
+  ('a0000000-0000-0000-0000-000000000001', 'oid-admin-001',   'admin@pebblr.dev',     'Alexandru Dobre',  'admin',   '', 'online'),
+  ('a0000000-0000-0000-0000-000000000002', 'oid-mgr-001',     'mgr.north@pebblr.dev', 'Ioana Marinescu',  'manager', '', 'online'),
+  ('a0000000-0000-0000-0000-000000000003', 'oid-mgr-002',     'mgr.south@pebblr.dev', 'Cristian Barbu',   'manager', '', 'away'),
+  ('a0000000-0000-0000-0000-000000000004', 'oid-rep-001',     'rep.alice@pebblr.dev', 'Alina Popa',       'rep',     '', 'online'),
+  ('a0000000-0000-0000-0000-000000000005', 'oid-rep-002',     'rep.bob@pebblr.dev',   'Bogdan Toma',      'rep',     '', 'online'),
+  ('a0000000-0000-0000-0000-000000000006', 'oid-rep-003',     'rep.carol@pebblr.dev', 'Camelia Radu',     'rep',     '', 'offline'),
+  ('a0000000-0000-0000-0000-000000000007', 'oid-rep-004',     'rep.dan@pebblr.dev',   'Daniel Nistor',    'rep',     '', 'online')
 ON CONFLICT (id) DO NOTHING;
 
 -- ============================================================
 -- Teams
 -- ============================================================
 INSERT INTO teams (id, name, manager_id) VALUES
-  ('b0000000-0000-0000-0000-000000000001', 'North Region', 'a0000000-0000-0000-0000-000000000002'),
-  ('b0000000-0000-0000-0000-000000000002', 'South Region', 'a0000000-0000-0000-0000-000000000003')
+  ('b0000000-0000-0000-0000-000000000001', 'Sector 1-3', 'a0000000-0000-0000-0000-000000000002'),
+  ('b0000000-0000-0000-0000-000000000002', 'Sector 4-6', 'a0000000-0000-0000-0000-000000000003')
 ON CONFLICT (id) DO NOTHING;
 
 -- ============================================================
@@ -37,64 +37,122 @@ INSERT INTO team_members (team_id, user_id) VALUES
 ON CONFLICT DO NOTHING;
 
 -- ============================================================
--- Targets: Doctors
+-- Targets: Doctors (18)
 -- ============================================================
 INSERT INTO targets (id, target_type, name, external_id, fields, assignee_id, team_id) VALUES
-  -- North Region doctors
-  ('c0000000-0000-0000-0000-000000000001', 'doctor', 'Dr. Elena Popescu',   'DOC-001',
-   '{"specialty": "cardiology", "potential": "a", "city": "Portland", "county": "Multnomah", "address": "123 Heart Ave"}',
+  -- Sector 1-3: Alina's doctors
+  ('c0000000-0000-0000-0000-000000000001', 'doctor', 'Dr. Elena Popescu', 'DOC-001',
+   '{"specialty": "cardiology", "potential": "a", "city": "București", "county": "București", "address": "Bd. Aviatorilor 34, Sector 1"}',
    'a0000000-0000-0000-0000-000000000004', 'b0000000-0000-0000-0000-000000000001'),
 
-  ('c0000000-0000-0000-0000-000000000002', 'doctor', 'Dr. Mihai Ionescu',   'DOC-002',
-   '{"specialty": "internal_medicine", "potential": "b", "city": "Seattle", "county": "King", "address": "456 Clinic Rd"}',
+  ('c0000000-0000-0000-0000-000000000002', 'doctor', 'Dr. Mihai Ionescu', 'DOC-002',
+   '{"specialty": "internal_medicine", "potential": "b", "city": "București", "county": "București", "address": "Str. Știrbei Vodă 128, Sector 1"}',
    'a0000000-0000-0000-0000-000000000004', 'b0000000-0000-0000-0000-000000000001'),
 
-  ('c0000000-0000-0000-0000-000000000003', 'doctor', 'Dr. Ana Dumitrescu',  'DOC-003',
-   '{"specialty": "family_medicine", "potential": "a", "city": "Tacoma", "county": "Pierce", "address": "789 Family Blvd"}',
+  ('c0000000-0000-0000-0000-000000000003', 'doctor', 'Dr. Adriana Vlad', 'DOC-003',
+   '{"specialty": "neurology", "potential": "a", "city": "București", "county": "București", "address": "Calea Dorobanți 77, Sector 1"}',
+   'a0000000-0000-0000-0000-000000000004', 'b0000000-0000-0000-0000-000000000001'),
+
+  ('c0000000-0000-0000-0000-000000000004', 'doctor', 'Dr. Sorin Munteanu', 'DOC-004',
+   '{"specialty": "gastroenterology", "potential": "c", "city": "București", "county": "București", "address": "Str. Polonă 52, Sector 1"}',
+   'a0000000-0000-0000-0000-000000000004', 'b0000000-0000-0000-0000-000000000001'),
+
+  -- Sector 1-3: Bogdan's doctors
+  ('c0000000-0000-0000-0000-000000000005', 'doctor', 'Dr. Ana Dumitrescu', 'DOC-005',
+   '{"specialty": "family_medicine", "potential": "a", "city": "București", "county": "București", "address": "Bd. Magheru 28, Sector 2"}',
    'a0000000-0000-0000-0000-000000000005', 'b0000000-0000-0000-0000-000000000001'),
 
-  ('c0000000-0000-0000-0000-000000000004', 'doctor', 'Dr. Radu Constantinescu', 'DOC-004',
-   '{"specialty": "gastroenterology", "potential": "c", "city": "Portland", "county": "Multnomah", "address": "321 Gastro St"}',
+  ('c0000000-0000-0000-0000-000000000006', 'doctor', 'Dr. Radu Constantinescu', 'DOC-006',
+   '{"specialty": "pulmonology", "potential": "b", "city": "București", "county": "București", "address": "Str. Barbu Văcărescu 164, Sector 2"}',
    'a0000000-0000-0000-0000-000000000005', 'b0000000-0000-0000-0000-000000000001'),
 
-  -- South Region doctors
-  ('c0000000-0000-0000-0000-000000000005', 'doctor', 'Dr. Maria Stanescu',  'DOC-005',
-   '{"specialty": "neurology", "potential": "a", "city": "San Francisco", "county": "San Francisco", "address": "100 Neuro Way"}',
+  ('c0000000-0000-0000-0000-000000000007', 'doctor', 'Dr. Florina Neagu', 'DOC-007',
+   '{"specialty": "endocrinology", "potential": "a", "city": "București", "county": "București", "address": "Bd. Dacia 65, Sector 2"}',
+   'a0000000-0000-0000-0000-000000000005', 'b0000000-0000-0000-0000-000000000001'),
+
+  ('c0000000-0000-0000-0000-000000000008', 'doctor', 'Dr. Victor Preda', 'DOC-008',
+   '{"specialty": "cardiology", "potential": "b", "city": "București", "county": "București", "address": "Str. Traian 200, Sector 3"}',
+   'a0000000-0000-0000-0000-000000000005', 'b0000000-0000-0000-0000-000000000001'),
+
+  ('c0000000-0000-0000-0000-000000000009', 'doctor', 'Dr. Luminița Stoian', 'DOC-009',
+   '{"specialty": "dermatology", "potential": "c", "city": "București", "county": "București", "address": "Calea Călărașilor 306, Sector 3"}',
+   'a0000000-0000-0000-0000-000000000005', 'b0000000-0000-0000-0000-000000000001'),
+
+  -- Sector 4-6: Camelia's doctors
+  ('c0000000-0000-0000-0000-000000000010', 'doctor', 'Dr. Maria Stanescu', 'DOC-010',
+   '{"specialty": "neurology", "potential": "a", "city": "București", "county": "București", "address": "Bd. Tineretului 1, Sector 4"}',
    'a0000000-0000-0000-0000-000000000006', 'b0000000-0000-0000-0000-000000000002'),
 
-  ('c0000000-0000-0000-0000-000000000006', 'doctor', 'Dr. Andrei Georgescu','DOC-006',
-   '{"specialty": "pulmonology", "potential": "b", "city": "Eugene", "county": "Lane", "address": "200 Lung Ct"}',
+  ('c0000000-0000-0000-0000-000000000011', 'doctor', 'Dr. Cristina Moldovan', 'DOC-011',
+   '{"specialty": "pediatrics", "potential": "b", "city": "București", "county": "București", "address": "Șos. Olteniței 40, Sector 4"}',
+   'a0000000-0000-0000-0000-000000000006', 'b0000000-0000-0000-0000-000000000002'),
+
+  ('c0000000-0000-0000-0000-000000000012', 'doctor', 'Dr. Gheorghe Petre', 'DOC-012',
+   '{"specialty": "orthopedics", "potential": "a", "city": "București", "county": "București", "address": "Calea Văcărești 280, Sector 4"}',
+   'a0000000-0000-0000-0000-000000000006', 'b0000000-0000-0000-0000-000000000002'),
+
+  ('c0000000-0000-0000-0000-000000000013', 'doctor', 'Dr. Daniela Luca', 'DOC-013',
+   '{"specialty": "internal_medicine", "potential": "b", "city": "București", "county": "București", "address": "Str. Fabricii 12, Sector 6"}',
+   'a0000000-0000-0000-0000-000000000006', 'b0000000-0000-0000-0000-000000000002'),
+
+  -- Sector 4-6: Daniel's doctors
+  ('c0000000-0000-0000-0000-000000000014', 'doctor', 'Dr. Andrei Georgescu', 'DOC-014',
+   '{"specialty": "pulmonology", "potential": "b", "city": "București", "county": "București", "address": "Calea 13 Septembrie 106, Sector 5"}',
    'a0000000-0000-0000-0000-000000000007', 'b0000000-0000-0000-0000-000000000002'),
 
-  ('c0000000-0000-0000-0000-000000000007', 'doctor', 'Dr. Cristina Moldovan','DOC-007',
-   '{"specialty": "pediatrics", "potential": "b", "city": "Bend", "county": "Deschutes", "address": "50 Kids Ln"}',
-   'a0000000-0000-0000-0000-000000000006', 'b0000000-0000-0000-0000-000000000002'),
+  ('c0000000-0000-0000-0000-000000000015', 'doctor', 'Dr. Ion Petrescu', 'DOC-015',
+   '{"specialty": "geriatrics", "potential": "c", "city": "București", "county": "București", "address": "Bd. Libertății 18, Sector 5"}',
+   'a0000000-0000-0000-0000-000000000007', 'b0000000-0000-0000-0000-000000000002'),
 
-  ('c0000000-0000-0000-0000-000000000008', 'doctor', 'Dr. Ion Petrescu',    'DOC-008',
-   '{"specialty": "geriatrics", "potential": "c", "city": "Las Vegas", "county": "Clark", "address": "88 Senior Dr"}',
+  ('c0000000-0000-0000-0000-000000000016', 'doctor', 'Dr. Oana Dragomir', 'DOC-016',
+   '{"specialty": "family_medicine", "potential": "a", "city": "București", "county": "București", "address": "Bd. Iuliu Maniu 63, Sector 6"}',
+   'a0000000-0000-0000-0000-000000000007', 'b0000000-0000-0000-0000-000000000002'),
+
+  ('c0000000-0000-0000-0000-000000000017', 'doctor', 'Dr. Bogdan Enescu', 'DOC-017',
+   '{"specialty": "gastroenterology", "potential": "b", "city": "București", "county": "București", "address": "Str. Brașov 21, Sector 6"}',
+   'a0000000-0000-0000-0000-000000000007', 'b0000000-0000-0000-0000-000000000002'),
+
+  ('c0000000-0000-0000-0000-000000000018', 'doctor', 'Dr. Raluca Matei', 'DOC-018',
+   '{"specialty": "cardiology", "potential": "a", "city": "București", "county": "București", "address": "Bd. Timișoara 44, Sector 6"}',
    'a0000000-0000-0000-0000-000000000007', 'b0000000-0000-0000-0000-000000000002')
 ON CONFLICT (id) DO NOTHING;
 
 -- ============================================================
--- Targets: Pharmacies
+-- Targets: Pharmacies (8)
 -- ============================================================
 INSERT INTO targets (id, target_type, name, external_id, fields, assignee_id, team_id) VALUES
-  -- North Region pharmacies
-  ('c0000000-0000-0000-0000-000000000009', 'pharmacy', 'Greenfield Pharmacy',     'PHR-001',
-   '{"pharmacy_type": "chain", "city": "Portland", "county": "Multnomah", "address": "10 Main St"}',
+  -- Sector 1-3 pharmacies
+  ('c0000000-0000-0000-0000-000000000019', 'pharmacy', 'Farmacia Dona — Victoriei',      'PHR-001',
+   '{"pharmacy_type": "chain", "city": "București", "county": "București", "address": "Calea Victoriei 155, Sector 1"}',
    'a0000000-0000-0000-0000-000000000004', 'b0000000-0000-0000-0000-000000000001'),
 
-  ('c0000000-0000-0000-0000-000000000010', 'pharmacy', 'Pacific Health Pharmacy', 'PHR-002',
-   '{"pharmacy_type": "chain", "city": "Seattle", "county": "King", "address": "22 Wellness Ave"}',
+  ('c0000000-0000-0000-0000-000000000020', 'pharmacy', 'Farmacia Sensiblu — Floreasca',  'PHR-002',
+   '{"pharmacy_type": "chain", "city": "București", "county": "București", "address": "Calea Floreasca 169, Sector 1"}',
+   'a0000000-0000-0000-0000-000000000004', 'b0000000-0000-0000-0000-000000000001'),
+
+  ('c0000000-0000-0000-0000-000000000021', 'pharmacy', 'Farmacia Catena — Obor',         'PHR-003',
+   '{"pharmacy_type": "chain", "city": "București", "county": "București", "address": "Șos. Colentina 2, Sector 2"}',
    'a0000000-0000-0000-0000-000000000005', 'b0000000-0000-0000-0000-000000000001'),
 
-  -- South Region pharmacies
-  ('c0000000-0000-0000-0000-000000000011', 'pharmacy', 'Sunrise Pharmacy',        'PHR-003',
-   '{"pharmacy_type": "chain", "city": "San Francisco", "county": "San Francisco", "address": "5 Bay Rd"}',
+  ('c0000000-0000-0000-0000-000000000022', 'pharmacy', 'Farmacia Help Net — Universitate','PHR-004',
+   '{"pharmacy_type": "chain", "city": "București", "county": "București", "address": "Bd. Regina Elisabeta 15, Sector 3"}',
+   'a0000000-0000-0000-0000-000000000005', 'b0000000-0000-0000-0000-000000000001'),
+
+  -- Sector 4-6 pharmacies
+  ('c0000000-0000-0000-0000-000000000023', 'pharmacy', 'Farmacia Dr. Max — Brâncoveanu',  'PHR-005',
+   '{"pharmacy_type": "chain", "city": "București", "county": "București", "address": "Bd. Constantin Brâncoveanu 114, Sector 4"}',
    'a0000000-0000-0000-0000-000000000006', 'b0000000-0000-0000-0000-000000000002'),
 
-  ('c0000000-0000-0000-0000-000000000012', 'pharmacy', 'Metro Drug Store',        'PHR-004',
-   '{"pharmacy_type": "chain", "city": "Sacramento", "county": "Sacramento", "address": "99 Capitol Blvd"}',
+  ('c0000000-0000-0000-0000-000000000024', 'pharmacy', 'Farmacia Ropharma — Rahova',      'PHR-006',
+   '{"pharmacy_type": "independent", "city": "București", "county": "București", "address": "Calea Rahovei 266, Sector 5"}',
+   'a0000000-0000-0000-0000-000000000006', 'b0000000-0000-0000-0000-000000000002'),
+
+  ('c0000000-0000-0000-0000-000000000025', 'pharmacy', 'Farmacia Dona — Crângași',        'PHR-007',
+   '{"pharmacy_type": "chain", "city": "București", "county": "București", "address": "Calea Crângași 6, Sector 6"}',
+   'a0000000-0000-0000-0000-000000000007', 'b0000000-0000-0000-0000-000000000002'),
+
+  ('c0000000-0000-0000-0000-000000000026', 'pharmacy', 'Farmacia Belladonna — Drumul Taberei', 'PHR-008',
+   '{"pharmacy_type": "independent", "city": "București", "county": "București", "address": "Bd. Drumul Taberei 34, Sector 6"}',
    'a0000000-0000-0000-0000-000000000007', 'b0000000-0000-0000-0000-000000000002')
 ON CONFLICT (id) DO NOTHING;
 
@@ -102,7 +160,7 @@ ON CONFLICT (id) DO NOTHING;
 -- Activities: Visits (field activities linked to targets)
 -- ============================================================
 INSERT INTO activities (id, activity_type, status, due_date, duration, routing, fields, target_id, creator_id, joint_visit_user_id, team_id, submitted_at, created_at) VALUES
-  -- North Region: Alice's visits
+  -- Sector 1-3: Alina's visits
   ('d0000000-0000-0000-0000-000000000001', 'visit', 'completed',
    CURRENT_DATE - INTERVAL '7 days', 'full_day', 'week_1',
    '{"visit_type": "f2f", "promoted_products": ["product_1"], "feedback": "Good reception, doctor interested in new cardiology line.", "details": "Discussed Q2 samples.", "duration": "full_day"}',
@@ -130,11 +188,11 @@ INSERT INTO activities (id, activity_type, status, due_date, duration, routing, 
    NULL,
    NOW() - INTERVAL '2 days'),
 
-  -- North Region: Bob's visits
+  -- Sector 1-3: Bogdan's visits
   ('d0000000-0000-0000-0000-000000000004', 'visit', 'completed',
    CURRENT_DATE - INTERVAL '3 days', 'full_day', 'week_1',
    '{"visit_type": "f2f", "promoted_products": ["product_1"], "feedback": "Family medicine doc very receptive, requested samples.", "details": "Presented new product line.", "duration": "full_day"}',
-   'c0000000-0000-0000-0000-000000000003',
+   'c0000000-0000-0000-0000-000000000005',
    'a0000000-0000-0000-0000-000000000005', NULL,
    'b0000000-0000-0000-0000-000000000001',
    NOW() - INTERVAL '2 days',
@@ -143,7 +201,7 @@ INSERT INTO activities (id, activity_type, status, due_date, duration, routing, 
   ('d0000000-0000-0000-0000-000000000005', 'visit', 'planned',
    CURRENT_DATE + INTERVAL '2 days', 'half_day', 'week_2',
    '{"visit_type": "remote", "duration": "half_day"}',
-   'c0000000-0000-0000-0000-000000000004',
+   'c0000000-0000-0000-0000-000000000008',
    'a0000000-0000-0000-0000-000000000005', NULL,
    'b0000000-0000-0000-0000-000000000001',
    NULL,
@@ -152,17 +210,17 @@ INSERT INTO activities (id, activity_type, status, due_date, duration, routing, 
   ('d0000000-0000-0000-0000-000000000006', 'visit', 'planned',
    CURRENT_DATE + INTERVAL '3 days', 'full_day', 'week_2',
    '{"visit_type": "f2f", "duration": "full_day"}',
-   'c0000000-0000-0000-0000-000000000010',
+   'c0000000-0000-0000-0000-000000000021',
    'a0000000-0000-0000-0000-000000000005', NULL,
    'b0000000-0000-0000-0000-000000000001',
    NULL,
    NOW() - INTERVAL '1 day'),
 
-  -- South Region: Carol's visits
+  -- Sector 4-6: Camelia's visits
   ('d0000000-0000-0000-0000-000000000007', 'visit', 'completed',
    CURRENT_DATE - INTERVAL '6 days', 'full_day', 'week_1',
    '{"visit_type": "f2f", "promoted_products": ["product_1"], "feedback": "Neurology specialist interested, scheduled follow-up.", "details": "Detailed product presentation.", "duration": "full_day"}',
-   'c0000000-0000-0000-0000-000000000005',
+   'c0000000-0000-0000-0000-000000000010',
    'a0000000-0000-0000-0000-000000000006', NULL,
    'b0000000-0000-0000-0000-000000000002',
    NOW() - INTERVAL '5 days',
@@ -171,7 +229,7 @@ INSERT INTO activities (id, activity_type, status, due_date, duration, routing, 
   ('d0000000-0000-0000-0000-000000000008', 'visit', 'cancelled',
    CURRENT_DATE - INTERVAL '2 days', 'half_day', 'week_1',
    '{"visit_type": "f2f", "duration": "half_day"}',
-   'c0000000-0000-0000-0000-000000000007',
+   'c0000000-0000-0000-0000-000000000011',
    'a0000000-0000-0000-0000-000000000006', NULL,
    'b0000000-0000-0000-0000-000000000002',
    NULL,
@@ -180,17 +238,17 @@ INSERT INTO activities (id, activity_type, status, due_date, duration, routing, 
   ('d0000000-0000-0000-0000-000000000009', 'visit', 'planned',
    CURRENT_DATE + INTERVAL '2 days', 'full_day', 'week_2',
    '{"visit_type": "f2f", "duration": "full_day"}',
-   'c0000000-0000-0000-0000-000000000005',
+   'c0000000-0000-0000-0000-000000000010',
    'a0000000-0000-0000-0000-000000000006', NULL,
    'b0000000-0000-0000-0000-000000000002',
    NULL,
    NOW() - INTERVAL '1 day'),
 
-  -- South Region: Dan's visits
+  -- Sector 4-6: Daniel's visits
   ('d0000000-0000-0000-0000-000000000010', 'visit', 'completed',
    CURRENT_DATE - INTERVAL '4 days', 'full_day', 'week_1',
    '{"visit_type": "f2f", "promoted_products": ["product_1"], "feedback": "Discussed pulmonology treatments, positive outlook.", "details": "On-site visit with Dr. Georgescu.", "duration": "full_day"}',
-   'c0000000-0000-0000-0000-000000000006',
+   'c0000000-0000-0000-0000-000000000014',
    'a0000000-0000-0000-0000-000000000007', NULL,
    'b0000000-0000-0000-0000-000000000002',
    NOW() - INTERVAL '3 days',
@@ -199,17 +257,17 @@ INSERT INTO activities (id, activity_type, status, due_date, duration, routing, 
   ('d0000000-0000-0000-0000-000000000011', 'visit', 'planned',
    CURRENT_DATE + INTERVAL '4 days', 'half_day', 'week_2',
    '{"visit_type": "remote", "duration": "half_day"}',
-   'c0000000-0000-0000-0000-000000000008',
+   'c0000000-0000-0000-0000-000000000015',
    'a0000000-0000-0000-0000-000000000007', NULL,
    'b0000000-0000-0000-0000-000000000002',
    NULL,
    NOW() - INTERVAL '1 day'),
 
-  -- Joint visit: Alice + manager Morgan visiting a high-potential doctor
+  -- Joint visit: Alina + manager Ioana visiting a high-potential doctor
   ('d0000000-0000-0000-0000-000000000012', 'visit', 'planned',
    CURRENT_DATE + INTERVAL '5 days', 'full_day', 'week_2',
-   '{"visit_type": "f2f", "visit_partner": "Morgan North", "duration": "full_day"}',
-   'c0000000-0000-0000-0000-000000000001',
+   '{"visit_type": "f2f", "duration": "full_day"}',
+   'c0000000-0000-0000-0000-000000000003',
    'a0000000-0000-0000-0000-000000000004',
    'a0000000-0000-0000-0000-000000000002',
    'b0000000-0000-0000-0000-000000000001',
@@ -232,14 +290,14 @@ INSERT INTO activities (id, activity_type, status, due_date, duration, fields, c
   -- Team meeting
   ('d0000000-0000-0000-0000-000000000014', 'team_meeting', 'planned',
    CURRENT_DATE + INTERVAL '2 days', 'half_day',
-   '{"duration": "half_day", "details": "North Region weekly sync."}',
+   '{"duration": "half_day", "details": "Sector 1-3 weekly sync."}',
    'a0000000-0000-0000-0000-000000000002',
    'b0000000-0000-0000-0000-000000000001',
    NOW() - INTERVAL '3 days'),
 
   ('d0000000-0000-0000-0000-000000000015', 'team_meeting', 'planned',
    CURRENT_DATE + INTERVAL '2 days', 'half_day',
-   '{"duration": "half_day", "details": "South Region weekly sync."}',
+   '{"duration": "half_day", "details": "Sector 4-6 weekly sync."}',
    'a0000000-0000-0000-0000-000000000003',
    'b0000000-0000-0000-0000-000000000002',
    NOW() - INTERVAL '3 days'),
@@ -255,7 +313,7 @@ INSERT INTO activities (id, activity_type, status, due_date, duration, fields, c
   -- Business travel
   ('d0000000-0000-0000-0000-000000000017', 'business_travel', 'completed',
    CURRENT_DATE - INTERVAL '8 days', 'full_day',
-   '{"duration": "full_day", "details": "Travel to Portland territory."}',
+   '{"duration": "full_day", "details": "Travel to Sector 3 territory."}',
    'a0000000-0000-0000-0000-000000000005',
    'b0000000-0000-0000-0000-000000000001',
    NOW() - INTERVAL '12 days'),
@@ -339,8 +397,8 @@ INSERT INTO audit_log (id, entity_type, entity_id, event_type, actor_id, old_val
    '{"name": "Dr. Elena Popescu", "target_type": "doctor"}',
    NOW() - INTERVAL '30 days'),
 
-  ('e0000000-0000-0000-0000-000000000013', 'target', 'c0000000-0000-0000-0000-000000000009',
+  ('e0000000-0000-0000-0000-000000000013', 'target', 'c0000000-0000-0000-0000-000000000019',
    'created', 'a0000000-0000-0000-0000-000000000001', NULL,
-   '{"name": "Greenfield Pharmacy", "target_type": "pharmacy"}',
+   '{"name": "Farmacia Dona — Victoriei", "target_type": "pharmacy"}',
    NOW() - INTERVAL '30 days')
 ON CONFLICT (id) DO NOTHING;
