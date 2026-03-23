@@ -108,18 +108,17 @@ function MapPlannerPage() {
     })
   }, [])
 
-  const handleDrop = useCallback((dateStr: string, targetId: string) => {
+  const handleDrop = useCallback((_dateStr: string, _targetId: string) => {
+    // Drop all selected targets onto the day, not just the dragged one.
     setDayAssignments((prev) => {
-      const arr = prev[dateStr] ?? []
-      if (arr.includes(targetId)) return prev
-      return { ...prev, [dateStr]: [...arr, targetId] }
+      const arr = prev[_dateStr] ?? []
+      const existing = new Set(arr)
+      const toAdd = Array.from(selectedIds).filter((id) => !existing.has(id))
+      if (toAdd.length === 0) return prev
+      return { ...prev, [_dateStr]: [...arr, ...toAdd] }
     })
-    setSelectedIds((prev) => {
-      const next = new Set(prev)
-      next.delete(targetId)
-      return next
-    })
-  }, [])
+    setSelectedIds(new Set())
+  }, [selectedIds])
 
   const removeFromDay = useCallback((dateStr: string, targetId: string) => {
     setDayAssignments((prev) => {
