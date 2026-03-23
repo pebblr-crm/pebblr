@@ -5,9 +5,10 @@ import { MapPin, Check, GripVertical } from 'lucide-react'
 import { Route as rootRoute } from '../__root'
 import { LoadingSpinner } from '../../components/LoadingSpinner'
 import { useTargets, useTargetVisitStatus } from '../../services/targets'
-import { useBatchCreateActivities } from '../../services/activities'
+import { useActivities, useBatchCreateActivities } from '../../services/activities'
 import { useConfig } from '../../services/config'
 import { useToast } from '../../hooks/useToast'
+import type { Activity } from '@/types/activity'
 import type { Target } from '@/types/target'
 
 export const Route = createRoute({
@@ -71,6 +72,23 @@ function MapPlannerPage() {
 
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set())
   const [weekOffset, setWeekOffset] = useState(0)
+
+  // Compute week range for activity query.
+  const weekRange = useMemo(() => {
+    const base = new Date()
+    base.setDate(base.getDate() + weekOffset * 7)
+    const days = getWeekDates(base)
+    return {
+      dateFrom: formatDate(days[0].date),
+      dateTo: formatDate(days[days.length - 1].date),
+    }
+  }, [weekOffset])
+
+  const { data: weekActivities } = useActivities({
+    dateFrom: weekRange.dateFrom,
+    dateTo: weekRange.dateTo,
+    limit: 200,
+  })
   // dayAssignments: dateString → set of target IDs
   const [dayAssignments, setDayAssignments] = useState<Record<string, string[]>>({})
   const [dragTargetId, setDragTargetId] = useState<string | null>(null)
@@ -159,6 +177,18 @@ function MapPlannerPage() {
     base.setDate(base.getDate() + weekOffset * 7)
     return getWeekDates(base)
   }, [weekOffset])
+
+  // Existing activities grouped by date string.
+  const activitiesByDate = useMemo(() => {
+    const map = new Map<string, Activity[]>()
+    for (const a of weekActivities?.items ?? []) {
+      const dateStr = a.dueDate.slice(0, 10)
+      const arr = map.get(dateStr) ?? []
+      arr.push(a)
+      map.set(dateStr, arr)
+    }
+    return map
+  }, [weekActivities])
 
   const toggleTarget = useCallback((id: string) => {
     setSelectedIds((prev) => {
@@ -395,6 +425,7 @@ function MapPlannerPage() {
                   key={dateStr}
                   label={label}
                   targetIds={dayTargets}
+                  existingActivities={activitiesByDate.get(dateStr) ?? []}
                   targetMap={targetMap}
                   dragTargetId={dragTargetId}
                   onDrop={(id) => handleDrop(dateStr, id)}
@@ -486,6 +517,7 @@ function TargetListItem({
 interface DayDropZoneProps {
   label: string
   targetIds: string[]
+  existingActivities: Activity[]
   targetMap: Map<string, Target>
   dragTargetId: string | null
   onDrop: (targetId: string) => void
@@ -495,12 +527,14 @@ interface DayDropZoneProps {
 function DayDropZone({
   label,
   targetIds,
+  existingActivities,
   targetMap,
   dragTargetId,
   onDrop,
   onRemove,
 }: DayDropZoneProps) {
   const [dragOver, setDragOver] = useState(false)
+  const totalCount = existingActivities.length + targetIds.length
 
   return (
     <div
@@ -521,22 +555,41 @@ function DayDropZone({
           : 'border-slate-200 bg-white'
       }`}
     >
-      <p className="text-[10px] font-bold text-slate-500 mb-1">{label}</p>
-      <p className="text-[9px] text-slate-400 mb-1">{targetIds.length} targets</p>
-      <div className="space-y-1">
+      <div className="flex items-center justify-between mb-1">
+        <p className="text-[10px] font-bold text-slate-500">{label}</p>
+        <span className="text-[9px] text-slate-400">{totalCount} total</span>
+      </div>
+
+      <div className="space-y-0.5">
+        {/* Existing scheduled activities */}
+        {existingActivities.map((a) => (
+          <div
+            key={a.id}
+            className="flex items-center gap-1 bg-slate-100 rounded px-1.5 py-0.5 text-[10px] text-slate-500"
+          >
+            <span className="w-1.5 h-1.5 rounded-full bg-slate-400 shrink-0" />
+            <span className="truncate flex-1">
+              {a.targetName || a.activityType}
+            </span>
+            <span className="text-[8px] text-slate-400 shrink-0">{a.status}</span>
+          </div>
+        ))}
+
+        {/* Newly assigned targets (pending creation) */}
         {targetIds.map((id) => {
           const t = targetMap.get(id)
           if (!t) return null
           return (
             <div
               key={id}
-              className="flex items-center gap-1 bg-slate-50 rounded px-1.5 py-0.5 text-[10px]"
+              className="flex items-center gap-1 bg-primary/10 rounded px-1.5 py-0.5 text-[10px] text-primary"
             >
+              <span className="w-1.5 h-1.5 rounded-full bg-primary shrink-0" />
               <span className="truncate flex-1">{t.name}</span>
               <button
                 type="button"
                 onClick={() => onRemove(id)}
-                className="text-slate-400 hover:text-error shrink-0"
+                className="text-primary/50 hover:text-error shrink-0"
               >
                 ×
               </button>
