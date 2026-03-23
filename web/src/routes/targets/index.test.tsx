@@ -18,6 +18,7 @@ vi.mock('@tanstack/react-router', async () => {
 
 vi.mock('../../services/targets', () => ({
   useTargets: vi.fn(),
+  useTargetFrequencyStatus: vi.fn(() => ({ data: [] })),
 }))
 
 vi.mock('../../services/config', () => ({
