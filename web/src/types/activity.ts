@@ -5,12 +5,14 @@
 export interface Activity {
   id: string
   activityType: string
+  label?: string
   status: string
   dueDate: string
   duration: string
   routing?: string
   fields: Record<string, unknown>
   targetId?: string
+  targetName?: string
   creatorId: string
   teamId?: string
   submittedAt?: string
@@ -20,6 +22,7 @@ export interface Activity {
 
 export interface CreateActivityInput {
   activityType: string
+  label?: string
   status: string
   dueDate: string
   duration: string

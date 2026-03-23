@@ -34,6 +34,10 @@ vi.mock('../../services/teams', () => ({
   useTeamMembers: () => ({ data: { items: [], total: 0, page: 1, limit: 20 } }),
 }))
 
+vi.mock('../../hooks/useToast', () => ({
+  useToast: () => ({ showToast: vi.fn() }),
+}))
+
 vi.mock('motion/react', () => ({
   motion: {
     div: ({ children, ...props }: React.HTMLAttributes<HTMLDivElement>) => (
@@ -98,7 +102,7 @@ describe('ActivityDetailInner', () => {
     } as ReturnType<typeof useActivity>)
   })
 
-  it('renders status badge as tappable when not submitted', async () => {
+  it('renders status badge', async () => {
     render(<ActivityDetailInner activityId="act-1" config={testConfig} />)
     await waitFor(() => {
       expect(screen.getByTestId('status-badge')).toBeInTheDocument()

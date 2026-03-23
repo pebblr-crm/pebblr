@@ -198,11 +198,11 @@ describe('DashboardPage', () => {
     expect(screen.getAllByText('15').length).toBeGreaterThanOrEqual(1)
   })
 
-  it('displays realization rate', () => {
+  it('displays completion rate', () => {
     setupAllHooks()
     render(<DashboardPage />)
-    expect(screen.getByText('Realization Rate')).toBeInTheDocument()
-    // 75% appears in both the realization rate card and as a frequency compliance value
+    expect(screen.getByText('Completion Rate')).toBeInTheDocument()
+    // 75% appears in both the completion rate card and as a frequency compliance value
     expect(screen.getAllByText('75%').length).toBeGreaterThanOrEqual(1)
   })
 

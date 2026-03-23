@@ -8,8 +8,9 @@ import { useActivities } from '../../services/activities'
 import { useConfig } from '../../services/config'
 import { MonthGrid } from '../../components/planner/MonthGrid'
 import { WeekGrid } from '../../components/planner/WeekGrid'
+import { ActivityList } from '../../components/planner/ActivityList'
 import { formatDate, addDays, getMonday, extractDate } from '@/utils/date'
-import { MONTH_NAMES } from '@/utils/config'
+import { MONTH_NAMES, getStatusDotColor } from '@/utils/config'
 
 export const Route = createRoute({
   getParentRoute: () => rootRoute,
@@ -17,7 +18,7 @@ export const Route = createRoute({
   component: PlannerPage,
 })
 
-type ViewMode = 'week' | 'month'
+type ViewMode = 'week' | 'month' | 'list'
 
 
 export function PlannerPage() {
@@ -79,12 +80,10 @@ export function PlannerPage() {
   const todayCount = activities.filter((a) => extractDate(a.dueDate) === todayStr).length
 
   // Status legend from config
-  const statusLegend = config?.activities.statuses.map((s) => {
-    const dot = s.key === 'realizat' ? 'bg-emerald-500'
-      : s.key === 'anulat' ? 'bg-red-400'
-        : 'bg-amber-500'
-    return { label: s.label, dot }
-  }) ?? []
+  const statusLegend = config?.activities.statuses.map((s) => ({
+    label: s.label,
+    dot: getStatusDotColor(config?.activities, s.key),
+  })) ?? []
 
   return (
     <motion.div
@@ -119,28 +118,39 @@ export function PlannerPage() {
             >
               Month
             </button>
-          </div>
-
-          {/* Today button */}
-          <button
-            onClick={goToToday}
-            className="px-3 py-1.5 text-xs font-bold text-primary border border-primary rounded-lg hover:bg-primary-fixed transition-colors"
-          >
-            Today
-          </button>
-
-          {/* Period navigation */}
-          <div className="flex items-center gap-2 bg-surface-container-lowest px-4 py-2 rounded-xl shadow-sm">
-            <button className="text-on-surface-variant hover:text-primary" onClick={prevPeriod} aria-label="Previous period">
-              <ChevronLeft className="w-5 h-5" />
-            </button>
-            <span className="font-headline font-bold text-primary px-2 min-w-[180px] text-center text-sm" data-testid="period-label">
-              {periodLabel}
-            </span>
-            <button className="text-on-surface-variant hover:text-primary" onClick={nextPeriod} aria-label="Next period">
-              <ChevronRight className="w-5 h-5" />
+            <button
+              onClick={() => setViewMode('list')}
+              className={`px-3 py-1.5 text-xs font-bold rounded-md transition-colors ${
+                viewMode === 'list' ? 'bg-primary text-white' : 'text-on-surface-variant hover:text-primary'
+              }`}
+              data-testid="list-view-toggle"
+            >
+              My Activities
             </button>
           </div>
+
+          {/* Today button + Period navigation (hidden in list mode) */}
+          {viewMode !== 'list' && (
+            <>
+              <button
+                onClick={goToToday}
+                className="px-3 py-1.5 text-xs font-bold text-primary border border-primary rounded-lg hover:bg-primary-fixed transition-colors"
+              >
+                Today
+              </button>
+              <div className="flex items-center gap-2 bg-surface-container-lowest px-4 py-2 rounded-xl shadow-sm">
+                <button className="text-on-surface-variant hover:text-primary" onClick={prevPeriod} aria-label="Previous period">
+                  <ChevronLeft className="w-5 h-5" />
+                </button>
+                <span className="font-headline font-bold text-primary px-2 min-w-[180px] text-center text-sm" data-testid="period-label">
+                  {periodLabel}
+                </span>
+                <button className="text-on-surface-variant hover:text-primary" onClick={nextPeriod} aria-label="Next period">
+                  <ChevronRight className="w-5 h-5" />
+                </button>
+              </div>
+            </>
+          )}
 
           {/* New activity */}
           <Link
@@ -154,72 +164,76 @@ export function PlannerPage() {
       </div>
 
       {/* Body */}
-      <div className="grid grid-cols-12 gap-6">
-        {/* Sidebar */}
-        <div className="col-span-12 lg:col-span-3 space-y-6">
-          {/* Status legend */}
-          <div className="bg-surface-container-lowest p-6 rounded-xl shadow-sm border border-slate-100">
-            <h3 className="font-headline font-bold text-primary mb-4 text-sm">Status Legend</h3>
-            <div className="space-y-3">
-              {statusLegend.map((item) => (
-                <div key={item.label} className="flex items-center gap-2">
-                  <span className={`w-3 h-3 rounded-full ${item.dot}`} />
-                  <span className="text-[10px] font-medium text-on-surface-variant">{item.label}</span>
+      {viewMode === 'list' ? (
+        <ActivityList />
+      ) : (
+        <div className="grid grid-cols-12 gap-6">
+          {/* Sidebar */}
+          <div className="col-span-12 lg:col-span-3 space-y-6">
+            {/* Status legend */}
+            <div className="bg-surface-container-lowest p-6 rounded-xl shadow-sm border border-slate-100">
+              <h3 className="font-headline font-bold text-primary mb-4 text-sm">Status Legend</h3>
+              <div className="space-y-3">
+                {statusLegend.map((item) => (
+                  <div key={item.label} className="flex items-center gap-2">
+                    <span className={`w-3 h-3 rounded-full ${item.dot}`} />
+                    <span className="text-[10px] font-medium text-on-surface-variant">{item.label}</span>
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            {/* Category legend */}
+            <div className="bg-surface-container-lowest p-6 rounded-xl shadow-sm border border-slate-100">
+              <h3 className="font-headline font-bold text-primary mb-4 text-sm">Categories</h3>
+              <div className="space-y-3">
+                <div className="flex items-center gap-2">
+                  <span className="w-3 h-3 rounded-sm bg-amber-500" />
+                  <span className="text-[10px] font-medium text-on-surface-variant">Field activities</span>
                 </div>
-              ))}
+                <div className="flex items-center gap-2">
+                  <span className="w-3 h-3 rounded-sm bg-blue-400" />
+                  <span className="text-[10px] font-medium text-on-surface-variant">Non-field activities</span>
+                </div>
+              </div>
+            </div>
+
+            {/* Daily pulse */}
+            <div className="bg-surface-container-lowest p-6 rounded-xl shadow-sm border border-slate-100">
+              <h4 className="font-headline font-bold text-primary mb-4 text-sm">Daily Pulse</h4>
+              <div className="space-y-4">
+                <div className="flex items-start gap-3">
+                  <CalendarDays className="w-4 h-4 text-primary mt-0.5" />
+                  <div>
+                    <p className="text-xs font-bold text-on-surface">{todayCount} Today</p>
+                    <p className="text-[10px] text-on-surface-variant">{formatDate(now)}</p>
+                  </div>
+                </div>
+                <div className="flex items-start gap-3">
+                  <TrendingUp className="w-4 h-4 text-tertiary-fixed-dim mt-0.5" />
+                  <div>
+                    <p className="text-xs font-bold text-on-surface">{activities.length} In View</p>
+                    <p className="text-[10px] text-on-surface-variant">{periodLabel}</p>
+                  </div>
+                </div>
+              </div>
             </div>
           </div>
 
-          {/* Category legend */}
-          <div className="bg-surface-container-lowest p-6 rounded-xl shadow-sm border border-slate-100">
-            <h3 className="font-headline font-bold text-primary mb-4 text-sm">Categories</h3>
-            <div className="space-y-3">
-              <div className="flex items-center gap-2">
-                <span className="w-3 h-3 rounded-sm bg-amber-500" />
-                <span className="text-[10px] font-medium text-on-surface-variant">Field activities</span>
+          {/* Calendar grid */}
+          <div className="col-span-12 lg:col-span-9">
+            {isLoading ? (
+              <div className="flex items-center justify-center h-64">
+                <LoadingSpinner size="lg" label="Loading planner..." />
               </div>
-              <div className="flex items-center gap-2">
-                <span className="w-3 h-3 rounded-sm bg-blue-400" />
-                <span className="text-[10px] font-medium text-on-surface-variant">Non-field activities</span>
-              </div>
-            </div>
-          </div>
-
-          {/* Daily pulse */}
-          <div className="bg-surface-container-lowest p-6 rounded-xl shadow-sm border border-slate-100">
-            <h4 className="font-headline font-bold text-primary mb-4 text-sm">Daily Pulse</h4>
-            <div className="space-y-4">
-              <div className="flex items-start gap-3">
-                <CalendarDays className="w-4 h-4 text-primary mt-0.5" />
-                <div>
-                  <p className="text-xs font-bold text-on-surface">{todayCount} Today</p>
-                  <p className="text-[10px] text-on-surface-variant">{formatDate(now)}</p>
-                </div>
-              </div>
-              <div className="flex items-start gap-3">
-                <TrendingUp className="w-4 h-4 text-tertiary-fixed-dim mt-0.5" />
-                <div>
-                  <p className="text-xs font-bold text-on-surface">{activities.length} In View</p>
-                  <p className="text-[10px] text-on-surface-variant">{periodLabel}</p>
-                </div>
-              </div>
-            </div>
+            ) : viewMode === 'month' ? (
+              <MonthGrid activities={activities} year={year} month={month} config={config} />
+            ) : (
+              <WeekGrid activities={activities} weekStart={weekStart} config={config} />
+            )}
           </div>
         </div>
-
-        {/* Calendar grid */}
-        <div className="col-span-12 lg:col-span-9">
-          {isLoading ? (
-            <div className="flex items-center justify-center h-64">
-              <LoadingSpinner size="lg" label="Loading planner..." />
-            </div>
-          ) : viewMode === 'month' ? (
-            <MonthGrid activities={activities} year={year} month={month} config={config} />
-          ) : (
-            <WeekGrid activities={activities} weekStart={weekStart} config={config} />
-          )}
-        </div>
-      </div>
+      )}
     </motion.div>
   )
 }

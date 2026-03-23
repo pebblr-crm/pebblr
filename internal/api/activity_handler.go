@@ -54,6 +54,7 @@ func NewActivityRouter(h *ActivityHandler) http.Handler {
 
 type activityRequest struct {
 	ActivityType string         `json:"activityType"`
+	Label        string         `json:"label"`
 	Status       string         `json:"status"`
 	DueDate      string         `json:"dueDate"`
 	Duration     string         `json:"duration"`
@@ -130,7 +131,7 @@ func mapActivityServiceError(w http.ResponseWriter, err error) {
 	case errors.Is(err, service.ErrBlockedDay):
 		writeError(w, http.StatusConflict, "CONFLICT", "day is blocked by a non-field activity")
 	case errors.Is(err, service.ErrTargetRequired):
-		writeError(w, http.StatusBadRequest, "BAD_REQUEST", "target is required for field activities")
+		writeError(w, http.StatusBadRequest, "BAD_REQUEST", "Please select a target before saving")
 	default:
 		writeError(w, http.StatusInternalServerError, "INTERNAL_ERROR", "an unexpected error occurred")
 	}
@@ -238,6 +239,7 @@ func (h *ActivityHandler) Create(w http.ResponseWriter, r *http.Request) {
 
 	activity := &domain.Activity{
 		ActivityType:  req.ActivityType,
+		Label:         req.Label,
 		Status:        req.Status,
 		DueDate:       dueDate,
 		Duration:      req.Duration,
@@ -318,6 +320,7 @@ func (h *ActivityHandler) Update(w http.ResponseWriter, r *http.Request) {
 
 	activity := &domain.Activity{
 		ActivityType:  req.ActivityType,
+		Label:         req.Label,
 		Status:        req.Status,
 		DueDate:       dueDate,
 		Duration:      req.Duration,

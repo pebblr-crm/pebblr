@@ -66,6 +66,7 @@ type ActivityTypeConfig struct {
 // FieldConfig defines a single field on an account or activity type.
 type FieldConfig struct {
 	Key        string   `json:"key"`
+	Label      string   `json:"label,omitempty"`
 	Type       string   `json:"type"` // text, select, multi_select, relation, date
 	Required   bool     `json:"required"`
 	Editable   *bool    `json:"editable,omitempty"` // nil means editable

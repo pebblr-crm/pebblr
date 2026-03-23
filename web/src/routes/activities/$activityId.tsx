@@ -2,7 +2,6 @@ import { createRoute, Link } from '@tanstack/react-router'
 import { motion } from 'motion/react'
 import { ArrowLeft, Lock, Send } from 'lucide-react'
 import { useState, useEffect, useRef } from 'react'
-import { Drawer } from 'vaul'
 import { Route as rootRoute } from '../__root'
 import { LoadingSpinner } from '../../components/LoadingSpinner'
 import { SaveStateIndicator, SaveSuccessFlash } from '../../components/SaveStateIndicator'
@@ -10,13 +9,16 @@ import { useActivity, usePatchActivityStatus } from '../../services/activities'
 import { useTarget, useTargets } from '../../services/targets'
 import { useTeamMembers } from '../../services/teams'
 import { useConfig } from '../../services/config'
+import { useToast } from '../../hooks/useToast'
+import { formatValidationToast } from '../../utils/fieldLabels'
 import { useInlineActivityEditor } from '../../hooks/useInlineActivityEditor'
 import { extractDate } from '@/utils/date'
 import {
   getTypeConfig,
   getTypeLabel,
+  getActivityTitle,
   getStatusLabel,
-  STATUS_BADGE_COLORS,
+  getStatusBadgeColor,
 } from '@/utils/config'
 import type { FieldConfig, OptionDef, TenantConfig } from '@/types/config'
 
@@ -75,6 +77,7 @@ interface InnerProps {
 
 export function ActivityDetailInner({ activityId, config }: InnerProps) {
   const { data: activity } = useActivity(activityId)
+  const { showToast } = useToast()
 
   // activity is guaranteed here since ActivityDetailPage already checked
   const act = activity!
@@ -86,8 +89,9 @@ export function ActivityDetailInner({ activityId, config }: InnerProps) {
   const isSubmitted = Boolean(act.submittedAt)
   const typeConfig = getTypeConfig(config?.activities, act.activityType)
   const typeLabel = getTypeLabel(config?.activities, act.activityType)
+  const activityTitle = getActivityTitle(config?.activities, act)
   const statusLabel = getStatusLabel(config?.activities, localData.status ?? act.status)
-  const statusColor = STATUS_BADGE_COLORS[localData.status ?? act.status] ?? 'bg-primary-fixed text-primary'
+  const statusColor = getStatusBadgeColor(config?.activities, localData.status ?? act.status)
   const allowedTransitions = config?.activities.status_transitions[localData.status ?? act.status] ?? []
 
   // Flash "Saved" for 500ms after transition from saving→idle
@@ -108,25 +112,65 @@ export function ActivityDetailInner({ activityId, config }: InnerProps) {
     return cleanup
   }, [saveState])
 
-  // Status bottom sheet (mobile) / inline popover (desktop)
-  const [statusSheetOpen, setStatusSheetOpen] = useState(false)
   const statusMutation = usePatchActivityStatus()
-
-  function onStatusSelect(toStatus: string) {
-    handleStatusChange(toStatus)
-    setStatusSheetOpen(false)
-  }
 
   function getFieldError(field: string): string | undefined {
     return fieldErrors.find((e) => e.field === field)?.message
   }
 
-  async function onSubmitClick() {
+  // Show toast when save errors occur
+  const prevSaveStateForToast = useRef(saveState)
+  useEffect(() => {
+    if (prevSaveStateForToast.current !== 'error' && saveState === 'error') {
+      showToast('Failed to save changes. Tap retry to try again.')
+    }
+    prevSaveStateForToast.current = saveState
+  }, [saveState, showToast])
+
+  // Show toast when field validation errors arrive
+  const prevFieldErrorCount = useRef(0)
+  useEffect(() => {
+    if (fieldErrors.length > 0 && fieldErrors.length !== prevFieldErrorCount.current) {
+      showToast(formatValidationToast(config, act.activityType, fieldErrors))
+    }
+    prevFieldErrorCount.current = fieldErrors.length
+  }, [fieldErrors, config, act.activityType, showToast])
+
+  // Confirmation modal for irreversible actions
+  const [confirmAction, setConfirmAction] = useState<{
+    title: string
+    message: string
+    onConfirm: () => void
+  } | null>(null)
+
+  function isTerminalStatus(status: string): boolean {
+    const transitions = config?.activities.status_transitions[status] ?? []
+    return transitions.length === 0
+  }
+
+  function requestStatusChange(toStatus: string) {
+    if (isTerminalStatus(toStatus)) {
+      const label = getStatusLabel(config?.activities, toStatus)
+      setConfirmAction({
+        title: `Mark as ${label}?`,
+        message: `This will change the status to ${label}. This action cannot be undone.`,
+        onConfirm: () => { handleStatusChange(toStatus); setConfirmAction(null) },
+      })
+    } else {
+      handleStatusChange(toStatus)
+    }
+  }
+
+  function requestSubmit() {
     if (saveState === 'error') {
       retrySave()
       return
     }
-    await handleSubmit()
+    setConfirmAction({
+      title: 'Submit report?',
+      message: 'Once submitted, the activity will be locked and can no longer be edited.',
+      onConfirm: () => { setConfirmAction(null); void handleSubmit() },
+    })
   }
 
   return (
@@ -149,26 +193,16 @@ export function ActivityDetailInner({ activityId, config }: InnerProps) {
         <div className="flex items-start justify-between gap-4">
           <div className="min-w-0">
             <h1 className="text-2xl sm:text-3xl font-extrabold tracking-tight text-primary font-headline">
-              {typeLabel}
+              {activityTitle}
             </h1>
             <div className="flex flex-wrap items-center gap-2 mt-2">
-              {/* Tappable status badge */}
-              {!isSubmitted ? (
-                <button
-                  type="button"
-                  onClick={() => setStatusSheetOpen(true)}
-                  disabled={statusMutation.isPending}
-                  className={`px-3 py-1 rounded-full text-[10px] font-bold uppercase tracking-tight min-h-[36px] min-w-[44px] transition-opacity disabled:opacity-50 ${statusColor}`}
-                  data-testid="status-badge"
-                  aria-label={`Status: ${statusLabel}. Tap to change.`}
-                >
-                  {statusLabel}
-                </button>
-              ) : (
-                <span className={`px-3 py-1 rounded-full text-[10px] font-bold uppercase tracking-tight ${statusColor}`}>
-                  {statusLabel}
-                </span>
-              )}
+              {/* Status badge (read-only indicator) */}
+              <span
+                className={`px-3 py-1 rounded-full text-[10px] font-bold uppercase tracking-tight ${statusColor}`}
+                data-testid="status-badge"
+              >
+                {statusLabel}
+              </span>
 
               {isSubmitted && (
                 <span className="inline-flex items-center gap-1 px-3 py-1 rounded-full text-[10px] font-bold uppercase tracking-tight bg-slate-200 text-slate-600">
@@ -283,65 +317,59 @@ export function ActivityDetailInner({ activityId, config }: InnerProps) {
         </div>
       )}
 
-      {/* Status transition bottom sheet (mobile) */}
-      <Drawer.Root open={statusSheetOpen} onOpenChange={setStatusSheetOpen}>
-        <Drawer.Portal>
-          <Drawer.Overlay className="fixed inset-0 bg-black/40 z-40" />
-          <Drawer.Content className="fixed bottom-0 left-0 right-0 z-50 bg-white rounded-t-2xl pb-safe focus:outline-none">
-            <div className="p-4">
-              <div className="mx-auto w-12 h-1.5 rounded-full bg-slate-200 mb-6" />
-              <h3 className="text-base font-bold text-on-surface mb-4 font-headline px-2">
-                Change Status
-              </h3>
-              <div className="space-y-1">
-                {allowedTransitions.map((toStatus) => {
-                  const label = getStatusLabel(config?.activities, toStatus)
-                  return (
-                    <button
-                      key={toStatus}
-                      type="button"
-                      onClick={() => onStatusSelect(toStatus)}
-                      className="w-full text-left px-4 py-4 min-h-[56px] text-sm font-medium rounded-xl hover:bg-slate-50 transition-colors"
-                    >
-                      {label}
-                    </button>
-                  )
-                })}
-                <button
-                  type="button"
-                  onClick={() => setStatusSheetOpen(false)}
-                  className="w-full text-left px-4 py-4 min-h-[56px] text-sm text-slate-400 rounded-xl hover:bg-slate-50 transition-colors"
-                >
-                  Cancel
-                </button>
-              </div>
-            </div>
-          </Drawer.Content>
-        </Drawer.Portal>
-      </Drawer.Root>
-
-      {/* Sticky submit bar (mobile) / inline (desktop) */}
+      {/* Action bar — status transitions + submit */}
       {!isSubmitted && (
         <>
           {/* Mobile sticky bar */}
           <div className="fixed bottom-0 left-0 right-0 sm:hidden bg-white border-t border-slate-100 px-4 pt-3 pb-safe z-30">
-            <SubmitButton
-              saveState={saveState}
-              isSubmitting={isSubmitting}
-              isStatusPending={statusMutation.isPending}
-              onClick={() => void onSubmitClick()}
-            />
+            <div className="flex items-center gap-2">
+              {allowedTransitions.map((toStatus) => (
+                <StatusTransitionButton
+                  key={toStatus}
+                  toStatus={toStatus}
+                  config={config}
+                  isPending={statusMutation.isPending}
+                  onClick={() => requestStatusChange(toStatus)}
+                />
+              ))}
+              <div className="flex-1" />
+              <SubmitButton
+                saveState={saveState}
+                isSubmitting={isSubmitting}
+                isStatusPending={statusMutation.isPending}
+                onClick={requestSubmit}
+              />
+            </div>
           </div>
           {/* Desktop inline */}
-          <div className="hidden sm:flex justify-end">
+          <div className="hidden sm:flex items-center gap-3 justify-end">
+            {allowedTransitions.map((toStatus) => (
+              <StatusTransitionButton
+                key={toStatus}
+                toStatus={toStatus}
+                config={config}
+                isPending={statusMutation.isPending}
+                onClick={() => requestStatusChange(toStatus)}
+              />
+            ))}
             <SubmitButton
               saveState={saveState}
               isSubmitting={isSubmitting}
               isStatusPending={statusMutation.isPending}
-              onClick={() => void onSubmitClick()}
+              onClick={requestSubmit}
             />
           </div>
         </>
+      )}
+
+      {/* Confirmation modal */}
+      {confirmAction && (
+        <ConfirmModal
+          title={confirmAction.title}
+          message={confirmAction.message}
+          onConfirm={confirmAction.onConfirm}
+          onCancel={() => setConfirmAction(null)}
+        />
       )}
     </motion.div>
   )
@@ -369,6 +397,68 @@ function SubmitButton({ saveState, isSubmitting, isStatusPending, onClick }: Sub
       <Send className="w-4 h-4" />
       {isSubmitting ? 'Submitting…' : saveState === 'error' ? 'Retry Save' : 'Submit Report'}
     </button>
+  )
+}
+
+interface StatusTransitionButtonProps {
+  toStatus: string
+  config: TenantConfig
+  isPending: boolean
+  onClick: () => void
+}
+
+function StatusTransitionButton({ toStatus, config, isPending, onClick }: StatusTransitionButtonProps) {
+  const label = getStatusLabel(config?.activities, toStatus)
+  const badgeColor = getStatusBadgeColor(config?.activities, toStatus)
+
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      disabled={isPending}
+      className={`inline-flex items-center justify-center px-4 py-2.5 min-h-[44px] text-sm font-bold rounded-xl border transition-colors disabled:opacity-50 ${badgeColor} border-current/20 hover:opacity-80`}
+      data-testid={`status-transition-${toStatus}`}
+    >
+      {label}
+    </button>
+  )
+}
+
+// ── Confirmation modal ──────────────────────────────────────────────────────
+
+interface ConfirmModalProps {
+  title: string
+  message: string
+  onConfirm: () => void
+  onCancel: () => void
+}
+
+function ConfirmModal({ title, message, onConfirm, onCancel }: ConfirmModalProps) {
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+      <div className="fixed inset-0 bg-black/40" onClick={onCancel} />
+      <div className="relative bg-white rounded-2xl shadow-xl max-w-sm w-full p-6 space-y-4">
+        <h3 className="text-lg font-bold text-on-surface font-headline">{title}</h3>
+        <p className="text-sm text-on-surface-variant">{message}</p>
+        <div className="flex items-center gap-3 justify-end pt-2">
+          <button
+            type="button"
+            onClick={onCancel}
+            className="px-4 py-2.5 min-h-[44px] text-sm font-medium text-slate-500 rounded-xl hover:bg-slate-50 transition-colors"
+          >
+            Go back
+          </button>
+          <button
+            type="button"
+            onClick={onConfirm}
+            className="px-4 py-2.5 min-h-[44px] text-sm font-bold text-white bg-primary rounded-xl hover:bg-primary/90 transition-colors"
+            data-testid="confirm-action"
+          >
+            Confirm
+          </button>
+        </div>
+      </div>
+    </div>
   )
 }
 
@@ -482,7 +572,7 @@ function DynamicField({ fieldDef, value, onChange, onBlur, disabled, error, conf
 
   const labelEl = (
     <label className={labelClass}>
-      {fieldDef.key.replace(/_/g, ' ')}
+      {fieldDef.label ?? fieldDef.key.replace(/_/g, ' ')}
       {fieldDef.required && <span className="text-error ml-1">*</span>}
     </label>
   )

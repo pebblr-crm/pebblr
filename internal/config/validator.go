@@ -12,19 +12,19 @@ func (e FieldError) Error() string {
 	return fmt.Sprintf("%s: %s", e.Field, e.Message)
 }
 
+// hoistedFields are config field keys that map to top-level Activity columns
+// rather than living in the JSONB fields map. They are validated separately
+// (e.g. ValidateDuration) and must be skipped by ValidateActivity.
+var hoistedFields = map[string]bool{
+	"duration":            true,
+	"account_id":          true,
+	"routing":             true,
+	"joint_visit_user_id": true,
+}
+
 // ValidateActivity validates field values for an activity against the
 // tenant config. phase is "save" or "submit" — submit enforces
 // additional required fields defined in submit_required.
-// hoistedFields are config field keys that map to top-level Activity columns
-// rather than living in the JSONB fields map. They are validated separately
-// (e.g. ValidateDuration) and must be skipped here.
-var hoistedFields = map[string]bool{
-	"duration":             true,
-	"account_id":           true,
-	"routing":              true,
-	"joint_visit_user_id":  true,
-}
-
 func ValidateActivity(cfg *TenantConfig, activityType string, fields map[string]any, phase string) []FieldError {
 	at := cfg.ActivityType(activityType)
 	if at == nil {

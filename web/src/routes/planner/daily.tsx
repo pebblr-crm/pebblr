@@ -12,8 +12,8 @@ import {
   getTypeCategory,
   getStatusLabel,
   getDurationLabel,
+  getStatusBadgeColor,
   CATEGORY_COLORS,
-  STATUS_BADGE_COLORS,
   MONTH_NAMES,
 } from '@/utils/config'
 
@@ -122,7 +122,7 @@ export function PlannerDailyPage() {
             const category = getTypeCategory(config?.activities, activity.activityType)
             const style = CATEGORY_COLORS[category] ?? CATEGORY_COLORS.field
             const statusLabel = getStatusLabel(config?.activities, activity.status)
-            const statusStyle = STATUS_BADGE_COLORS[activity.status] ?? 'bg-slate-100 text-slate-600'
+            const statusStyle = getStatusBadgeColor(config?.activities, activity.status)
             const durationLabel = getDurationLabel(config?.activities, activity.duration)
 
             return (

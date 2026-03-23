@@ -37,7 +37,7 @@ async function parseError(response: Response): Promise<ApiError> {
 
   const code = body?.error?.code ?? 'UNKNOWN'
   const message = body?.error?.message ?? `HTTP ${response.status}`
-  return new ApiError(code, message, response.status)
+  return new ApiError(code, message, response.status, body?.fields)
 }
 
 /**

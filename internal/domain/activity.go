@@ -8,12 +8,14 @@ import "time"
 type Activity struct {
 	ID             string         `json:"id"`
 	ActivityType   string         `json:"activityType"`           // key from tenant config (e.g. "visit", "administrative")
+	Label          string         `json:"label,omitempty"`        // optional user-defined title override
 	Status         string         `json:"status"`                 // key from config statuses (e.g. "planificat", "realizat")
 	DueDate        time.Time      `json:"dueDate"`                // the scheduled date
 	Duration       string         `json:"duration"`               // key from config durations (e.g. "full_day", "half_day")
 	Routing        string         `json:"routing,omitempty"`      // optional routing week
 	Fields         map[string]any `json:"fields"`                 // dynamic fields defined in tenant config
 	TargetID       string         `json:"targetId,omitempty"`     // linked target (required for visits, empty for time-off)
+	TargetName     string         `json:"targetName,omitempty"`   // denormalized from targets table for display
 	CreatorID      string         `json:"creatorId"`              // the rep who created it
 	JointVisitUID  string         `json:"jointVisitUserId,omitempty"` // optional co-visitor
 	TeamID         string         `json:"teamId,omitempty"`

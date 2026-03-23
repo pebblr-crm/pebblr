@@ -20,19 +20,21 @@ type activityRepository struct {
 }
 
 const activityColumns = `
-	id::TEXT, activity_type, status, due_date, duration,
-	COALESCE(routing, ''), fields,
-	COALESCE(target_id::TEXT, ''), creator_id::TEXT,
-	COALESCE(joint_visit_user_id::TEXT, ''), COALESCE(team_id::TEXT, ''),
-	submitted_at, created_at, updated_at, deleted_at`
+	a.id::TEXT, a.activity_type, COALESCE(a.label, ''), a.status, a.due_date, a.duration,
+	COALESCE(a.routing, ''), a.fields,
+	COALESCE(a.target_id::TEXT, ''), COALESCE(t.name, ''), a.creator_id::TEXT,
+	COALESCE(a.joint_visit_user_id::TEXT, ''), COALESCE(a.team_id::TEXT, ''),
+	a.submitted_at, a.created_at, a.updated_at, a.deleted_at`
+
+const activityFrom = ` FROM activities a LEFT JOIN targets t ON a.target_id = t.id`
 
 func scanActivity(row pgx.Row) (*domain.Activity, error) {
 	var a domain.Activity
 	var fieldsJSON []byte
 	err := row.Scan(
-		&a.ID, &a.ActivityType, &a.Status, &a.DueDate, &a.Duration,
+		&a.ID, &a.ActivityType, &a.Label, &a.Status, &a.DueDate, &a.Duration,
 		&a.Routing, &fieldsJSON,
-		&a.TargetID, &a.CreatorID,
+		&a.TargetID, &a.TargetName, &a.CreatorID,
 		&a.JointVisitUID, &a.TeamID,
 		&a.SubmittedAt, &a.CreatedAt, &a.UpdatedAt, &a.DeletedAt,
 	)
@@ -53,7 +55,7 @@ func scanActivity(row pgx.Row) (*domain.Activity, error) {
 
 func (r *activityRepository) Get(ctx context.Context, id string) (*domain.Activity, error) {
 	row := r.pool.QueryRow(ctx,
-		`SELECT `+activityColumns+` FROM activities WHERE id = $1::UUID AND deleted_at IS NULL`,
+		`SELECT `+activityColumns+activityFrom+` WHERE a.id = $1::UUID AND a.deleted_at IS NULL`,
 		id,
 	)
 	return scanActivity(row)
@@ -73,7 +75,7 @@ func (r *activityRepository) List(ctx context.Context, scope rbac.ActivityScope,
 	var conditions []string
 
 	// Always exclude soft-deleted.
-	conditions = append(conditions, "deleted_at IS NULL")
+	conditions = append(conditions, "a.deleted_at IS NULL")
 
 	// RBAC scope.
 	if !scope.AllActivities {
@@ -85,7 +87,7 @@ func (r *activityRepository) List(ctx context.Context, scope rbac.ActivityScope,
 				args = append(args, id)
 				argIdx++
 			}
-			scopeParts = append(scopeParts, fmt.Sprintf("(creator_id::TEXT = ANY(ARRAY[%s]) OR joint_visit_user_id::TEXT = ANY(ARRAY[%s]))",
+			scopeParts = append(scopeParts, fmt.Sprintf("(a.creator_id::TEXT = ANY(ARRAY[%s]) OR a.joint_visit_user_id::TEXT = ANY(ARRAY[%s]))",
 				strings.Join(placeholders, ","), strings.Join(placeholders, ",")))
 		}
 		if len(scope.TeamIDs) > 0 {
@@ -95,7 +97,7 @@ func (r *activityRepository) List(ctx context.Context, scope rbac.ActivityScope,
 				args = append(args, id)
 				argIdx++
 			}
-			scopeParts = append(scopeParts, fmt.Sprintf("team_id::TEXT = ANY(ARRAY[%s])", strings.Join(placeholders, ",")))
+			scopeParts = append(scopeParts, fmt.Sprintf("a.team_id::TEXT = ANY(ARRAY[%s])", strings.Join(placeholders, ",")))
 		}
 		if len(scopeParts) > 0 {
 			conditions = append(conditions, "("+strings.Join(scopeParts, " OR ")+")")
@@ -106,54 +108,54 @@ func (r *activityRepository) List(ctx context.Context, scope rbac.ActivityScope,
 
 	// Filters.
 	if filter.ActivityType != nil {
-		conditions = append(conditions, fmt.Sprintf("activity_type = $%d", argIdx))
+		conditions = append(conditions, fmt.Sprintf("a.activity_type = $%d", argIdx))
 		args = append(args, *filter.ActivityType)
 		argIdx++
 	}
 	if filter.Status != nil {
-		conditions = append(conditions, fmt.Sprintf("status = $%d", argIdx))
+		conditions = append(conditions, fmt.Sprintf("a.status = $%d", argIdx))
 		args = append(args, *filter.Status)
 		argIdx++
 	}
 	if filter.CreatorID != nil {
-		conditions = append(conditions, fmt.Sprintf("creator_id::TEXT = $%d", argIdx))
+		conditions = append(conditions, fmt.Sprintf("a.creator_id::TEXT = $%d", argIdx))
 		args = append(args, *filter.CreatorID)
 		argIdx++
 	}
 	if filter.TargetID != nil {
-		conditions = append(conditions, fmt.Sprintf("target_id::TEXT = $%d", argIdx))
+		conditions = append(conditions, fmt.Sprintf("a.target_id::TEXT = $%d", argIdx))
 		args = append(args, *filter.TargetID)
 		argIdx++
 	}
 	if filter.TeamID != nil {
-		conditions = append(conditions, fmt.Sprintf("team_id::TEXT = $%d", argIdx))
+		conditions = append(conditions, fmt.Sprintf("a.team_id::TEXT = $%d", argIdx))
 		args = append(args, *filter.TeamID)
 		argIdx++
 	}
 	if filter.DateFrom != nil {
-		conditions = append(conditions, fmt.Sprintf("due_date >= $%d", argIdx))
+		conditions = append(conditions, fmt.Sprintf("a.due_date >= $%d", argIdx))
 		args = append(args, *filter.DateFrom)
 		argIdx++
 	}
 	if filter.DateTo != nil {
-		conditions = append(conditions, fmt.Sprintf("due_date <= $%d", argIdx))
+		conditions = append(conditions, fmt.Sprintf("a.due_date <= $%d", argIdx))
 		args = append(args, *filter.DateTo)
 		argIdx++
 	}
 
 	where := ""
 	if len(conditions) > 0 {
-		where = "WHERE " + strings.Join(conditions, " AND ")
+		where = " WHERE " + strings.Join(conditions, " AND ")
 	}
 
-	countQuery := `SELECT COUNT(*) FROM activities ` + where
+	countQuery := `SELECT COUNT(*)` + activityFrom + where
 	var total int
 	if err := r.pool.QueryRow(ctx, countQuery, args...).Scan(&total); err != nil {
 		return nil, fmt.Errorf("counting activities: %w", err)
 	}
 
-	listQuery := `SELECT ` + activityColumns + ` FROM activities ` + where +
-		fmt.Sprintf(` ORDER BY due_date DESC, created_at DESC LIMIT $%d OFFSET $%d`, argIdx, argIdx+1)
+	listQuery := `SELECT ` + activityColumns + activityFrom + where +
+		fmt.Sprintf(` ORDER BY a.due_date DESC, a.created_at DESC LIMIT $%d OFFSET $%d`, argIdx, argIdx+1)
 	args = append(args, limit, offset)
 
 	rows, err := r.pool.Query(ctx, listQuery, args...)
@@ -184,12 +186,15 @@ func (r *activityRepository) Create(ctx context.Context, a *domain.Activity) (*d
 	}
 
 	row := r.pool.QueryRow(ctx,
-		`INSERT INTO activities (activity_type, status, due_date, duration, routing, fields,
-		     target_id, creator_id, joint_visit_user_id, team_id, submitted_at)
-		 VALUES ($1, $2, $3, $4, $5, $6,
-		     $7::UUID, $8::UUID, $9::UUID, $10::UUID, $11)
-		 RETURNING `+activityColumns,
-		a.ActivityType, a.Status, a.DueDate, a.Duration,
+		`WITH ins AS (
+		   INSERT INTO activities (activity_type, label, status, due_date, duration, routing, fields,
+		       target_id, creator_id, joint_visit_user_id, team_id, submitted_at)
+		   VALUES ($1, $2, $3, $4, $5, $6, $7,
+		       $8::UUID, $9::UUID, $10::UUID, $11::UUID, $12)
+		   RETURNING *
+		 )
+		 SELECT `+activityColumns+` FROM ins a LEFT JOIN targets t ON a.target_id = t.id`,
+		a.ActivityType, a.Label, a.Status, a.DueDate, a.Duration,
 		nullIfEmpty(a.Routing), fieldsJSON,
 		nullIfEmpty(a.TargetID), a.CreatorID,
 		nullIfEmpty(a.JointVisitUID), nullIfEmpty(a.TeamID),
@@ -205,15 +210,18 @@ func (r *activityRepository) Update(ctx context.Context, a *domain.Activity) (*d
 	}
 
 	row := r.pool.QueryRow(ctx,
-		`UPDATE activities
-		 SET activity_type = $1, status = $2, due_date = $3, duration = $4,
-		     routing = $5, fields = $6,
-		     target_id = $7::UUID, joint_visit_user_id = $8::UUID,
-		     team_id = $9::UUID, submitted_at = $10,
-		     updated_at = NOW()
-		 WHERE id = $11::UUID AND deleted_at IS NULL
-		 RETURNING `+activityColumns,
-		a.ActivityType, a.Status, a.DueDate, a.Duration,
+		`WITH upd AS (
+		   UPDATE activities
+		   SET activity_type = $1, label = $2, status = $3, due_date = $4, duration = $5,
+		       routing = $6, fields = $7,
+		       target_id = $8::UUID, joint_visit_user_id = $9::UUID,
+		       team_id = $10::UUID, submitted_at = $11,
+		       updated_at = NOW()
+		   WHERE id = $12::UUID AND deleted_at IS NULL
+		   RETURNING *
+		 )
+		 SELECT `+activityColumns+` FROM upd a LEFT JOIN targets t ON a.target_id = t.id`,
+		a.ActivityType, a.Label, a.Status, a.DueDate, a.Duration,
 		nullIfEmpty(a.Routing), fieldsJSON,
 		nullIfEmpty(a.TargetID), nullIfEmpty(a.JointVisitUID),
 		nullIfEmpty(a.TeamID), a.SubmittedAt,

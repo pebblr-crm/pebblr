@@ -9,23 +9,23 @@
         "key": "doctor",
         "label": "Doctor",
         "fields": [
-          { "key": "name", "type": "text", "required": true, "editable": false },
-          { "key": "specialty", "type": "select", "required": false, "editable": false, "options_ref": "specialties" },
-          { "key": "potential", "type": "select", "required": false, "editable": true, "options_ref": "classifications" },
-          { "key": "city", "type": "text", "required": false, "editable": false },
-          { "key": "county", "type": "text", "required": false, "editable": false },
-          { "key": "address", "type": "text", "required": false, "editable": false }
+          { "key": "name", "label": "Name", "type": "text", "required": true, "editable": false },
+          { "key": "specialty", "label": "Specialty", "type": "select", "required": false, "editable": false, "options_ref": "specialties" },
+          { "key": "potential", "label": "Potential", "type": "select", "required": false, "editable": true, "options_ref": "classifications" },
+          { "key": "city", "label": "City", "type": "text", "required": false, "editable": false },
+          { "key": "county", "label": "County", "type": "text", "required": false, "editable": false },
+          { "key": "address", "label": "Address", "type": "text", "required": false, "editable": false }
         ]
       },
       {
         "key": "pharmacy",
         "label": "Pharmacy",
         "fields": [
-          { "key": "name", "type": "text", "required": true, "editable": false },
-          { "key": "pharmacy_type", "type": "select", "required": false, "editable": false, "options_ref": "pharmacy_types" },
-          { "key": "city", "type": "text", "required": false, "editable": false },
-          { "key": "county", "type": "text", "required": false, "editable": false },
-          { "key": "address", "type": "text", "required": false, "editable": false }
+          { "key": "name", "label": "Name", "type": "text", "required": true, "editable": false },
+          { "key": "pharmacy_type", "label": "Pharmacy Type", "type": "select", "required": false, "editable": false, "options_ref": "pharmacy_types" },
+          { "key": "city", "label": "City", "type": "text", "required": false, "editable": false },
+          { "key": "county", "label": "County", "type": "text", "required": false, "editable": false },
+          { "key": "address", "label": "Address", "type": "text", "required": false, "editable": false }
         ]
       }
     ]
@@ -51,14 +51,14 @@
         "label": "Visit",
         "category": "field",
         "fields": [
-          { "key": "account_id", "type": "relation", "required": true },
-          { "key": "visit_type", "type": "select", "required": true, "options": ["f2f", "remote"] },
-          { "key": "promoted_products", "type": "multi_select", "required": false, "options_ref": "products" },
-          { "key": "feedback", "type": "text", "required": false },
-          { "key": "details", "type": "text", "required": false },
-          { "key": "duration", "type": "select", "required": true, "options_ref": "durations" },
-          { "key": "joint_visit_user_id", "type": "relation", "required": false, "options_ref": "users" },
-          { "key": "routing", "type": "select", "required": false, "options_ref": "routing_options" }
+          { "key": "account_id", "label": "Account", "type": "relation", "required": true },
+          { "key": "visit_type", "label": "Visit Type", "type": "select", "required": true, "options": ["f2f", "remote"] },
+          { "key": "promoted_products", "label": "Promoted Products", "type": "multi_select", "required": false, "options_ref": "products" },
+          { "key": "feedback", "label": "Feedback", "type": "text", "required": false },
+          { "key": "details", "label": "Details", "type": "text", "required": false },
+          { "key": "duration", "label": "Duration", "type": "select", "required": true, "options_ref": "durations" },
+          { "key": "joint_visit_user_id", "label": "Joint Visit User", "type": "relation", "required": false, "options_ref": "users" },
+          { "key": "routing", "label": "Routing", "type": "select", "required": false, "options_ref": "routing_options" }
         ],
         "submit_required": ["promoted_products", "feedback"]
       },
@@ -67,8 +67,8 @@
         "label": "Administrative",
         "category": "non_field",
         "fields": [
-          { "key": "duration", "type": "select", "required": true, "options_ref": "durations" },
-          { "key": "details", "type": "text", "required": false }
+          { "key": "duration", "label": "Duration", "type": "select", "required": true, "options_ref": "durations" },
+          { "key": "details", "label": "Details", "type": "text", "required": false }
         ]
       },
       {
@@ -76,8 +76,8 @@
         "label": "Business Travel",
         "category": "non_field",
         "fields": [
-          { "key": "duration", "type": "select", "required": true, "options_ref": "durations" },
-          { "key": "details", "type": "text", "required": false }
+          { "key": "duration", "label": "Duration", "type": "select", "required": true, "options_ref": "durations" },
+          { "key": "details", "label": "Details", "type": "text", "required": false }
         ]
       },
       {
@@ -85,8 +85,8 @@
         "label": "Company Event",
         "category": "non_field",
         "fields": [
-          { "key": "duration", "type": "select", "required": true, "options_ref": "durations" },
-          { "key": "details", "type": "text", "required": false }
+          { "key": "duration", "label": "Duration", "type": "select", "required": true, "options_ref": "durations" },
+          { "key": "details", "label": "Details", "type": "text", "required": false }
         ]
       },
       {
@@ -94,8 +94,8 @@
         "label": "Cycle Meeting",
         "category": "non_field",
         "fields": [
-          { "key": "duration", "type": "select", "required": true, "options_ref": "durations" },
-          { "key": "details", "type": "text", "required": false }
+          { "key": "duration", "label": "Duration", "type": "select", "required": true, "options_ref": "durations" },
+          { "key": "details", "label": "Details", "type": "text", "required": false }
         ]
       },
       {
@@ -103,8 +103,8 @@
         "label": "Team Meeting",
         "category": "non_field",
         "fields": [
-          { "key": "duration", "type": "select", "required": true, "options_ref": "durations" },
-          { "key": "details", "type": "text", "required": false }
+          { "key": "duration", "label": "Duration", "type": "select", "required": true, "options_ref": "durations" },
+          { "key": "details", "label": "Details", "type": "text", "required": false }
         ]
       },
       {
@@ -112,8 +112,8 @@
         "label": "Training",
         "category": "non_field",
         "fields": [
-          { "key": "duration", "type": "select", "required": true, "options_ref": "durations" },
-          { "key": "details", "type": "text", "required": false }
+          { "key": "duration", "label": "Duration", "type": "select", "required": true, "options_ref": "durations" },
+          { "key": "details", "label": "Details", "type": "text", "required": false }
         ]
       },
       {
@@ -122,7 +122,7 @@
         "category": "non_field",
         "blocks_field_activities": true,
         "fields": [
-          { "key": "duration", "type": "select", "required": true, "options_ref": "durations" }
+          { "key": "duration", "label": "Duration", "type": "select", "required": true, "options_ref": "durations" }
         ]
       },
       {
@@ -131,7 +131,7 @@
         "category": "non_field",
         "blocks_field_activities": true,
         "fields": [
-          { "key": "duration", "type": "select", "required": true, "options_ref": "durations" }
+          { "key": "duration", "label": "Duration", "type": "select", "required": true, "options_ref": "durations" }
         ]
       },
       {
@@ -139,7 +139,7 @@
         "label": "Lunch Break",
         "category": "non_field",
         "fields": [
-          { "key": "duration", "type": "select", "required": true, "options_ref": "durations" }
+          { "key": "duration", "label": "Duration", "type": "select", "required": true, "options_ref": "durations" }
         ]
       }
     ],

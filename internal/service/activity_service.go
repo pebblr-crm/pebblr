@@ -21,7 +21,7 @@ var ErrMaxActivities = fmt.Errorf("maximum activities per day reached")
 var ErrBlockedDay = fmt.Errorf("day is blocked by a non-field activity")
 
 // ErrTargetRequired indicates that a field activity requires a target.
-var ErrTargetRequired = fmt.Errorf("target is required for field activities")
+var ErrTargetRequired = fmt.Errorf("target required")
 
 // ValidationErrors wraps a slice of config.FieldError for returning from the service layer.
 type ValidationErrors struct {

@@ -9,18 +9,28 @@ export interface ApiErrorDetail {
   message: string
 }
 
+export interface ValidationFieldError {
+  field: string
+  message: string
+}
+
 export interface ApiErrorResponse {
   error: ApiErrorDetail
+  fields?: ValidationFieldError[]
 }
 
 export class ApiError extends Error {
+  public readonly fields?: ValidationFieldError[]
+
   constructor(
     public readonly code: string,
     message: string,
     public readonly status: number,
+    fields?: ValidationFieldError[],
   ) {
     super(message)
     this.name = 'ApiError'
+    this.fields = fields
   }
 }
 

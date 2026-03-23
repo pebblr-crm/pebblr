@@ -117,7 +117,7 @@ function ActivityFormInner({
 
     const labelEl = (
       <label className="block text-xs font-bold uppercase tracking-widest text-slate-400 mb-1">
-        {fieldDef.key.replace(/_/g, ' ')}
+        {fieldDef.label ?? fieldDef.key.replace(/_/g, ' ')}
         {fieldDef.required && <span className="text-error ml-1">*</span>}
       </label>
     )

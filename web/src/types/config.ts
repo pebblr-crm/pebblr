@@ -10,6 +10,7 @@ export interface OptionDef {
 
 export interface FieldConfig {
   key: string
+  label?: string
   type: 'text' | 'select' | 'multi_select' | 'relation' | 'date'
   required: boolean
   editable?: boolean

@@ -143,14 +143,9 @@ export function useInlineActivityEditor(activity: Activity): InlineActivityEdito
       submitMutation.mutate(activity.id, {
         onSuccess: () => resolve(),
         onError: (err) => {
-          const apiErr = err as Error & { status?: number }
-          if (apiErr.status === 422) {
-            try {
-              const body = JSON.parse(apiErr.message) as { fields?: ValidationFieldError[] }
-              if (body.fields) setFieldErrors(body.fields)
-            } catch {
-              // non-JSON error body
-            }
+          const apiErr = err as Error & { status?: number; fields?: ValidationFieldError[] }
+          if (apiErr.status === 422 && apiErr.fields) {
+            setFieldErrors(apiErr.fields)
           }
           reject(err)
         },

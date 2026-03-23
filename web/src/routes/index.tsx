@@ -47,9 +47,12 @@ export function DashboardPage() {
     )
   }
 
-  const planned = activityStats?.byStatus['planificat'] ?? 0
-  const realized = activityStats?.byStatus['realizat'] ?? 0
-  const realizationPct = planned > 0 ? Math.round((realized / planned) * 100) : 0
+  const statuses = config?.activities.statuses ?? []
+  const plannedKey = statuses.find((s) => s.initial)?.key ?? statuses[0]?.key
+  const completedKey = statuses[1]?.key
+  const planned = plannedKey ? (activityStats?.byStatus[plannedKey] ?? 0) : 0
+  const completed = completedKey ? (activityStats?.byStatus[completedKey] ?? 0) : 0
+  const realizationPct = planned > 0 ? Math.round((completed / planned) * 100) : 0
 
   return (
     <motion.div
@@ -74,18 +77,18 @@ export function DashboardPage() {
       {/* Top-level KPI cards */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
         <StatCard
-          label="Planned"
+          label={statuses.find((s) => s.initial)?.label ?? 'Planned'}
           value={String(planned)}
           variant="default"
         />
         <StatCard
-          label="Realized"
-          value={String(realized)}
+          label={statuses[1]?.label ?? 'Completed'}
+          value={String(completed)}
           variant="primary"
           progress={realizationPct}
         />
         <StatCard
-          label="Realization Rate"
+          label="Completion Rate"
           value={`${realizationPct}%`}
           progress={realizationPct}
         />
