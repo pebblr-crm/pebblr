@@ -1,0 +1,30 @@
+{{- if and .Values.istio.enabled .Values.istio.createGateway -}}
+apiVersion: networking.istio.io/v1
+kind: Gateway
+metadata:
+  name: {{ .Values.istio.gatewayName }}
+  namespace: {{ .Values.istio.gatewayNamespace | default .Release.Namespace }}
+  labels:
+    {{- include "pebblr.labels" . | nindent 4 }}
+spec:
+  selector:
+    istio: ingressgateway
+  servers:
+    - port:
+        number: 80
+        name: http
+        protocol: HTTP
+      hosts:
+        - {{ .Values.istio.host | quote }}
+    {{- if .Values.tls.enabled }}
+    - port:
+        number: 443
+        name: https
+        protocol: HTTPS
+      hosts:
+        - {{ .Values.istio.host | quote }}
+      tls:
+        mode: SIMPLE
+        credentialName: {{ include "pebblr.fullname" . }}-tls
+    {{- end }}
+{{- end }}

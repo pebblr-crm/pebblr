@@ -1,0 +1,21 @@
+# AKS cluster values — Istio ingress, External Secrets from Azure KeyVault.
+
+gateway:
+  enabled: false
+
+istio:
+  enabled: true
+  host: "*"
+  gatewayName: pebblr-gateway
+  gatewayNamespace: istio-system
+  createGateway: true
+
+tls:
+  enabled: false
+
+externalSecrets:
+  enabled: false  # Enable once ESO is installed and SecretStore is configured
+
+database:
+  host: postgres.pebblr-db.svc.cluster.local
+  sslMode: disable

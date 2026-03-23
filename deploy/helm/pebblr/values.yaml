@@ -22,10 +22,19 @@ service:
   type: ClusterIP
   port: 8080
 
-# Gateway API — creates Gateway + HTTPRoute when enabled
+# Gateway API (Envoy Gateway) — creates Gateway + HTTPRoute when enabled
 gateway:
   enabled: false
   className: eg
+
+# Istio — creates VirtualService (and optionally an Istio Gateway) when enabled
+# Use this instead of gateway.enabled on clusters running Istio.
+istio:
+  enabled: false
+  host: "*"
+  gatewayName: pebblr-gateway
+  gatewayNamespace: istio-system
+  createGateway: false
 
 # TLS via cert-manager
 # mode: "selfsigned" — self-signed CA chain (local dev)
