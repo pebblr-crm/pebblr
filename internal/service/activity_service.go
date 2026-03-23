@@ -17,6 +17,12 @@ var ErrSubmitted = fmt.Errorf("activity is submitted and locked")
 // ErrMaxActivities indicates that the maximum activities per day has been reached.
 var ErrMaxActivities = fmt.Errorf("maximum activities per day reached")
 
+// ErrBlockedDay indicates that a blocking activity (e.g. vacation) prevents field activities on this day.
+var ErrBlockedDay = fmt.Errorf("day is blocked by a non-field activity")
+
+// ErrTargetRequired indicates that a field activity requires a target.
+var ErrTargetRequired = fmt.Errorf("target is required for field activities")
+
 // ValidationErrors wraps a slice of config.FieldError for returning from the service layer.
 type ValidationErrors struct {
 	Errors []config.FieldError
@@ -69,8 +75,18 @@ func (s *ActivityService) Create(ctx context.Context, actor *domain.User, activi
 		}
 	}
 
+	// Business rule: target required for field activities.
+	if err := s.checkTargetRequired(activity); err != nil {
+		return nil, err
+	}
+
 	// Business rule: max activities per day.
 	if err := s.checkMaxActivitiesPerDay(ctx, activity.CreatorID, activity.DueDate); err != nil {
+		return nil, err
+	}
+
+	// Business rule: blocked days (vacation/holiday blocks field activities and vice versa).
+	if err := s.checkBlockedDay(ctx, activity.CreatorID, activity.DueDate, activity.ActivityType); err != nil {
 		return nil, err
 	}
 
@@ -312,4 +328,84 @@ func (s *ActivityService) checkMaxActivitiesPerDay(ctx context.Context, creatorI
 		return ErrMaxActivities
 	}
 	return nil
+}
+
+// checkTargetRequired enforces that field-category activities have a target.
+func (s *ActivityService) checkTargetRequired(activity *domain.Activity) error {
+	if s.cfg == nil {
+		return nil
+	}
+	at := s.cfg.ActivityType(activity.ActivityType)
+	if at == nil {
+		return nil // already caught by validateCore
+	}
+	if at.Category == "field" && activity.TargetID == "" {
+		return ErrTargetRequired
+	}
+	return nil
+}
+
+// checkBlockedDay enforces two rules:
+//  1. If the new activity is a field activity, no blocking (e.g. vacation) activity may exist on that day.
+//  2. If the new activity blocks field activities, no field activity may exist on that day.
+func (s *ActivityService) checkBlockedDay(ctx context.Context, creatorID string, date time.Time, activityType string) error {
+	if s.cfg == nil {
+		return nil
+	}
+	at := s.cfg.ActivityType(activityType)
+	if at == nil {
+		return nil
+	}
+
+	if at.Category == "field" {
+		// Check if any blocking activity exists on this day.
+		blockingTypes := s.blockingActivityTypes()
+		if len(blockingTypes) > 0 {
+			blocked, err := s.activities.HasActivityWithTypes(ctx, creatorID, date, blockingTypes)
+			if err != nil {
+				return fmt.Errorf("checking blocked day: %w", err)
+			}
+			if blocked {
+				return ErrBlockedDay
+			}
+		}
+	}
+
+	if at.BlocksFieldActivities {
+		// Check if any field activity exists on this day.
+		fieldTypes := s.fieldActivityTypes()
+		if len(fieldTypes) > 0 {
+			hasField, err := s.activities.HasActivityWithTypes(ctx, creatorID, date, fieldTypes)
+			if err != nil {
+				return fmt.Errorf("checking blocked day: %w", err)
+			}
+			if hasField {
+				return ErrBlockedDay
+			}
+		}
+	}
+
+	return nil
+}
+
+// blockingActivityTypes returns the keys of all activity types that block field activities.
+func (s *ActivityService) blockingActivityTypes() []string {
+	var types []string
+	for _, at := range s.cfg.Activities.Types {
+		if at.BlocksFieldActivities {
+			types = append(types, at.Key)
+		}
+	}
+	return types
+}
+
+// fieldActivityTypes returns the keys of all field-category activity types.
+func (s *ActivityService) fieldActivityTypes() []string {
+	var types []string
+	for _, at := range s.cfg.Activities.Types {
+		if at.Category == "field" {
+			types = append(types, at.Key)
+		}
+	}
+	return types
 }

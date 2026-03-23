@@ -47,4 +47,8 @@ type ActivityRepository interface {
 
 	// CountByDate returns the number of non-deleted activities for a creator on a given date.
 	CountByDate(ctx context.Context, creatorID string, date time.Time) (int, error)
+
+	// HasActivityWithTypes reports whether the creator has any non-deleted activity
+	// on the given date whose activity_type is one of the provided types.
+	HasActivityWithTypes(ctx context.Context, creatorID string, date time.Time, types []string) (bool, error)
 }
