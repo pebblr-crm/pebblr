@@ -147,37 +147,24 @@ function MapPlannerPage() {
     return { lat: sumLat / count, lng: sumLng / count }
   }, [selectedIds, targets])
 
-  // Available targets sorted by distance from selection centroid.
-  const sortedAvailable = useMemo(() => {
+  // Available targets with computed distances, sorted by proximity when a selection exists.
+  const availableWithDistance = useMemo(() => {
     const available = geoTargets.filter((t) => !selectedIds.has(t.id) && !assignedIds.has(t.id))
-    if (!selectionCentroid) return available
 
-    return available
-      .map((t) => ({
-        target: t,
-        distance: haversineKm(
-          selectionCentroid.lat, selectionCentroid.lng,
-          t.fields.lat as number, t.fields.lng as number,
-        ),
-      }))
-      .sort((a, b) => a.distance - b.distance)
-      .map((x) => x.target)
-  }, [geoTargets, selectedIds, assignedIds, selectionCentroid])
+    const items = available.map((t) => {
+      const dist = selectionCentroid
+        ? haversineKm(selectionCentroid.lat, selectionCentroid.lng, t.fields.lat as number, t.fields.lng as number)
+        : undefined
+      const isCadenced = isWithinCadence(visitStatusMap.get(t.id), cadenceDays)
+      return { target: t, distance: dist, isCadenced }
+    })
 
-  // Distance lookup for display.
-  const distanceMap = useMemo(() => {
-    if (!selectionCentroid) return new Map<string, number>()
-    const m = new Map<string, number>()
-    for (const t of geoTargets) {
-      if (t.fields?.lat != null && t.fields?.lng != null) {
-        m.set(t.id, haversineKm(
-          selectionCentroid.lat, selectionCentroid.lng,
-          t.fields.lat as number, t.fields.lng as number,
-        ))
-      }
+    if (selectionCentroid) {
+      items.sort((a, b) => (a.distance ?? Infinity) - (b.distance ?? Infinity))
     }
-    return m
-  }, [geoTargets, selectionCentroid])
+
+    return items
+  }, [geoTargets, selectedIds, assignedIds, selectionCentroid, visitStatusMap, cadenceDays])
 
   const weekDates = useMemo(() => {
     const base = new Date()
@@ -357,19 +344,10 @@ function MapPlannerPage() {
 
           {/* Target list (1/4) */}
           <div className="w-1/4 border-l border-slate-200 flex flex-col bg-white">
-            <div className="p-3 border-b border-slate-100 space-y-2">
+            <div className="p-3 border-b border-slate-100">
               <h2 className="text-sm font-bold text-on-surface">
                 Selected ({selectedIds.size})
               </h2>
-              <label className="flex items-center gap-1.5 text-[10px] text-slate-500 cursor-pointer">
-                <input
-                  type="checkbox"
-                  checked={showCadenced}
-                  onChange={(e) => setShowCadenced(e.target.checked)}
-                  className="rounded border-slate-300"
-                />
-                Allow recently visited
-              </label>
             </div>
             <div className="flex-1 overflow-y-auto">
               {/* Selected targets first */}
@@ -390,42 +368,50 @@ function MapPlannerPage() {
                   />
                 )
               })}
-              {selectedIds.size > 0 && sortedAvailable.length > 0 && (
-                <div className="border-t border-slate-100 px-3 py-1">
-                  <span className="text-[10px] uppercase tracking-widest text-slate-400 font-bold">
-                    {selectionCentroid ? 'Nearby' : 'Available'}
-                  </span>
-                </div>
-              )}
               {/* Available targets sorted by proximity to selection */}
-              {sortedAvailable
-                .filter((t) => {
-                  if (showCadenced) return true
-                  return !isWithinCadence(visitStatusMap.get(t.id), cadenceDays)
-                })
-                .map((target) => {
-                  const lastVisit = visitStatusMap.get(target.id)
-                  const isCadenced = isWithinCadence(lastVisit, cadenceDays)
-                  const cadenceLocked = isCadenced && !showCadenced
-                  const dist = distanceMap.get(target.id)
-                  return (
-                    <TargetListItem
-                      key={target.id}
-                      target={target}
-                      lastVisit={lastVisit}
-                      isSelected={false}
-                      isCadenced={cadenceLocked}
-                      isHovered={hoveredTargetId === target.id}
-                      distanceKm={dist}
-                      onHover={(h) => setHoveredTargetId(h ? target.id : null)}
-                      onToggle={() => {
-                        if (!cadenceLocked) toggleTarget(target.id)
-                      }}
-                      onDragStart={() => setDragTargetId(target.id)}
-                      onDragEnd={() => setDragTargetId(null)}
-                    />
-                  )
-                })}
+              {(() => {
+                const open = availableWithDistance.filter((x) => !x.isCadenced)
+                const cadenced = availableWithDistance.filter((x) => x.isCadenced)
+
+                return (
+                  <>
+                    {(selectedIds.size > 0 || open.length > 0) && open.length > 0 && (
+                      <div className="border-t border-slate-100 px-3 py-1">
+                        <span className="text-[10px] uppercase tracking-widest text-slate-400 font-bold">
+                          {selectionCentroid ? 'Nearby' : 'Available'}
+                        </span>
+                      </div>
+                    )}
+                    {open.map(({ target, distance }) => (
+                      <TargetListItem
+                        key={target.id}
+                        target={target}
+                        lastVisit={visitStatusMap.get(target.id)}
+                        isSelected={false}
+                        isHovered={hoveredTargetId === target.id}
+                        distanceKm={distance}
+                        onHover={(h) => setHoveredTargetId(h ? target.id : null)}
+                        onToggle={() => toggleTarget(target.id)}
+                        onDragStart={() => setDragTargetId(target.id)}
+                        onDragEnd={() => setDragTargetId(null)}
+                      />
+                    ))}
+
+                    {cadenced.length > 0 && (
+                      <CadencedSection
+                        items={cadenced}
+                        showCadenced={showCadenced}
+                        setShowCadenced={setShowCadenced}
+                        visitStatusMap={visitStatusMap}
+                        hoveredTargetId={hoveredTargetId}
+                        setHoveredTargetId={setHoveredTargetId}
+                        toggleTarget={toggleTarget}
+                        setDragTargetId={setDragTargetId}
+                      />
+                    )}
+                  </>
+                )
+              })()}
             </div>
           </div>
         </div>
@@ -490,6 +476,77 @@ function MapPlannerPage() {
         </div>
       </div>
     </APIProvider>
+  )
+}
+
+// ── Cadenced targets rollout ──────────────────────────────────────────────────
+
+interface CadencedSectionProps {
+  items: Array<{ target: Target; distance?: number }>
+  showCadenced: boolean
+  setShowCadenced: (v: boolean) => void
+  visitStatusMap: Map<string, string>
+  hoveredTargetId: string | null
+  setHoveredTargetId: (id: string | null) => void
+  toggleTarget: (id: string) => void
+  setDragTargetId: (id: string | null) => void
+}
+
+function CadencedSection({
+  items,
+  showCadenced,
+  setShowCadenced,
+  visitStatusMap,
+  hoveredTargetId,
+  setHoveredTargetId,
+  toggleTarget,
+  setDragTargetId,
+}: CadencedSectionProps) {
+  const [expanded, setExpanded] = useState(false)
+
+  return (
+    <div className="border-t border-slate-100">
+      <button
+        type="button"
+        onClick={() => setExpanded((v) => !v)}
+        className="w-full flex items-center justify-between px-3 py-1.5 hover:bg-slate-50 transition-colors"
+      >
+        <span className="text-[10px] uppercase tracking-widest text-slate-400 font-bold">
+          Recently visited ({items.length})
+        </span>
+        <span className="text-[10px] text-slate-400">{expanded ? '▲' : '▼'}</span>
+      </button>
+      {expanded && (
+        <>
+          <label className="flex items-center gap-1.5 px-3 py-1 text-[10px] text-slate-500 cursor-pointer">
+            <input
+              type="checkbox"
+              checked={showCadenced}
+              onChange={(e) => setShowCadenced(e.target.checked)}
+              className="rounded border-slate-300"
+            />
+            Allow scheduling
+          </label>
+          {items.map(({ target, distance }) => (
+            <TargetListItem
+              key={target.id}
+              target={target}
+              lastVisit={visitStatusMap.get(target.id)}
+              isSelected={false}
+              isCadenced={!showCadenced}
+              isHovered={hoveredTargetId === target.id}
+              distanceKm={distance}
+              onHover={(h) => setHoveredTargetId(h ? target.id : null)}
+              onToggle={() => {
+                if (showCadenced) toggleTarget(target.id)
+              }}
+              onDragStart={() => setDragTargetId(target.id)}
+              onDragEnd={() => setDragTargetId(null)}
+            />
+          ))}
+        </>
+      )}
+    </div>
   )
 }
 
