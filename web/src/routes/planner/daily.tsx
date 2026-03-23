@@ -11,7 +11,6 @@ import {
   getActivityTitle,
   getTypeCategory,
   getStatusLabel,
-  getDurationLabel,
   getStatusBadgeColor,
   CATEGORY_COLORS,
   MONTH_NAMES,
@@ -120,37 +119,32 @@ export function PlannerDailyPage() {
           </Link>
         </div>
       ) : (
-        <div className="space-y-3" data-testid="daily-activities">
+        <div className="space-y-1.5" data-testid="daily-activities">
           {activities.map((activity) => {
             const title = getActivityTitle(config, activity)
             const category = getTypeCategory(config?.activities, activity.activityType)
             const style = CATEGORY_COLORS[category] ?? CATEGORY_COLORS.field
             const statusLabel = getStatusLabel(config?.activities, activity.status)
             const statusStyle = getStatusBadgeColor(config?.activities, activity.status)
-            const durationLabel = getDurationLabel(config?.activities, activity.duration)
 
             return (
               <Link
                 key={activity.id}
                 to="/activities/$activityId"
                 params={{ activityId: activity.id }}
-                className={`block p-5 rounded-xl border-l-4 ${style} shadow-sm hover:shadow-md transition-shadow no-underline`}
+                className={`block px-3 py-2 rounded-lg border-l-2 ${style} hover:shadow-sm transition-shadow no-underline`}
                 data-testid="daily-activity-row"
               >
-                <div className="flex items-start justify-between">
-                  <div>
-                    <h3 className="text-sm font-bold text-on-surface">{title}</h3>
-                    <p className="text-xs text-on-surface-variant mt-1">{durationLabel}</p>
-                    {activity.routing && (
-                      <p className="text-xs text-on-surface-variant mt-0.5">Route: {activity.routing}</p>
-                    )}
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-2 min-w-0">
+                    <h3 className="text-xs font-bold text-on-surface truncate">{title}</h3>
                   </div>
-                  <div className="flex items-center gap-2">
-                    <span className={`px-2.5 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-tight ${statusStyle}`}>
+                  <div className="flex items-center gap-1.5 shrink-0 ml-2">
+                    <span className={`px-2 py-0.5 rounded-full text-[9px] font-bold uppercase tracking-tight ${statusStyle}`}>
                       {statusLabel}
                     </span>
                     {activity.submittedAt && (
-                      <span className="px-2.5 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-tight bg-slate-200 text-slate-600">
+                      <span className="px-2 py-0.5 rounded-full text-[9px] font-bold uppercase tracking-tight bg-slate-200 text-slate-600">
                         Submitted
                       </span>
                     )}

@@ -5,7 +5,6 @@ import type { TenantConfig } from '@/types/config'
 import {
   getActivityTitle,
   getTypeCategory,
-  getDurationLabel,
   getStatusDotColor,
   CATEGORY_COLORS,
 } from '@/utils/config'
@@ -20,7 +19,6 @@ export function ActivityCard({ activity, config }: ActivityCardProps) {
   const category = getTypeCategory(config?.activities, activity.activityType)
   const style = CATEGORY_COLORS[category] ?? CATEGORY_COLORS.field
   const statusDot = getStatusDotColor(config?.activities, activity.status)
-  const durationLabel = getDurationLabel(config?.activities, activity.duration)
   const jointVisitUserId = activity.jointVisitUserId
     ?? (activity.fields?.joint_visit_user_id as string | undefined)
   const hasJointVisit = Boolean(jointVisitUserId)
@@ -29,17 +27,16 @@ export function ActivityCard({ activity, config }: ActivityCardProps) {
     <Link
       to="/activities/$activityId"
       params={{ activityId: activity.id }}
-      className={`block p-1.5 rounded-lg border-l-4 ${style} no-underline hover:opacity-80 transition-opacity`}
+      className={`block px-1.5 py-0.5 rounded border-l-2 ${style} no-underline hover:opacity-80 transition-opacity`}
       data-testid="activity-card"
     >
       <div className="flex items-center gap-1">
         <span className={`w-1.5 h-1.5 rounded-full shrink-0 ${statusDot}`} />
-        <p className="text-[10px] font-semibold truncate">{title}</p>
+        <p className="text-[9px] font-semibold truncate">{title}</p>
         {hasJointVisit && (
           <Users className="w-2.5 h-2.5 shrink-0 opacity-60" data-testid="joint-visit-icon" />
         )}
       </div>
-      <p className="text-[8px] opacity-70 truncate">{durationLabel}</p>
     </Link>
   )
 }

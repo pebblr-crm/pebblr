@@ -879,18 +879,18 @@ function DayDropZone({
         setDragOver(false)
         if (dragTargetId || dragActivityId || dragCollectionId) onDrop()
       }}
-      className={`rounded-lg border-2 border-dashed p-2 min-h-[100px] transition-colors ${
+      className={`rounded-lg border-2 border-dashed p-1.5 min-h-[80px] transition-colors ${
         dragOver
           ? 'border-primary bg-primary/5'
           : 'border-slate-200 bg-white'
       }`}
     >
-      <div className="flex items-center justify-between mb-1">
+      <div className="flex items-center justify-between mb-0.5">
         <p className="text-[10px] font-bold text-slate-500">{label}</p>
-        <span className="text-[9px] text-slate-400">{totalCount} total</span>
+        <span className={`text-[9px] font-bold px-1 py-0.5 rounded ${totalCount > 0 ? 'bg-slate-100 text-slate-600' : 'text-slate-400'}`}>{totalCount}</span>
       </div>
 
-      <div className="space-y-0.5">
+      <div className="space-y-0.5 max-h-[120px] overflow-y-auto">
         {/* Existing scheduled activities */}
         {existingActivities.map((a) => {
           const dotColor = getStatusDotColor(ac, a.status)
