@@ -72,6 +72,10 @@ func (r *stubTargetRepo) Upsert(_ context.Context, targets []*domain.Target) (*s
 	return &store.ImportResult{Created: len(targets), Imported: targets}, nil
 }
 
+func (r *stubTargetRepo) VisitStatus(_ context.Context, _ rbac.TargetScope, _ []string) ([]store.TargetVisitStatus, error) {
+	return nil, nil
+}
+
 // --- test config ---
 
 func testConfig() *config.TenantConfig {

@@ -70,6 +70,10 @@ func (s *stubTargetSvc) Import(_ context.Context, actor *domain.User, targets []
 	return &store.ImportResult{Created: len(targets), Imported: targets}, nil
 }
 
+func (s *stubTargetSvc) VisitStatus(_ context.Context, _ *domain.User) ([]store.TargetVisitStatus, error) {
+	return []store.TargetVisitStatus{}, nil
+}
+
 func targetRouter() http.Handler {
 	h := api.NewTargetHandler(&stubTargetSvc{})
 	return api.NewTargetRouter(h)

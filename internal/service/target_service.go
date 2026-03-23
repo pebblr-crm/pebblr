@@ -170,6 +170,34 @@ func buildAddress(fields map[string]any) string {
 	return s
 }
 
+// VisitStatus returns the last visit date for each of the actor's targets.
+func (s *TargetService) VisitStatus(ctx context.Context, actor *domain.User) ([]store.TargetVisitStatus, error) {
+	scope := s.enforcer.ScopeTargetQuery(ctx, actor)
+	fieldTypes := s.fieldActivityTypes()
+	result, err := s.targets.VisitStatus(ctx, scope, fieldTypes)
+	if err != nil {
+		return nil, fmt.Errorf("querying visit status: %w", err)
+	}
+	return result, nil
+}
+
+// fieldActivityTypes returns the keys of all field-category activity types from config.
+func (s *TargetService) fieldActivityTypes() []string {
+	if s.cfg == nil {
+		return []string{"visit"}
+	}
+	var types []string
+	for _, at := range s.cfg.Activities.Types {
+		if at.Category == "field" {
+			types = append(types, at.Key)
+		}
+	}
+	if len(types) == 0 {
+		types = []string{"visit"}
+	}
+	return types
+}
+
 // validateTarget checks that the target has a valid type and name.
 func (s *TargetService) validateTarget(target *domain.Target) error {
 	if target.Name == "" {

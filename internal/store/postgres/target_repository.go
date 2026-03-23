@@ -242,6 +242,73 @@ func (r *targetRepository) Upsert(ctx context.Context, targets []*domain.Target)
 	return result, nil
 }
 
+func (r *targetRepository) VisitStatus(ctx context.Context, scope rbac.TargetScope, fieldTypes []string) ([]store.TargetVisitStatus, error) {
+	if len(fieldTypes) == 0 {
+		return nil, nil
+	}
+
+	args := []any{}
+	argIdx := 1
+	var conditions []string
+
+	// Scope targets.
+	if !scope.AllTargets {
+		if len(scope.AssigneeIDs) > 0 {
+			phs := make([]string, len(scope.AssigneeIDs))
+			for i, id := range scope.AssigneeIDs {
+				phs[i] = fmt.Sprintf("$%d", argIdx)
+				args = append(args, id)
+				argIdx++
+			}
+			conditions = append(conditions, fmt.Sprintf("t.assignee_id::TEXT = ANY(ARRAY[%s])", strings.Join(phs, ",")))
+		}
+		if len(scope.TeamIDs) > 0 {
+			phs := make([]string, len(scope.TeamIDs))
+			for i, id := range scope.TeamIDs {
+				phs[i] = fmt.Sprintf("$%d", argIdx)
+				args = append(args, id)
+				argIdx++
+			}
+			conditions = append(conditions, fmt.Sprintf("t.team_id::TEXT = ANY(ARRAY[%s])", strings.Join(phs, ",")))
+		}
+		if len(conditions) == 0 {
+			return nil, nil
+		}
+	}
+
+	// Field activity types filter.
+	args = append(args, fieldTypes)
+	typesArg := fmt.Sprintf("$%d", argIdx)
+	argIdx++
+
+	where := ""
+	if len(conditions) > 0 {
+		where = " AND (" + strings.Join(conditions, " OR ") + ")"
+	}
+
+	query := `SELECT t.id::TEXT, MAX(a.due_date)
+		FROM targets t
+		JOIN activities a ON a.target_id = t.id AND a.deleted_at IS NULL AND a.activity_type = ANY(` + typesArg + `)
+		WHERE TRUE` + where + `
+		GROUP BY t.id`
+
+	rows, err := r.pool.Query(ctx, query, args...)
+	if err != nil {
+		return nil, fmt.Errorf("querying visit status: %w", err)
+	}
+	defer rows.Close()
+
+	var result []store.TargetVisitStatus
+	for rows.Next() {
+		var vs store.TargetVisitStatus
+		if err := rows.Scan(&vs.TargetID, &vs.LastVisitDate); err != nil {
+			return nil, fmt.Errorf("scanning visit status: %w", err)
+		}
+		result = append(result, vs)
+	}
+	return result, rows.Err()
+}
+
 func scanTargetWithFlag(row pgx.Row, flag *bool) (*domain.Target, error) {
 	var t domain.Target
 	var fieldsJSON []byte

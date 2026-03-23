@@ -2,10 +2,17 @@ package store
 
 import (
 	"context"
+	"time"
 
 	"github.com/pebblr/pebblr/internal/domain"
 	"github.com/pebblr/pebblr/internal/rbac"
 )
+
+// TargetVisitStatus pairs a target ID with its most recent visit date.
+type TargetVisitStatus struct {
+	TargetID      string    `json:"targetId"`
+	LastVisitDate time.Time `json:"lastVisitDate"`
+}
 
 // TargetFilter specifies optional filter criteria for target list queries.
 type TargetFilter struct {
@@ -48,4 +55,8 @@ type TargetRepository interface {
 	// Upsert inserts or updates targets keyed by (target_type, external_id).
 	// Returns the number of created and updated records.
 	Upsert(ctx context.Context, targets []*domain.Target) (*ImportResult, error)
+
+	// VisitStatus returns the most recent visit date for each target in the given scope.
+	// Only considers non-deleted, field-category activities (visits).
+	VisitStatus(ctx context.Context, scope rbac.TargetScope, fieldTypes []string) ([]TargetVisitStatus, error)
 }

@@ -21,6 +21,7 @@ type TargetServicer interface {
 	List(ctx context.Context, actor *domain.User, filter store.TargetFilter, page, limit int) (*store.TargetPage, error)
 	Update(ctx context.Context, actor *domain.User, target *domain.Target) (*domain.Target, error)
 	Import(ctx context.Context, actor *domain.User, targets []*domain.Target) (*store.ImportResult, error)
+	VisitStatus(ctx context.Context, actor *domain.User) ([]store.TargetVisitStatus, error)
 }
 
 // TargetHandler handles HTTP requests for target CRUD operations.
@@ -37,6 +38,7 @@ func NewTargetHandler(svc TargetServicer) *TargetHandler {
 func NewTargetRouter(h *TargetHandler) http.Handler {
 	r := chi.NewRouter()
 	r.Get("/", h.List)
+	r.Get("/visit-status", h.VisitStatus)
 	r.Post("/", h.Create)
 	r.Post("/import", h.Import)
 	r.Get("/{id}", h.Get)
@@ -306,4 +308,25 @@ func (h *TargetHandler) Import(w http.ResponseWriter, r *http.Request) {
 		Updated: result.Updated,
 		Targets: imported,
 	})
+}
+
+// VisitStatus handles GET /api/v1/targets/visit-status
+func (h *TargetHandler) VisitStatus(w http.ResponseWriter, r *http.Request) {
+	actor, err := rbac.UserFromContext(r.Context())
+	if err != nil {
+		writeError(w, http.StatusUnauthorized, "UNAUTHORIZED", "missing authenticated user")
+		return
+	}
+
+	result, err := h.svc.VisitStatus(r.Context(), actor)
+	if err != nil {
+		writeError(w, http.StatusInternalServerError, "INTERNAL_ERROR", "failed to query visit status")
+		return
+	}
+	if result == nil {
+		result = []store.TargetVisitStatus{}
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	_ = json.NewEncoder(w).Encode(map[string]any{"items": result})
 }
