@@ -42,78 +42,78 @@ ON CONFLICT DO NOTHING;
 INSERT INTO targets (id, target_type, name, external_id, fields, assignee_id, team_id) VALUES
   -- Sector 1-3: Alina's doctors
   ('c0000000-0000-0000-0000-000000000001', 'doctor', 'Dr. Elena Popescu', 'DOC-001',
-   '{"specialty": "cardiology", "potential": "a", "city": "București", "county": "București", "address": "Bd. Aviatorilor 34, Sector 1"}',
+   '{"specialty": "cardiology", "potential": "a", "city": "București", "county": "București", "address": "Bd. Aviatorilor 34, Sector 1", "lat": 44.4605, "lng": 26.0853}',
    'a0000000-0000-0000-0000-000000000004', 'b0000000-0000-0000-0000-000000000001'),
 
   ('c0000000-0000-0000-0000-000000000002', 'doctor', 'Dr. Mihai Ionescu', 'DOC-002',
-   '{"specialty": "internal_medicine", "potential": "b", "city": "București", "county": "București", "address": "Str. Știrbei Vodă 128, Sector 1"}',
+   '{"specialty": "internal_medicine", "potential": "b", "city": "București", "county": "București", "address": "Str. Știrbei Vodă 128, Sector 1", "lat": 44.4445, "lng": 26.0742}',
    'a0000000-0000-0000-0000-000000000004', 'b0000000-0000-0000-0000-000000000001'),
 
   ('c0000000-0000-0000-0000-000000000003', 'doctor', 'Dr. Adriana Vlad', 'DOC-003',
-   '{"specialty": "neurology", "potential": "a", "city": "București", "county": "București", "address": "Calea Dorobanți 77, Sector 1"}',
+   '{"specialty": "neurology", "potential": "a", "city": "București", "county": "București", "address": "Calea Dorobanți 77, Sector 1", "lat": 44.4530, "lng": 26.0905}',
    'a0000000-0000-0000-0000-000000000004', 'b0000000-0000-0000-0000-000000000001'),
 
   ('c0000000-0000-0000-0000-000000000004', 'doctor', 'Dr. Sorin Munteanu', 'DOC-004',
-   '{"specialty": "gastroenterology", "potential": "c", "city": "București", "county": "București", "address": "Str. Polonă 52, Sector 1"}',
+   '{"specialty": "gastroenterology", "potential": "c", "city": "București", "county": "București", "address": "Str. Polonă 52, Sector 1", "lat": 44.4490, "lng": 26.0920}',
    'a0000000-0000-0000-0000-000000000004', 'b0000000-0000-0000-0000-000000000001'),
 
   -- Sector 1-3: Bogdan's doctors
   ('c0000000-0000-0000-0000-000000000005', 'doctor', 'Dr. Ana Dumitrescu', 'DOC-005',
-   '{"specialty": "family_medicine", "potential": "a", "city": "București", "county": "București", "address": "Bd. Magheru 28, Sector 2"}',
+   '{"specialty": "family_medicine", "potential": "a", "city": "București", "county": "București", "address": "Bd. Magheru 28, Sector 2", "lat": 44.4415, "lng": 26.0975}',
    'a0000000-0000-0000-0000-000000000005', 'b0000000-0000-0000-0000-000000000001'),
 
   ('c0000000-0000-0000-0000-000000000006', 'doctor', 'Dr. Radu Constantinescu', 'DOC-006',
-   '{"specialty": "pulmonology", "potential": "b", "city": "București", "county": "București", "address": "Str. Barbu Văcărescu 164, Sector 2"}',
+   '{"specialty": "pulmonology", "potential": "b", "city": "București", "county": "București", "address": "Str. Barbu Văcărescu 164, Sector 2", "lat": 44.4520, "lng": 26.1150}',
    'a0000000-0000-0000-0000-000000000005', 'b0000000-0000-0000-0000-000000000001'),
 
   ('c0000000-0000-0000-0000-000000000007', 'doctor', 'Dr. Florina Neagu', 'DOC-007',
-   '{"specialty": "endocrinology", "potential": "a", "city": "București", "county": "București", "address": "Bd. Dacia 65, Sector 2"}',
+   '{"specialty": "endocrinology", "potential": "a", "city": "București", "county": "București", "address": "Bd. Dacia 65, Sector 2", "lat": 44.4465, "lng": 26.0985}',
    'a0000000-0000-0000-0000-000000000005', 'b0000000-0000-0000-0000-000000000001'),
 
   ('c0000000-0000-0000-0000-000000000008', 'doctor', 'Dr. Victor Preda', 'DOC-008',
-   '{"specialty": "cardiology", "potential": "b", "city": "București", "county": "București", "address": "Str. Traian 200, Sector 3"}',
+   '{"specialty": "cardiology", "potential": "b", "city": "București", "county": "București", "address": "Str. Traian 200, Sector 3", "lat": 44.4275, "lng": 26.1180}',
    'a0000000-0000-0000-0000-000000000005', 'b0000000-0000-0000-0000-000000000001'),
 
   ('c0000000-0000-0000-0000-000000000009', 'doctor', 'Dr. Luminița Stoian', 'DOC-009',
-   '{"specialty": "dermatology", "potential": "c", "city": "București", "county": "București", "address": "Calea Călărașilor 306, Sector 3"}',
+   '{"specialty": "dermatology", "potential": "c", "city": "București", "county": "București", "address": "Calea Călărașilor 306, Sector 3", "lat": 44.4225, "lng": 26.1250}',
    'a0000000-0000-0000-0000-000000000005', 'b0000000-0000-0000-0000-000000000001'),
 
   -- Sector 4-6: Camelia's doctors
   ('c0000000-0000-0000-0000-000000000010', 'doctor', 'Dr. Maria Stanescu', 'DOC-010',
-   '{"specialty": "neurology", "potential": "a", "city": "București", "county": "București", "address": "Bd. Tineretului 1, Sector 4"}',
+   '{"specialty": "neurology", "potential": "a", "city": "București", "county": "București", "address": "Bd. Tineretului 1, Sector 4", "lat": 44.4130, "lng": 26.1020}',
    'a0000000-0000-0000-0000-000000000006', 'b0000000-0000-0000-0000-000000000002'),
 
   ('c0000000-0000-0000-0000-000000000011', 'doctor', 'Dr. Cristina Moldovan', 'DOC-011',
-   '{"specialty": "pediatrics", "potential": "b", "city": "București", "county": "București", "address": "Șos. Olteniței 40, Sector 4"}',
+   '{"specialty": "pediatrics", "potential": "b", "city": "București", "county": "București", "address": "Șos. Olteniței 40, Sector 4", "lat": 44.3985, "lng": 26.1065}',
    'a0000000-0000-0000-0000-000000000006', 'b0000000-0000-0000-0000-000000000002'),
 
   ('c0000000-0000-0000-0000-000000000012', 'doctor', 'Dr. Gheorghe Petre', 'DOC-012',
-   '{"specialty": "orthopedics", "potential": "a", "city": "București", "county": "București", "address": "Calea Văcărești 280, Sector 4"}',
+   '{"specialty": "orthopedics", "potential": "a", "city": "București", "county": "București", "address": "Calea Văcărești 280, Sector 4", "lat": 44.4080, "lng": 26.1140}',
    'a0000000-0000-0000-0000-000000000006', 'b0000000-0000-0000-0000-000000000002'),
 
   ('c0000000-0000-0000-0000-000000000013', 'doctor', 'Dr. Daniela Luca', 'DOC-013',
-   '{"specialty": "internal_medicine", "potential": "b", "city": "București", "county": "București", "address": "Str. Fabricii 12, Sector 6"}',
+   '{"specialty": "internal_medicine", "potential": "b", "city": "București", "county": "București", "address": "Str. Fabricii 12, Sector 6", "lat": 44.4355, "lng": 26.0385}',
    'a0000000-0000-0000-0000-000000000006', 'b0000000-0000-0000-0000-000000000002'),
 
   -- Sector 4-6: Daniel's doctors
   ('c0000000-0000-0000-0000-000000000014', 'doctor', 'Dr. Andrei Georgescu', 'DOC-014',
-   '{"specialty": "pulmonology", "potential": "b", "city": "București", "county": "București", "address": "Calea 13 Septembrie 106, Sector 5"}',
+   '{"specialty": "pulmonology", "potential": "b", "city": "București", "county": "București", "address": "Calea 13 Septembrie 106, Sector 5", "lat": 44.4265, "lng": 26.0720}',
    'a0000000-0000-0000-0000-000000000007', 'b0000000-0000-0000-0000-000000000002'),
 
   ('c0000000-0000-0000-0000-000000000015', 'doctor', 'Dr. Ion Petrescu', 'DOC-015',
-   '{"specialty": "geriatrics", "potential": "c", "city": "București", "county": "București", "address": "Bd. Libertății 18, Sector 5"}',
+   '{"specialty": "geriatrics", "potential": "c", "city": "București", "county": "București", "address": "Bd. Libertății 18, Sector 5", "lat": 44.4235, "lng": 26.0865}',
    'a0000000-0000-0000-0000-000000000007', 'b0000000-0000-0000-0000-000000000002'),
 
   ('c0000000-0000-0000-0000-000000000016', 'doctor', 'Dr. Oana Dragomir', 'DOC-016',
-   '{"specialty": "family_medicine", "potential": "a", "city": "București", "county": "București", "address": "Bd. Iuliu Maniu 63, Sector 6"}',
+   '{"specialty": "family_medicine", "potential": "a", "city": "București", "county": "București", "address": "Bd. Iuliu Maniu 63, Sector 6", "lat": 44.4310, "lng": 26.0310}',
    'a0000000-0000-0000-0000-000000000007', 'b0000000-0000-0000-0000-000000000002'),
 
   ('c0000000-0000-0000-0000-000000000017', 'doctor', 'Dr. Bogdan Enescu', 'DOC-017',
-   '{"specialty": "gastroenterology", "potential": "b", "city": "București", "county": "București", "address": "Str. Brașov 21, Sector 6"}',
+   '{"specialty": "gastroenterology", "potential": "b", "city": "București", "county": "București", "address": "Str. Brașov 21, Sector 6", "lat": 44.4380, "lng": 26.0450}',
    'a0000000-0000-0000-0000-000000000007', 'b0000000-0000-0000-0000-000000000002'),
 
   ('c0000000-0000-0000-0000-000000000018', 'doctor', 'Dr. Raluca Matei', 'DOC-018',
-   '{"specialty": "cardiology", "potential": "a", "city": "București", "county": "București", "address": "Bd. Timișoara 44, Sector 6"}',
+   '{"specialty": "cardiology", "potential": "a", "city": "București", "county": "București", "address": "Bd. Timișoara 44, Sector 6", "lat": 44.4285, "lng": 26.0255}',
    'a0000000-0000-0000-0000-000000000007', 'b0000000-0000-0000-0000-000000000002')
 ON CONFLICT (id) DO NOTHING;
 
@@ -123,36 +123,36 @@ ON CONFLICT (id) DO NOTHING;
 INSERT INTO targets (id, target_type, name, external_id, fields, assignee_id, team_id) VALUES
   -- Sector 1-3 pharmacies
   ('c0000000-0000-0000-0000-000000000019', 'pharmacy', 'Farmacia Dona — Victoriei',      'PHR-001',
-   '{"pharmacy_type": "chain", "city": "București", "county": "București", "address": "Calea Victoriei 155, Sector 1"}',
+   '{"pharmacy_type": "chain", "city": "București", "county": "București", "address": "Calea Victoriei 155, Sector 1", "lat": 44.4505, "lng": 26.0785}',
    'a0000000-0000-0000-0000-000000000004', 'b0000000-0000-0000-0000-000000000001'),
 
   ('c0000000-0000-0000-0000-000000000020', 'pharmacy', 'Farmacia Sensiblu — Floreasca',  'PHR-002',
-   '{"pharmacy_type": "chain", "city": "București", "county": "București", "address": "Calea Floreasca 169, Sector 1"}',
+   '{"pharmacy_type": "chain", "city": "București", "county": "București", "address": "Calea Floreasca 169, Sector 1", "lat": 44.4625, "lng": 26.0960}',
    'a0000000-0000-0000-0000-000000000004', 'b0000000-0000-0000-0000-000000000001'),
 
   ('c0000000-0000-0000-0000-000000000021', 'pharmacy', 'Farmacia Catena — Obor',         'PHR-003',
-   '{"pharmacy_type": "chain", "city": "București", "county": "București", "address": "Șos. Colentina 2, Sector 2"}',
+   '{"pharmacy_type": "chain", "city": "București", "county": "București", "address": "Șos. Colentina 2, Sector 2", "lat": 44.4505, "lng": 26.1230}',
    'a0000000-0000-0000-0000-000000000005', 'b0000000-0000-0000-0000-000000000001'),
 
   ('c0000000-0000-0000-0000-000000000022', 'pharmacy', 'Farmacia Help Net — Universitate','PHR-004',
-   '{"pharmacy_type": "chain", "city": "București", "county": "București", "address": "Bd. Regina Elisabeta 15, Sector 3"}',
+   '{"pharmacy_type": "chain", "city": "București", "county": "București", "address": "Bd. Regina Elisabeta 15, Sector 3", "lat": 44.4355, "lng": 26.1005}',
    'a0000000-0000-0000-0000-000000000005', 'b0000000-0000-0000-0000-000000000001'),
 
   -- Sector 4-6 pharmacies
   ('c0000000-0000-0000-0000-000000000023', 'pharmacy', 'Farmacia Dr. Max — Brâncoveanu',  'PHR-005',
-   '{"pharmacy_type": "chain", "city": "București", "county": "București", "address": "Bd. Constantin Brâncoveanu 114, Sector 4"}',
+   '{"pharmacy_type": "chain", "city": "București", "county": "București", "address": "Bd. Constantin Brâncoveanu 114, Sector 4", "lat": 44.3935, "lng": 26.1185}',
    'a0000000-0000-0000-0000-000000000006', 'b0000000-0000-0000-0000-000000000002'),
 
   ('c0000000-0000-0000-0000-000000000024', 'pharmacy', 'Farmacia Ropharma — Rahova',      'PHR-006',
-   '{"pharmacy_type": "independent", "city": "București", "county": "București", "address": "Calea Rahovei 266, Sector 5"}',
+   '{"pharmacy_type": "independent", "city": "București", "county": "București", "address": "Calea Rahovei 266, Sector 5", "lat": 44.4105, "lng": 26.0680}',
    'a0000000-0000-0000-0000-000000000006', 'b0000000-0000-0000-0000-000000000002'),
 
   ('c0000000-0000-0000-0000-000000000025', 'pharmacy', 'Farmacia Dona — Crângași',        'PHR-007',
-   '{"pharmacy_type": "chain", "city": "București", "county": "București", "address": "Calea Crângași 6, Sector 6"}',
+   '{"pharmacy_type": "chain", "city": "București", "county": "București", "address": "Calea Crângași 6, Sector 6", "lat": 44.4420, "lng": 26.0405}',
    'a0000000-0000-0000-0000-000000000007', 'b0000000-0000-0000-0000-000000000002'),
 
   ('c0000000-0000-0000-0000-000000000026', 'pharmacy', 'Farmacia Belladonna — Drumul Taberei', 'PHR-008',
-   '{"pharmacy_type": "independent", "city": "București", "county": "București", "address": "Bd. Drumul Taberei 34, Sector 6"}',
+   '{"pharmacy_type": "independent", "city": "București", "county": "București", "address": "Bd. Drumul Taberei 34, Sector 6", "lat": 44.4195, "lng": 26.0285}',
    'a0000000-0000-0000-0000-000000000007', 'b0000000-0000-0000-0000-000000000002')
 ON CONFLICT (id) DO NOTHING;
 
