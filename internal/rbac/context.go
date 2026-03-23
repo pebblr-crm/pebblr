@@ -27,12 +27,3 @@ func UserFromContext(ctx context.Context) (*domain.User, error) {
 	return user, nil
 }
 
-// MustUserFromContext retrieves the User from context or panics.
-// Only use in handlers that are guaranteed to run after auth middleware.
-func MustUserFromContext(ctx context.Context) *domain.User {
-	user, err := UserFromContext(ctx)
-	if err != nil {
-		panic(fmt.Sprintf("rbac: %v", err))
-	}
-	return user
-}

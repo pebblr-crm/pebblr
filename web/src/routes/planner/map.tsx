@@ -115,7 +115,7 @@ function MapPlannerPage() {
   const patchActivity = usePatchActivity()
 
   const cadenceDays = config?.rules?.visit_cadence_days ?? 21
-  const targets = targetsResult?.items ?? []
+  const targets = useMemo(() => targetsResult?.items ?? [], [targetsResult?.items])
 
   // Build visit status lookup
   const visitStatusMap = useMemo(() => {

@@ -2,7 +2,6 @@ package api
 
 import (
 	"context"
-	"encoding/json"
 	"errors"
 	"net/http"
 
@@ -78,7 +77,7 @@ func (h *TeamHandler) List(w http.ResponseWriter, r *http.Request) {
 
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(http.StatusOK)
-	_ = json.NewEncoder(w).Encode(teamListResponse{Items: teams, Total: len(teams)})
+	writeJSON(w, r, teamListResponse{Items: teams, Total: len(teams)})
 }
 
 // Get handles GET /api/v1/teams/{id}
@@ -107,5 +106,5 @@ func (h *TeamHandler) Get(w http.ResponseWriter, r *http.Request) {
 
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(http.StatusOK)
-	_ = json.NewEncoder(w).Encode(teamDetailResponse{Team: team, Members: members})
+	writeJSON(w, r, teamDetailResponse{Team: team, Members: members})
 }

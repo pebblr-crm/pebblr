@@ -84,7 +84,8 @@ func validateConfig(cfg *TenantConfig) error {
 
 	// Validate activity types.
 	actTypeKeys := make(map[string]bool)
-	for _, at := range cfg.Activities.Types {
+	for i := range cfg.Activities.Types {
+		at := &cfg.Activities.Types[i]
 		if at.Key == "" {
 			return fmt.Errorf("activity type key must not be empty")
 		}

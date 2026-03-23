@@ -2,7 +2,6 @@ package api
 
 import (
 	"context"
-	"encoding/json"
 	"net/http"
 	"time"
 
@@ -107,7 +106,7 @@ func (h *DashboardHandler) ActivityStats(w http.ResponseWriter, r *http.Request)
 
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(http.StatusOK)
-	_ = json.NewEncoder(w).Encode(stats)
+	writeJSON(w, r, stats)
 }
 
 // Coverage handles GET /api/v1/dashboard/coverage
@@ -132,7 +131,7 @@ func (h *DashboardHandler) Coverage(w http.ResponseWriter, r *http.Request) {
 
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(http.StatusOK)
-	_ = json.NewEncoder(w).Encode(stats)
+	writeJSON(w, r, stats)
 }
 
 // Frequency handles GET /api/v1/dashboard/frequency
@@ -157,5 +156,5 @@ func (h *DashboardHandler) Frequency(w http.ResponseWriter, r *http.Request) {
 
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(http.StatusOK)
-	_ = json.NewEncoder(w).Encode(stats)
+	writeJSON(w, r, stats)
 }

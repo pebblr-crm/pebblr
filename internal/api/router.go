@@ -1,7 +1,6 @@
 package api
 
 import (
-	"encoding/json"
 	"io/fs"
 	"log/slog"
 	"net/http"
@@ -151,7 +150,7 @@ func meHandler(w http.ResponseWriter, r *http.Request) {
 	}
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(http.StatusOK)
-	_ = json.NewEncoder(w).Encode(user)
+	writeJSON(w, r, user)
 }
 
 func notImplementedHandler(w http.ResponseWriter, _ *http.Request) {

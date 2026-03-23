@@ -43,6 +43,7 @@ type googleLatLng struct {
 	Lng float64 `json:"lng"`
 }
 
+// Geocode resolves an address string to geographic coordinates using the Google Maps Geocoding API.
 func (g *GoogleGeocoder) Geocode(ctx context.Context, address string) (*Result, error) {
 	u := fmt.Sprintf("%s?address=%s&key=%s",
 		g.baseURL,
