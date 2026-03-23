@@ -241,6 +241,49 @@ func (s *ActivityService) Submit(ctx context.Context, actor *domain.User, id str
 	return updated, nil
 }
 
+// PartialUpdate applies a server-side apply PATCH to an existing activity.
+// Only fields present in the patch are merged; absent fields are left untouched.
+// Same RBAC and ErrSubmitted guards as Update.
+func (s *ActivityService) PartialUpdate(ctx context.Context, actor *domain.User, id string, patch *domain.ActivityPatch) (*domain.Activity, error) {
+	existing, err := s.activities.Get(ctx, id)
+	if err != nil {
+		return nil, fmt.Errorf("getting activity: %w", err)
+	}
+	if !s.enforcer.CanUpdateActivity(ctx, actor, existing) {
+		return nil, ErrForbidden
+	}
+	if existing.IsSubmitted() {
+		return nil, ErrSubmitted
+	}
+
+	// Merge patch onto a copy of the existing record.
+	merged := *existing
+	patch.ApplyTo(&merged)
+
+	// Validate the merged result with save-mode strictness.
+	if s.cfg != nil {
+		if errs := config.ValidateActivity(s.cfg, merged.ActivityType, merged.Fields, "save"); len(errs) > 0 {
+			return nil, &ValidationErrors{Errors: errs}
+		}
+	}
+
+	updated, err := s.activities.Update(ctx, &merged)
+	if err != nil {
+		return nil, fmt.Errorf("updating activity: %w", err)
+	}
+
+	_ = s.audit.Record(ctx, &domain.AuditEntry{
+		EntityType: "activity",
+		EntityID:   id,
+		EventType:  "updated",
+		ActorID:    actor.ID,
+		OldValue:   map[string]any{"status": existing.Status},
+		NewValue:   map[string]any{"status": updated.Status},
+	})
+
+	return updated, nil
+}
+
 // PatchStatus transitions an activity's status, validated against config transitions.
 func (s *ActivityService) PatchStatus(ctx context.Context, actor *domain.User, id, newStatus string) (*domain.Activity, error) {
 	existing, err := s.activities.Get(ctx, id)

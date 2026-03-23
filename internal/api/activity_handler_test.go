@@ -100,6 +100,22 @@ func (s *stubActivitySvc) Submit(_ context.Context, _ *domain.User, id string) (
 	return a, nil
 }
 
+func (s *stubActivitySvc) PartialUpdate(_ context.Context, actor *domain.User, id string, patch *domain.ActivityPatch) (*domain.Activity, error) {
+	if id == "submitted" {
+		return nil, service.ErrSubmitted
+	}
+	if actor.Role == domain.RoleRep {
+		return nil, service.ErrForbidden
+	}
+	if id == "missing" {
+		return nil, store.ErrNotFound
+	}
+	a := s.getActivity()
+	a.ID = id
+	patch.ApplyTo(a)
+	return a, nil
+}
+
 func (s *stubActivitySvc) PatchStatus(_ context.Context, _ *domain.User, id, newStatus string) (*domain.Activity, error) {
 	if id == "submitted" {
 		return nil, service.ErrSubmitted
@@ -381,5 +397,110 @@ func TestActivityPatchStatus_SubmittedConflict(t *testing.T) {
 	w := activityReq(t, "PATCH", "/submitted/status", body)
 	if w.Code != http.StatusConflict {
 		t.Fatalf("expected 409, got %d: %s", w.Code, w.Body.String())
+	}
+}
+
+// --- Patch tests ---
+
+func TestActivityPatch_StatusOnly(t *testing.T) {
+	t.Parallel()
+	body := map[string]any{"status": "realizat"}
+	w := activityReq(t, "PATCH", "/activity-1", body)
+	if w.Code != http.StatusOK {
+		t.Fatalf("expected 200, got %d: %s", w.Code, w.Body.String())
+	}
+	var resp map[string]any
+	if err := json.Unmarshal(w.Body.Bytes(), &resp); err != nil {
+		t.Fatalf("decoding response: %v", err)
+	}
+	activity := resp["activity"].(map[string]any)
+	if activity["status"] != "realizat" {
+		t.Errorf("expected realizat, got %v", activity["status"])
+	}
+}
+
+func TestActivityPatch_DueDate(t *testing.T) {
+	t.Parallel()
+	body := map[string]any{"dueDate": "2026-03-30"}
+	w := activityReq(t, "PATCH", "/activity-1", body)
+	if w.Code != http.StatusOK {
+		t.Fatalf("expected 200, got %d: %s", w.Code, w.Body.String())
+	}
+}
+
+func TestActivityPatch_InvalidDueDateFormat(t *testing.T) {
+	t.Parallel()
+	body := map[string]any{"dueDate": "30/03/2026"}
+	w := activityReq(t, "PATCH", "/activity-1", body)
+	if w.Code != http.StatusBadRequest {
+		t.Fatalf("expected 400, got %d: %s", w.Code, w.Body.String())
+	}
+}
+
+func TestActivityPatch_FieldsMerge(t *testing.T) {
+	t.Parallel()
+	body := map[string]any{"fields": map[string]any{"notes": "updated note"}}
+	w := activityReq(t, "PATCH", "/activity-1", body)
+	if w.Code != http.StatusOK {
+		t.Fatalf("expected 200, got %d: %s", w.Code, w.Body.String())
+	}
+	var resp map[string]any
+	if err := json.Unmarshal(w.Body.Bytes(), &resp); err != nil {
+		t.Fatalf("decoding response: %v", err)
+	}
+	activity := resp["activity"].(map[string]any)
+	fields := activity["fields"].(map[string]any)
+	if fields["notes"] != "updated note" {
+		t.Errorf("expected notes=updated note, got %v", fields["notes"])
+	}
+}
+
+func TestActivityPatch_EmptyBodyIsNoOp(t *testing.T) {
+	t.Parallel()
+	body := map[string]any{}
+	w := activityReq(t, "PATCH", "/activity-1", body)
+	if w.Code != http.StatusOK {
+		t.Fatalf("expected 200, got %d: %s", w.Code, w.Body.String())
+	}
+}
+
+func TestActivityPatch_RepForbidden(t *testing.T) {
+	t.Parallel()
+	body := map[string]any{"status": "realizat"}
+	w := activityReqAsRep(t, "PATCH", "/activity-1", body)
+	if w.Code != http.StatusForbidden {
+		t.Fatalf("expected 403, got %d: %s", w.Code, w.Body.String())
+	}
+}
+
+func TestActivityPatch_SubmittedConflict(t *testing.T) {
+	t.Parallel()
+	body := map[string]any{"status": "realizat"}
+	w := activityReq(t, "PATCH", "/submitted", body)
+	if w.Code != http.StatusConflict {
+		t.Fatalf("expected 409, got %d: %s", w.Code, w.Body.String())
+	}
+}
+
+func TestActivityPatch_NotFound(t *testing.T) {
+	t.Parallel()
+	body := map[string]any{"status": "realizat"}
+	w := activityReq(t, "PATCH", "/missing", body)
+	if w.Code != http.StatusNotFound {
+		t.Fatalf("expected 404, got %d: %s", w.Code, w.Body.String())
+	}
+}
+
+func TestActivityPatch_InvalidBody(t *testing.T) {
+	t.Parallel()
+	req := httptest.NewRequest("PATCH", "/activity-1", bytes.NewBufferString("not-json"))
+	req.Header.Set("Content-Type", "application/json")
+	user := &domain.User{ID: "admin-1", Role: domain.RoleAdmin, TeamIDs: []string{"team-1"}}
+	ctx := rbac.WithUser(req.Context(), user)
+	req = req.WithContext(ctx)
+	w := httptest.NewRecorder()
+	activityRouter().ServeHTTP(w, req)
+	if w.Code != http.StatusBadRequest {
+		t.Fatalf("expected 400, got %d: %s", w.Code, w.Body.String())
 	}
 }

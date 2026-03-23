@@ -22,6 +22,7 @@ type ActivityServicer interface {
 	Get(ctx context.Context, actor *domain.User, id string) (*domain.Activity, error)
 	List(ctx context.Context, actor *domain.User, filter store.ActivityFilter, page, limit int) (*store.ActivityPage, error)
 	Update(ctx context.Context, actor *domain.User, id string, activity *domain.Activity) (*domain.Activity, error)
+	PartialUpdate(ctx context.Context, actor *domain.User, id string, patch *domain.ActivityPatch) (*domain.Activity, error)
 	Delete(ctx context.Context, actor *domain.User, id string) error
 	Submit(ctx context.Context, actor *domain.User, id string) (*domain.Activity, error)
 	PatchStatus(ctx context.Context, actor *domain.User, id, newStatus string) (*domain.Activity, error)
@@ -44,6 +45,7 @@ func NewActivityRouter(h *ActivityHandler) http.Handler {
 	r.Post("/", h.Create)
 	r.Get("/{id}", h.Get)
 	r.Put("/{id}", h.Update)
+	r.Patch("/{id}", h.Patch)
 	r.Delete("/{id}", h.Delete)
 	r.Post("/{id}/submit", h.Submit)
 	r.Patch("/{id}/status", h.PatchStatus)
@@ -346,6 +348,136 @@ func (h *ActivityHandler) Submit(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(http.StatusOK)
 	_ = json.NewEncoder(w).Encode(activityResponse{Activity: activity})
+}
+
+// Patch handles PATCH /api/v1/activities/{id} with server-side apply semantics.
+// Only fields present in the request body are updated; absent fields are left untouched.
+// When the "fields" key is present, its sub-keys are merged individually.
+func (h *ActivityHandler) Patch(w http.ResponseWriter, r *http.Request) {
+	actor, err := rbac.UserFromContext(r.Context())
+	if err != nil {
+		writeError(w, http.StatusUnauthorized, "UNAUTHORIZED", "missing authenticated user")
+		return
+	}
+
+	id := chi.URLParam(r, "id")
+
+	var raw map[string]json.RawMessage
+	if err := json.NewDecoder(r.Body).Decode(&raw); err != nil {
+		writeError(w, http.StatusBadRequest, "BAD_REQUEST", "invalid request body")
+		return
+	}
+
+	patch := &domain.ActivityPatch{}
+
+	if v, ok := raw["status"]; ok {
+		if string(v) == "null" {
+			s := ""
+			patch.Status = &s
+		} else {
+			var s string
+			if err := json.Unmarshal(v, &s); err != nil {
+				writeError(w, http.StatusBadRequest, "BAD_REQUEST", "invalid status value")
+				return
+			}
+			patch.Status = &s
+		}
+	}
+
+	if v, ok := raw["dueDate"]; ok {
+		if string(v) == "null" {
+			zero := time.Time{}
+			patch.DueDate = &zero
+		} else {
+			var ds string
+			if err := json.Unmarshal(v, &ds); err != nil {
+				writeError(w, http.StatusBadRequest, "BAD_REQUEST", "invalid dueDate value")
+				return
+			}
+			t, err := time.Parse("2006-01-02", ds)
+			if err != nil {
+				writeError(w, http.StatusBadRequest, "BAD_REQUEST", "dueDate must be in YYYY-MM-DD format")
+				return
+			}
+			patch.DueDate = &t
+		}
+	}
+
+	if v, ok := raw["duration"]; ok {
+		if string(v) == "null" {
+			s := ""
+			patch.Duration = &s
+		} else {
+			var s string
+			if err := json.Unmarshal(v, &s); err != nil {
+				writeError(w, http.StatusBadRequest, "BAD_REQUEST", "invalid duration value")
+				return
+			}
+			patch.Duration = &s
+		}
+	}
+
+	if v, ok := raw["routing"]; ok {
+		if string(v) == "null" {
+			s := ""
+			patch.Routing = &s
+		} else {
+			var s string
+			if err := json.Unmarshal(v, &s); err != nil {
+				writeError(w, http.StatusBadRequest, "BAD_REQUEST", "invalid routing value")
+				return
+			}
+			patch.Routing = &s
+		}
+	}
+
+	if v, ok := raw["fields"]; ok {
+		patch.FieldsPresent = true
+		if string(v) != "null" {
+			if err := json.Unmarshal(v, &patch.Fields); err != nil {
+				writeError(w, http.StatusBadRequest, "BAD_REQUEST", "invalid fields value")
+				return
+			}
+		}
+	}
+
+	if v, ok := raw["targetId"]; ok {
+		if string(v) == "null" {
+			s := ""
+			patch.TargetID = &s
+		} else {
+			var s string
+			if err := json.Unmarshal(v, &s); err != nil {
+				writeError(w, http.StatusBadRequest, "BAD_REQUEST", "invalid targetId value")
+				return
+			}
+			patch.TargetID = &s
+		}
+	}
+
+	if v, ok := raw["jointVisitUserId"]; ok {
+		if string(v) == "null" {
+			s := ""
+			patch.JointVisitUID = &s
+		} else {
+			var s string
+			if err := json.Unmarshal(v, &s); err != nil {
+				writeError(w, http.StatusBadRequest, "BAD_REQUEST", "invalid jointVisitUserId value")
+				return
+			}
+			patch.JointVisitUID = &s
+		}
+	}
+
+	updated, err := h.svc.PartialUpdate(r.Context(), actor, id, patch)
+	if err != nil {
+		mapActivityServiceError(w, err)
+		return
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(http.StatusOK)
+	_ = json.NewEncoder(w).Encode(activityResponse{Activity: updated})
 }
 
 // PatchStatus handles PATCH /api/v1/activities/{id}/status
