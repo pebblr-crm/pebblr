@@ -6,5 +6,6 @@ type Store interface {
 	Users() UserRepository
 	Teams() TeamRepository
 	Targets() TargetRepository
-	CalendarEvents() CalendarEventRepository
+	Activities() ActivityRepository
+	Audit() AuditRepository
 }

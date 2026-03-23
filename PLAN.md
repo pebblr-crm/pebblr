@@ -1,6 +1,6 @@
 # Pebblr — DrMax MVP Implementation Plan
 
-> **Last updated:** 2026-03-22
+> **Last updated:** 2026-03-23
 >
 > **Legend:** ✅ Done | 🔧 Partial | ❌ Not started
 >
@@ -14,16 +14,17 @@
 | **Config API endpoint** | ✅ Done | `GET /api/v1/config` — returns tenant config for frontend |
 | **Target domain** | ✅ Done | Entity, repository, service, handler, RBAC, migration 006 (replaces old Customer) |
 | **Auth & RBAC** | ✅ Done | Azure AD config, OIDC middleware, static test auth, per-row RBAC with PostgreSQL RLS |
-| **Database (migrations 001–006)** | ✅ Done | Users, teams, leads (soft delete, JSONB, priority), calendar_events, targets (dropped customers) |
-| **Database (migration 007)** | ✅ Done | Target external_id for import upsert |
-| **Database (migrations 008–009)** | ❌ | Activities, Audit log tables |
-| **Activity domain** | ❌ | Entity, repository, service, handler, submit flow, business rules |
+| **Database (migrations 001–007)** | ✅ Done | Users, teams, leads, calendar_events, targets, external_id |
+| **Database (migrations 008–011)** | ✅ Done | Drop leads (008), drop calendar_events (009), activities table with RLS (010), audit_log (011) |
+| **Activity domain + store** | ✅ Done | Entity, AuditEntry, ActivityRepository, AuditRepository, PostgreSQL impls, RBAC |
+| **Activity API** | ❌ | CRUD handlers, status transitions, submit flow, business rules |
 | **Frontend foundation** | ✅ Done | React + TypeScript strict, Vite, TanStack Router/Query/Table, Tailwind |
-| **Frontend pages (existing)** | ✅ Done | Dashboard, leads, calendar, team, my-leads — all with tests |
+| **Frontend pages (existing)** | ✅ Done | Dashboard, team — with tests |
 | **Frontend pages (DrMax)** | 🔧 Partial | Targets list/detail done; planner, activity form/detail not started |
 | **Helm / K8s / CI** | ✅ Done | Helm chart, Kind cluster, ExternalSecret, migration job, Makefile targets |
 | **Target import** | ✅ Done | `POST /api/v1/targets/import` — admin-only bulk upsert by external ID |
-| **Next step** | | Dead code removal → Phase 2 (activities) |
+| **Dead code removal** | ✅ Done | Leads, lead_events, CalendarEvent code all removed; replaced by Target + Activity domains |
+| **Next step** | | Activity API (item 10) — CRUD handlers + validation + submit |
 
 ## Context
 
@@ -31,7 +32,7 @@
 
 **Current state:** DrMax runs on Twenty CRM with a fragile per-user object duplication hack (54 custom objects, 126 workflows, PowerShell webhook) to work around Twenty's lack of row-level security. Pebblr replaces this with a proper multi-tenant CRM with native RBAC.
 
-**Current Pebblr codebase:** Core infrastructure is complete — auth, RBAC, tenant config, targets (doctors/pharmacies). The Lead/CalendarEvent/lead_events code from the generic CRM scaffold is unused by DrMax and scheduled for removal. Next: activities domain + planner UI.
+**Current Pebblr codebase:** Core infrastructure is complete — auth, RBAC, tenant config, targets (doctors/pharmacies). Activity domain + store landed with full RBAC and PostgreSQL RLS. All dead code (Lead, CalendarEvent, lead_events) has been removed. Next: Activity API handlers + business rules + frontend.
 
 **Key design constraint:** Nothing client-specific is hardcoded. Enums (statuses, activity types, specialties, products, etc.) and field-level requirements are driven by a JSON tenant configuration file. Validation happens at the API layer against this config, not via DB constraints on enum values.
 
@@ -47,19 +48,19 @@
 4. ✅ **Target API** — CRUD handlers, RBAC (rep sees own, manager sees team)
 5. ✅ **Target import endpoint** — bulk upsert for admin/scripts
 6. ✅ **Frontend: Target list + detail** — config-driven list with type filter, dynamic columns, detail page with resolved option labels
-7. ❌ **Remove dead code** — drop Lead, CalendarEvent, lead_events, Customer code + migrations; remove frontend lead/calendar/my-leads pages
+7. ✅ **Remove dead code** — Lead domain removed (migration 008), CalendarEvent removed with Activity domain landing
 8. 🔧 **Seed script** — exists with sample users/teams; needs DrMax-specific doctor/pharmacy target data
 
 → [Full details](PLAN-phase-1.md)
 
-### Phase 2 — Activities (core workflow) ❌
+### Phase 2 — Activities (core workflow) 🔧
 
-9. ❌ **Activity domain + store** — `Activity` entity, PostgreSQL repo, migration 007
+9. ✅ **Activity domain + store** — `Activity` + `AuditEntry` entities, PostgreSQL repos (migrations 009–011), RBAC enforcer with activity methods
 10. ❌ **Activity API** — CRUD + status transitions + submit, all validated against config
-11. ❌ **Audit log** — migration 008, generic audit recording on activity changes
+11. ✅ **Audit log** — migration 011, `AuditRepository` interface + PostgreSQL impl
 12. ❌ **Business rules enforcement** — max activities/day, blocked days (vacation/holiday), status transitions
 13. ❌ **Frontend: Activity form** — dynamic form from config, per-type field rendering
-14. ❌ **Frontend: Planner** — weekly/monthly calendar view with activities (reuse CalendarGrid patterns)
+14. ❌ **Frontend: Planner** — weekly/monthly calendar view with activities
 15. ❌ **Frontend: Activity detail** — view + report/submit flow
 
 → [Full details](PLAN-phase-2.md)
@@ -86,29 +87,15 @@
 
 ---
 
-## Dead Code Removal Plan
+## Dead Code Removal ✅
 
-The generic CRM scaffold included Lead, Customer, and CalendarEvent domains. DrMax uses **Targets** (doctors/pharmacies) and **Activities** (visits, time-off) instead. Customer was already dropped in migration 006. The rest should be removed to reduce maintenance burden and confusion.
+All generic CRM scaffold code has been removed:
 
-| Code to Remove | Replacement | Notes |
-| --- | --- | --- |
-| `internal/domain/lead.go`, `lead_status.go` | Target domain | Target covers the "entity reps visit" concept |
-| `internal/domain/calendar_event.go` | Activity domain (Phase 2) | Activities replace calendar events |
-| `internal/service/lead_service.go` | Target service (done) | — |
-| `internal/service/calendar_event_service.go` | Activity service (Phase 2) | — |
-| `internal/store/lead_store.go` + postgres impl | Target store (done) | — |
-| `internal/store/calendar_event_store.go` + postgres impl | Activity store (Phase 2) | — |
-| `internal/api/lead_handler.go` | Target handler (done) | — |
-| `internal/api/calendar_event_handler.go` | Activity handler (Phase 2) | — |
-| `internal/events/` (lead events) | Audit log (Phase 2) | Generalized audit replaces lead-specific events |
-| `internal/rbac/` lead methods | Already has target methods | Remove `CanViewLead`, `ScopeLeadQuery`, etc. |
-| Frontend: leads pages, my-leads, calendar | Target list/detail + Planner | Reuse `DataTable`, pagination, status badge patterns |
-| `web/src/services/leads.ts` | `targets.ts` (done) | — |
-| `web/src/services/calendar.ts` | Activity service (Phase 2) | — |
-| `web/src/types/lead.ts`, `calendar.ts` | `target.ts` (done) + activity types | — |
-| Dashboard lead-based stats | Activity-based KPIs (Phase 3) | — |
-
-**Strategy:** Remove lead code in Phase 1 (backend is already unused). Remove calendar_event code when Activity domain lands in Phase 2. Reuse frontend patterns (DataTable, status badges, pagination) — don't rewrite from scratch.
+- **Lead domain** — removed in commit `e260728` (PR #51): domain, service, store, handler, events, RBAC methods, frontend pages/services/types
+- **CalendarEvent domain** — removed when Activity domain landed: domain, service, store, handler, tests, frontend calendar page/service/types still present (to be cleaned in frontend activity work)
+- **Database** — migration 008 drops `leads` + `lead_events`; migration 009 drops `calendar_events`
+- **Frontend leads/my-leads pages** — removed in PR #51
+- **Frontend calendar components** — `web/src/routes/calendar/`, `web/src/services/calendar.ts`, `web/src/types/calendar.ts`, `web/src/components/calendar/` still present; will be removed when Planner lands (item 14)
 
 ---
 

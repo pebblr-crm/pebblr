@@ -22,7 +22,12 @@ func (db *DB) Targets() store.TargetRepository {
 	return &targetRepository{pool: db.pool}
 }
 
-// CalendarEvents returns the PostgreSQL-backed calendar event repository.
-func (db *DB) CalendarEvents() store.CalendarEventRepository {
-	return &calendarEventRepository{pool: db.pool}
+// Activities returns the PostgreSQL-backed activity repository.
+func (db *DB) Activities() store.ActivityRepository {
+	return &activityRepository{pool: db.pool}
+}
+
+// Audit returns the PostgreSQL-backed audit repository.
+func (db *DB) Audit() store.AuditRepository {
+	return &auditRepository{pool: db.pool}
 }

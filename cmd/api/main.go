@@ -54,7 +54,6 @@ func run() error {
 	enforcer := rbac.NewEnforcer()
 
 	// Services
-	calendarEventSvc := service.NewCalendarEventService(db.CalendarEvents())
 	teamSvc := service.NewTeamService(db.Teams())
 	userSvc := service.NewUserService(db.Users())
 
@@ -77,7 +76,6 @@ func run() error {
 
 	// Handlers
 	targetHandler := api.NewTargetHandler(targetSvc)
-	calendarEventHandler := api.NewCalendarEventHandler(calendarEventSvc)
 	teamHandler := api.NewTeamHandler(teamSvc)
 	userHandler := api.NewUserHandler(userSvc)
 
@@ -99,7 +97,6 @@ func run() error {
 		Logger:               logger,
 		Authenticator:        authenticator,
 		TargetHandler:        targetHandler,
-		CalendarEventHandler: calendarEventHandler,
 		TeamHandler:          teamHandler,
 		UserHandler:          userHandler,
 		ConfigHandler:        configHandler,

@@ -2,31 +2,22 @@ package domain_test
 
 import (
 	"testing"
+	"time"
 
 	"github.com/pebblr/pebblr/internal/domain"
 )
 
-func TestCalendarEventTypeValid(t *testing.T) {
+func TestActivityIsSubmitted(t *testing.T) {
 	t.Parallel()
-	valid := []domain.CalendarEventType{
-		domain.CalendarEventTypeSync,
-		domain.CalendarEventTypeVisit,
-		domain.CalendarEventTypeReview,
-		domain.CalendarEventTypeCallback,
-		domain.CalendarEventTypeLunch,
-		domain.CalendarEventTypeDemo,
+	a := &domain.Activity{}
+	if a.IsSubmitted() {
+		t.Error("activity without SubmittedAt should not be submitted")
 	}
-	for _, et := range valid {
-		et := et
-		t.Run(string(et), func(t *testing.T) {
-			t.Parallel()
-			if !et.Valid() {
-				t.Errorf("expected %q to be valid", et)
-			}
-		})
-	}
-	if domain.CalendarEventType("unknown").Valid() {
-		t.Error("expected unknown event type to be invalid")
+
+	now := time.Now()
+	a.SubmittedAt = &now
+	if !a.IsSubmitted() {
+		t.Error("activity with SubmittedAt should be submitted")
 	}
 }
 
