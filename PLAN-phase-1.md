@@ -10,7 +10,7 @@
 4. ✅ **Target API** — CRUD handlers, RBAC (rep sees own, manager sees team)
 5. ✅ **Target import endpoint** — bulk upsert for admin/scripts
 6. ✅ **Frontend: Target list + detail** — config-driven list with type filter, dynamic columns, detail page with resolved option labels
-7. ❌ **Remove dead code** — drop Lead, CalendarEvent, lead_events code + frontend pages
+7. ✅ **Remove dead code** — Lead removed (PR #51, migration 008); CalendarEvent removed with Activity domain (migration 009)
 8. 🔧 **Seed script** — exists with sample users/teams; needs DrMax-specific doctor/pharmacy target data
 
 ---
@@ -133,45 +133,22 @@ Implemented:
 - Routes registered in `App.tsx`, "Targets" added to `Sidebar.tsx`
 - Full test coverage: `index.test.tsx` (14 tests), `$targetId.test.tsx` (8 tests)
 
-### 3.3 Remove Dead Code ❌
+### 3.3 Remove Dead Code ✅
 
-Remove the following unused code from the generic CRM scaffold:
+All backend dead code has been removed:
 
-**Backend (remove now — Lead domain is unused):**
-- `internal/domain/lead.go`, `lead_status.go`
-- `internal/service/lead_service.go`
-- `internal/store/lead_store.go`, `postgres/lead_repository.go`
-- `internal/api/lead_handler.go`
-- `internal/events/` — entire package (lead-specific event types, recorder, querier)
-- `internal/store/event_store.go`, `postgres/event_repository.go`
-- `internal/rbac/` — remove `CanViewLead`, `CanAssignLead`, `CanUpdateLead`, `CanDeleteLead`, `ScopeLeadQuery`, `LeadScope`
-- Lead routes from `router.go`
-- `internal/metrics/` — if lead-specific, remove; if generic, keep
+**Backend (removed in PR #51):**
+- Lead domain, service, store, handler, events, RBAC methods, routes
 
-**Backend (remove in Phase 2 when Activity domain replaces it):**
-- `internal/domain/calendar_event.go`
-- `internal/service/calendar_event_service.go`
-- `internal/store/calendar_event_store.go`, `postgres/calendar_event_repository.go`
-- `internal/api/calendar_event_handler.go`
-- Calendar event routes from `router.go`
+**Backend (removed with Activity domain landing):**
+- CalendarEvent domain, service, store, handler, tests, routes
+- Migration 008 drops `leads` + `lead_events`; migration 009 drops `calendar_events`
 
-**Database:**
-- Migration to drop `leads`, `lead_events` tables (new migration 007, before activities migration)
-- Migration to drop `calendar_events` table (with activities migration in Phase 2)
+**Frontend (removed in PR #51):**
+- Leads pages, my-leads page, leads service/types, sidebar entries
 
-**Frontend (remove now):**
-- `web/src/routes/leads/` — leads list + detail pages
-- `web/src/routes/my-leads/` — my leads page
-- `web/src/services/leads.ts`
-- `web/src/types/lead.ts`
-- `web/src/components/dashboard/UnassignedLeadCard.tsx` — lead-specific widget
-- Sidebar navigation entries for leads/my-leads
-
-**Frontend (remove in Phase 2):**
-- `web/src/routes/calendar/` — calendar page (replaced by Planner)
-- `web/src/services/calendar.ts`
-- `web/src/types/calendar.ts`
-- `web/src/components/calendar/` — CalendarGrid, EventCard (reuse patterns in Planner, delete originals)
+**Frontend (remaining — remove when Planner lands in Phase 2, item 14):**
+- `web/src/routes/calendar/`, `web/src/services/calendar.ts`, `web/src/types/calendar.ts`, `web/src/components/calendar/`
 
 ### 3.4 Seed Script 🔧
 

@@ -1,110 +1,49 @@
-# Phase 2 — Activities (Core Workflow) ❌
+# Phase 2 — Activities (Core Workflow) 🔧
 
 > Back to [overview](PLAN.md)
 
 ## Checklist
 
-9. ❌ **Activity domain + store** — `Activity` entity, PostgreSQL repo, migration
+9. ✅ **Activity domain + store** — `Activity` + `AuditEntry` entities, PostgreSQL repos, migrations 009–011, RBAC enforcer
 10. ❌ **Activity API** — CRUD + status transitions + submit, all validated against config
-11. ❌ **Audit log** — migration, generic audit recording on activity changes
+11. ✅ **Audit log** — migration 011, `AuditRepository` interface + PostgreSQL impl
 12. ❌ **Business rules enforcement** — max activities/day, blocked days (vacation/holiday), status transitions
 13. ❌ **Frontend: Activity form** — dynamic form from config, per-type field rendering
 14. ❌ **Frontend: Planner** — weekly/monthly calendar view (replaces old calendar page)
 15. ❌ **Frontend: Activity detail** — view + report/submit flow
-16. ❌ **Remove calendar_event code** — replaced by Activity domain
+16. ✅ **Remove calendar_event code** — backend fully removed; frontend calendar files remain until Planner lands
 
 ---
 
-## 1. Activity Domain
+## 1. Activity Domain ✅
 
-### 1.1 Domain Model
+### 1.1 Domain Model ✅
 
-```go
-// internal/domain/activity.go
-type Activity struct {
-    ID             uuid.UUID
-    ActivityType   string            // "visit", "administrative", etc. — key from config
-    Status         string            // "planificat", "realizat", "anulat" — key from config
-    DueDate        time.Time         // the scheduled date
-    Duration       string            // "full_day", "half_day" — key from config
-    Routing        *string           // optional routing week
-    Fields         map[string]any    // dynamic fields (detalii, feedback, produse_promovate, etc.)
-    TargetID       *uuid.UUID        // linked target (required for visits, null for time-off)
-    CreatorID      uuid.UUID         // the rep who created it
-    JointVisitUID  *uuid.UUID        // optional co-visitor
-    TeamID         *uuid.UUID
-    SubmittedAt    *time.Time        // when the report was submitted (locks editing)
-    CreatedAt      time.Time
-    UpdatedAt      time.Time
-    DeletedAt      *time.Time        // soft delete
-}
-```
+Implemented in `internal/domain/activity.go` and `internal/domain/audit.go`.
 
-### 1.2 Database Migrations
+Uses string IDs (matching Target pattern), JSONB dynamic fields, soft delete. `IsSubmitted()` helper method checks lock state.
 
-**Migration: Drop dead tables**
+### 1.2 Database Migrations ✅
 
-```sql
--- Drop unused Lead and lead_events tables
-DROP TABLE IF EXISTS lead_events;
-DROP TABLE IF EXISTS leads;
-DROP TABLE IF EXISTS calendar_events;
-```
+- **Migration 009** (`009_drop_calendar_events`) — drops `calendar_events` table
+- **Migration 010** (`010_activities`) — creates `activities` table with all indexes + RLS policy (reps see own + joint visits, managers/admins see all)
+- **Migration 011** (`011_audit_log`) — creates `audit_log` table with entity/actor/time indexes
 
-**Migration: Activities table**
+### 1.3 Repository Interfaces ✅
 
-```sql
-CREATE TABLE activities (
-    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-    activity_type TEXT NOT NULL,
-    status TEXT NOT NULL,
-    due_date DATE NOT NULL,
-    duration TEXT NOT NULL,
-    routing TEXT,
-    fields JSONB NOT NULL DEFAULT '{}',
-    target_id UUID REFERENCES targets(id),
-    creator_id UUID NOT NULL REFERENCES users(id),
-    joint_visit_user_id UUID REFERENCES users(id),
-    team_id UUID REFERENCES teams(id),
-    submitted_at TIMESTAMPTZ,
-    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
-    updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
-    deleted_at TIMESTAMPTZ
-);
+- `store/activity_store.go` — `ActivityRepository`: Get, List (scoped), Create, Update, SoftDelete, CountByDate
+- `store/audit_store.go` — `AuditRepository`: Record, ListByEntity
+- `store/postgres/activity_repository.go` — full PostgreSQL implementation with RBAC-scoped queries
+- `store/postgres/audit_repository.go` — PostgreSQL implementation
 
-CREATE INDEX idx_activities_type ON activities(activity_type);
-CREATE INDEX idx_activities_status ON activities(status);
-CREATE INDEX idx_activities_due_date ON activities(due_date);
-CREATE INDEX idx_activities_creator ON activities(creator_id);
-CREATE INDEX idx_activities_target ON activities(target_id);
-CREATE INDEX idx_activities_team ON activities(team_id);
-CREATE INDEX idx_activities_fields ON activities USING GIN(fields);
+### 1.4 RBAC ✅
 
-ALTER TABLE activities ENABLE ROW LEVEL SECURITY;
-CREATE POLICY activities_rep ON activities FOR ALL
-    USING (current_setting('app.user_role') IN ('manager','admin')
-           OR creator_id = current_setting('app.user_id')::uuid
-           OR joint_visit_user_id = current_setting('app.user_id')::uuid);
-```
-
-**Migration: Audit log**
-
-```sql
-CREATE TABLE audit_log (
-    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-    entity_type TEXT NOT NULL,          -- "activity", "target"
-    entity_id UUID NOT NULL,
-    event_type TEXT NOT NULL,           -- "created", "status_changed", "submitted", "field_updated"
-    actor_id UUID NOT NULL REFERENCES users(id),
-    old_value JSONB,
-    new_value JSONB,
-    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
-);
-
-CREATE INDEX idx_audit_entity ON audit_log(entity_type, entity_id);
-CREATE INDEX idx_audit_actor ON audit_log(actor_id);
-CREATE INDEX idx_audit_created ON audit_log(created_at);
-```
+Added to `rbac.Enforcer` interface and `policyEnforcer`:
+- `CanViewActivity` — rep sees own + joint visits, manager sees team, admin sees all
+- `CanUpdateActivity` — rep sees own only (not joint), manager sees team, admin sees all
+- `CanDeleteActivity` — same as update
+- `ScopeActivityQuery` — returns `ActivityScope` for list queries
+- 7 new tests covering all roles and edge cases
 
 ---
 
@@ -144,28 +83,30 @@ Submit flow adds `submit_required` field validation and sets `submitted_at`, mak
 
 > **Note:** Validation functions are already implemented in `internal/config/validator.go` with full test coverage. Integration into handlers is the remaining work.
 
-### 2.3 Backend Package Structure
+### 2.3 Backend Package Structure ✅
+
+All files implemented:
 
 ```
 internal/
-├── domain/activity.go               # Activity entity (NEW)
-├── domain/audit.go                  # AuditEntry entity (NEW)
-├── service/activity_service.go      # Activity CRUD + validation + submit (NEW)
-├── store/activity.go                # ActivityRepository interface (NEW)
-├── store/audit.go                   # AuditRepository interface (NEW)
-├── store/postgres/activity.go       # PostgreSQL implementation (NEW)
-├── store/postgres/audit.go          # PostgreSQL implementation (NEW)
-├── api/activity_handler.go          # HTTP handlers (NEW)
-└── api/router.go                    # Add new routes, remove calendar_event routes (MODIFY)
+├── domain/activity.go               # Activity entity ✅
+├── domain/audit.go                  # AuditEntry entity ✅
+├── service/activity_service.go      # Activity CRUD + validation + submit (NEXT — item 10)
+├── store/activity_store.go          # ActivityRepository interface ✅
+├── store/audit_store.go             # AuditRepository interface ✅
+├── store/postgres/activity_repository.go  # PostgreSQL implementation ✅
+├── store/postgres/audit_repository.go     # PostgreSQL implementation ✅
+├── api/activity_handler.go          # HTTP handlers (NEXT — item 10)
+└── api/router.go                    # Placeholder activity routes wired ✅
 ```
 
-Also remove (replaced by Activity):
-- `internal/domain/calendar_event.go`
-- `internal/service/calendar_event_service.go`
-- `internal/store/calendar_event_store.go` + postgres impl
-- `internal/api/calendar_event_handler.go`
+Removed (replaced by Activity): ✅
+- `internal/domain/calendar_event.go` — deleted
+- `internal/service/calendar_event_service.go` — deleted
+- `internal/store/calendar_event_store.go` + postgres impl — deleted
+- `internal/api/calendar_event_handler.go` + tests — deleted
 
-RBAC: add `CanViewActivity`, `CanUpdateActivity`, `CanDeleteActivity`, `ScopeActivityQuery` to enforcer.
+RBAC: ✅ `CanViewActivity`, `CanUpdateActivity`, `CanDeleteActivity`, `ScopeActivityQuery` added to enforcer with tests.
 
 ---
 

@@ -290,34 +290,6 @@ func TestTeamListReturnsOK(t *testing.T) {
 	}
 }
 
-// ── Lead Endpoint Tests ──────────────────────────────────────────────────
-
-func TestLeadListReturnsOK(t *testing.T) {
-	resp := apiRequest(t, "GET", "/api/v1/leads", "")
-	body := readBody(t, resp)
-
-	if resp.StatusCode != http.StatusOK {
-		t.Fatalf("expected 200 for GET /leads, got %d: %s", resp.StatusCode, body)
-	}
-
-	var result map[string]any
-	if err := json.Unmarshal([]byte(body), &result); err != nil {
-		t.Fatalf("decoding lead list response: %v\nbody: %s", err, body)
-	}
-	if _, ok := result["items"]; !ok {
-		t.Error("expected 'items' key in lead list response")
-	}
-}
-
-func TestLeadGetNotFound(t *testing.T) {
-	resp := apiRequest(t, "GET", "/api/v1/leads/00000000-0000-0000-0000-000000000000", "")
-	body := readBody(t, resp)
-
-	if resp.StatusCode != http.StatusNotFound {
-		t.Fatalf("expected 404 for unknown lead, got %d: %s", resp.StatusCode, body)
-	}
-}
-
 // ── Activity Endpoint Tests ──────────────────────────────────────────────
 
 func TestActivityListReturnsNotImplemented(t *testing.T) {
@@ -329,35 +301,7 @@ func TestActivityListReturnsNotImplemented(t *testing.T) {
 	}
 }
 
-// ── Dashboard Endpoint Tests ─────────────────────────────────────────────
-
-func TestDashboardStatsReturnsOK(t *testing.T) {
-	resp := apiRequest(t, "GET", "/api/v1/dashboard/stats", "")
-	body := readBody(t, resp)
-
-	if resp.StatusCode != http.StatusOK {
-		t.Fatalf("expected 200 for GET /dashboard/stats, got %d: %s", resp.StatusCode, body)
-	}
-
-	var result map[string]any
-	if err := json.Unmarshal([]byte(body), &result); err != nil {
-		t.Fatalf("decoding dashboard stats response: %v\nbody: %s", err, body)
-	}
-	if _, ok := result["totalLeads"]; !ok {
-		t.Error("expected 'totalLeads' key in dashboard stats response")
-	}
-}
-
 // ── Placeholder Endpoint Tests (501 Not Implemented) ───────────────────
-
-func TestMetricsPipelineNotImplemented(t *testing.T) {
-	resp := apiRequest(t, "GET", "/api/v1/metrics/pipeline", "")
-	body := readBody(t, resp)
-
-	if resp.StatusCode != http.StatusNotImplemented {
-		t.Fatalf("expected 501 for /metrics/pipeline, got %d: %s", resp.StatusCode, body)
-	}
-}
 
 // ── Routing Tests ────────────────────────────────────────────────────────
 
@@ -375,8 +319,8 @@ func TestMethodNotAllowed(t *testing.T) {
 // ── Response Format Tests ────────────────────────────────────────────────
 
 func TestErrorResponseFormat(t *testing.T) {
-	// Request a non-existent lead → 404 with structured error
-	resp := apiRequest(t, "GET", "/api/v1/leads/00000000-0000-0000-0000-000000000000", "")
+	// Request a non-existent target → 404 with structured error
+	resp := apiRequest(t, "GET", "/api/v1/targets/00000000-0000-0000-0000-000000000000", "")
 	body := readBody(t, resp)
 
 	var errResp errorEnvelope
