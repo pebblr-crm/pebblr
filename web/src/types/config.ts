@@ -36,6 +36,7 @@ export interface ActivityTypeConfig {
   label: string
   category: 'field' | 'non_field'
   title_field?: string
+  has_duration?: boolean
   fields: FieldConfig[]
   submit_required?: string[]
   blocks_field_activities?: boolean

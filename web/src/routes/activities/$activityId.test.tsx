@@ -68,6 +68,13 @@ const testConfig: TenantConfig = {
         category: 'field',
         fields: [],
       },
+      {
+        key: 'administrative',
+        label: 'Administrative',
+        category: 'non_field',
+        has_duration: true,
+        fields: [],
+      },
     ],
     routing_options: [],
   },
@@ -132,11 +139,27 @@ describe('ActivityDetailInner', () => {
     })
   })
 
-  it('renders duration select with correct value', async () => {
-    render(<ActivityDetailInner activityId="act-1" config={testConfig} />)
+  it('renders duration select for types with has_duration', async () => {
+    const adminActivity: Activity = {
+      ...testActivity,
+      id: 'act-admin',
+      activityType: 'administrative',
+      duration: 'full_day',
+    }
+    vi.mocked(useActivity).mockReturnValue({
+      data: adminActivity, isLoading: false, isError: false, error: null,
+    } as ReturnType<typeof useActivity>)
+    render(<ActivityDetailInner activityId="act-admin" config={testConfig} />)
     await waitFor(() => {
       const select = screen.getByTestId('duration-select') as HTMLSelectElement
       expect(select.value).toBe('full_day')
+    })
+  })
+
+  it('hides duration select for visit type', async () => {
+    render(<ActivityDetailInner activityId="act-1" config={testConfig} />)
+    await waitFor(() => {
+      expect(screen.queryByTestId('duration-select')).not.toBeInTheDocument()
     })
   })
 

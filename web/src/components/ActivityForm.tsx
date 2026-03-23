@@ -73,6 +73,7 @@ function ActivityFormInner({
   const durations = config.activities.durations
   const selectedType = activityTypes.find((t) => t.key === activityType)
   const isFieldActivity = selectedType?.category === 'field'
+  const hasDuration = selectedType?.has_duration ?? false
   const isEditing = Boolean(initialData)
   const isLocked = Boolean(initialData?.submittedAt)
 
@@ -342,25 +343,27 @@ function ActivityFormInner({
             )}
           </div>
 
-          {/* Duration */}
-          <div>
-            <label className="block text-xs font-bold uppercase tracking-widest text-slate-400 mb-1">
-              Duration <span className="text-error">*</span>
-            </label>
-            <select
-              value={duration}
-              onChange={(e) => setDuration(e.target.value)}
-              disabled={isLocked}
-              className={inputClass(getFieldError('duration'))}
-              data-testid="duration-select"
-              required
-            >
-              <option value="">— Select duration —</option>
-              {durations.map((d) => (
-                <option key={d.key} value={d.key}>{d.label}</option>
-              ))}
-            </select>
-          </div>
+          {/* Duration (only for activity types with has_duration) */}
+          {hasDuration && (
+            <div>
+              <label className="block text-xs font-bold uppercase tracking-widest text-slate-400 mb-1">
+                Duration <span className="text-error">*</span>
+              </label>
+              <select
+                value={duration}
+                onChange={(e) => setDuration(e.target.value)}
+                disabled={isLocked}
+                className={inputClass(getFieldError('duration'))}
+                data-testid="duration-select"
+                required
+              >
+                <option value="">— Select duration —</option>
+                {durations.map((d) => (
+                  <option key={d.key} value={d.key}>{d.label}</option>
+                ))}
+              </select>
+            </div>
+          )}
 
           {/* Target (for field activities) */}
           {isFieldActivity && (

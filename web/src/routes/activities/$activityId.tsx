@@ -91,6 +91,7 @@ export function ActivityDetailInner({ activityId, config }: InnerProps) {
   const isSubmitted = Boolean(act.submittedAt)
   const typeConfig = getTypeConfig(config?.activities, act.activityType)
   const typeLabel = getTypeLabel(config?.activities, act.activityType)
+  const hasDuration = typeConfig?.has_duration ?? false
   const jointVisitUserId = act.jointVisitUserId
     ?? (act.fields?.joint_visit_user_id as string | undefined)
   const jointVisitorName = jointVisitUserId
@@ -276,25 +277,27 @@ export function ActivityDetailInner({ activityId, config }: InnerProps) {
             )}
           </div>
 
-          {/* Duration */}
-          <div>
-            <label className={labelClass}>
-              Duration <span className="text-error">*</span>
-            </label>
-            <select
-              value={localData.duration ?? ''}
-              onChange={(e) => handleFieldChange('duration', e.target.value)}
-              onBlur={handleFieldBlur}
-              disabled={isSubmitted}
-              className={inputClass(getFieldError('duration'))}
-              data-testid="duration-select"
-            >
-              <option value="">— Select duration —</option>
-              {config.activities.durations.map((d) => (
-                <option key={d.key} value={d.key}>{d.label}</option>
-              ))}
-            </select>
-          </div>
+          {/* Duration (only for activity types with has_duration) */}
+          {hasDuration && (
+            <div>
+              <label className={labelClass}>
+                Duration <span className="text-error">*</span>
+              </label>
+              <select
+                value={localData.duration ?? ''}
+                onChange={(e) => handleFieldChange('duration', e.target.value)}
+                onBlur={handleFieldBlur}
+                disabled={isSubmitted}
+                className={inputClass(getFieldError('duration'))}
+                data-testid="duration-select"
+              >
+                <option value="">— Select duration —</option>
+                {config.activities.durations.map((d) => (
+                  <option key={d.key} value={d.key}>{d.label}</option>
+                ))}
+              </select>
+            </div>
+          )}
 
           {/* Target (field activities) */}
           {getTypeConfig(config.activities, act.activityType)?.category === 'field' && (

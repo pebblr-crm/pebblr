@@ -57,7 +57,6 @@
           { "key": "promoted_products", "label": "Promoted Products", "type": "multi_select", "required": false, "options_ref": "products" },
           { "key": "feedback", "label": "Feedback", "type": "text", "required": false },
           { "key": "details", "label": "Details", "type": "text", "required": false },
-          { "key": "duration", "label": "Duration", "type": "select", "required": true, "options_ref": "durations" },
           { "key": "joint_visit_user_id", "label": "Joint Visit User", "type": "relation", "required": false, "options_ref": "users" },
           { "key": "routing", "label": "Routing", "type": "select", "required": false, "options_ref": "routing_options" }
         ],
@@ -67,6 +66,7 @@
         "key": "administrative",
         "label": "Administrative",
         "category": "non_field",
+        "has_duration": true,
         "fields": [
           { "key": "duration", "label": "Duration", "type": "select", "required": true, "options_ref": "durations" },
           { "key": "details", "label": "Details", "type": "text", "required": false }
@@ -76,6 +76,7 @@
         "key": "business_travel",
         "label": "Business Travel",
         "category": "non_field",
+        "has_duration": true,
         "fields": [
           { "key": "duration", "label": "Duration", "type": "select", "required": true, "options_ref": "durations" },
           { "key": "details", "label": "Details", "type": "text", "required": false }
@@ -85,6 +86,7 @@
         "key": "company_event",
         "label": "Company Event",
         "category": "non_field",
+        "has_duration": true,
         "fields": [
           { "key": "duration", "label": "Duration", "type": "select", "required": true, "options_ref": "durations" },
           { "key": "details", "label": "Details", "type": "text", "required": false }
@@ -94,6 +96,7 @@
         "key": "cycle_meeting",
         "label": "Cycle Meeting",
         "category": "non_field",
+        "has_duration": true,
         "fields": [
           { "key": "duration", "label": "Duration", "type": "select", "required": true, "options_ref": "durations" },
           { "key": "details", "label": "Details", "type": "text", "required": false }
@@ -103,6 +106,7 @@
         "key": "team_meeting",
         "label": "Team Meeting",
         "category": "non_field",
+        "has_duration": true,
         "fields": [
           { "key": "duration", "label": "Duration", "type": "select", "required": true, "options_ref": "durations" },
           { "key": "details", "label": "Details", "type": "text", "required": false }
@@ -112,6 +116,7 @@
         "key": "training",
         "label": "Training",
         "category": "non_field",
+        "has_duration": true,
         "fields": [
           { "key": "duration", "label": "Duration", "type": "select", "required": true, "options_ref": "durations" },
           { "key": "details", "label": "Details", "type": "text", "required": false }
@@ -121,6 +126,7 @@
         "key": "public_holiday",
         "label": "Public Holiday",
         "category": "non_field",
+        "has_duration": true,
         "blocks_field_activities": true,
         "fields": [
           { "key": "duration", "label": "Duration", "type": "select", "required": true, "options_ref": "durations" }
@@ -130,6 +136,7 @@
         "key": "vacation",
         "label": "Vacation",
         "category": "non_field",
+        "has_duration": true,
         "blocks_field_activities": true,
         "fields": [
           { "key": "duration", "label": "Duration", "type": "select", "required": true, "options_ref": "durations" }
@@ -139,6 +146,7 @@
         "key": "lunch_break",
         "label": "Lunch Break",
         "category": "non_field",
+        "has_duration": true,
         "fields": [
           { "key": "duration", "label": "Duration", "type": "select", "required": true, "options_ref": "durations" }
         ]
