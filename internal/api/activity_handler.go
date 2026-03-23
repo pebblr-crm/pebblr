@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
+	"log/slog"
 	"net/http"
 	"strconv"
 	"time"
@@ -112,10 +113,12 @@ func mapActivityServiceError(w http.ResponseWriter, err error) {
 	if errors.As(err, &ve) {
 		w.Header().Set("Content-Type", "application/json")
 		w.WriteHeader(http.StatusUnprocessableEntity)
-		_ = json.NewEncoder(w).Encode(validationErrorResponse{
+		if encErr := json.NewEncoder(w).Encode(validationErrorResponse{
 			Error:  errorDetail{Code: "VALIDATION_ERROR", Message: "validation failed"},
 			Fields: ve.Errors,
-		})
+		}); encErr != nil {
+			slog.Default().Error("failed to encode validation error response", "err", encErr)
+		}
 		return
 	}
 	switch {
@@ -200,7 +203,7 @@ func (h *ActivityHandler) List(w http.ResponseWriter, r *http.Request) {
 
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(http.StatusOK)
-	_ = json.NewEncoder(w).Encode(activityListResponse{
+	writeJSON(w, r, activityListResponse{
 		Items: activities,
 		Total: result.Total,
 		Page:  result.Page,
@@ -263,7 +266,7 @@ func (h *ActivityHandler) Create(w http.ResponseWriter, r *http.Request) {
 	prepareActivities(created)
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(http.StatusCreated)
-	_ = json.NewEncoder(w).Encode(activityResponse{Activity: created})
+	writeJSON(w, r, activityResponse{Activity: created})
 }
 
 // Get handles GET /api/v1/activities/{id}
@@ -284,7 +287,7 @@ func (h *ActivityHandler) Get(w http.ResponseWriter, r *http.Request) {
 	prepareActivities(activity)
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(http.StatusOK)
-	_ = json.NewEncoder(w).Encode(activityResponse{Activity: activity})
+	writeJSON(w, r, activityResponse{Activity: activity})
 }
 
 // Update handles PUT /api/v1/activities/{id}
@@ -344,7 +347,7 @@ func (h *ActivityHandler) Update(w http.ResponseWriter, r *http.Request) {
 	prepareActivities(updated)
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(http.StatusOK)
-	_ = json.NewEncoder(w).Encode(activityResponse{Activity: updated})
+	writeJSON(w, r, activityResponse{Activity: updated})
 }
 
 // Delete handles DELETE /api/v1/activities/{id}
@@ -382,7 +385,7 @@ func (h *ActivityHandler) Submit(w http.ResponseWriter, r *http.Request) {
 	prepareActivities(activity)
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(http.StatusOK)
-	_ = json.NewEncoder(w).Encode(activityResponse{Activity: activity})
+	writeJSON(w, r, activityResponse{Activity: activity})
 }
 
 // Patch handles PATCH /api/v1/activities/{id} with server-side apply semantics.
@@ -509,7 +512,7 @@ func (h *ActivityHandler) Patch(w http.ResponseWriter, r *http.Request) {
 	prepareActivities(updated)
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(http.StatusOK)
-	_ = json.NewEncoder(w).Encode(activityResponse{Activity: updated})
+	writeJSON(w, r, activityResponse{Activity: updated})
 }
 
 // BatchCreate handles POST /api/v1/activities/batch
@@ -573,7 +576,7 @@ func (h *ActivityHandler) BatchCreate(w http.ResponseWriter, r *http.Request) {
 		status = http.StatusMultiStatus
 	}
 	w.WriteHeader(status)
-	_ = json.NewEncoder(w).Encode(map[string]any{
+	writeJSON(w, r, map[string]any{
 		"created": created,
 		"errors":  batchErrors,
 	})
@@ -609,5 +612,5 @@ func (h *ActivityHandler) PatchStatus(w http.ResponseWriter, r *http.Request) {
 	prepareActivities(activity)
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(http.StatusOK)
-	_ = json.NewEncoder(w).Encode(activityResponse{Activity: activity})
+	writeJSON(w, r, activityResponse{Activity: activity})
 }

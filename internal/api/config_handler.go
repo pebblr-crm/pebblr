@@ -1,7 +1,6 @@
 package api
 
 import (
-	"encoding/json"
 	"net/http"
 
 	"github.com/pebblr/pebblr/internal/config"
@@ -28,5 +27,5 @@ func (h *ConfigHandler) Get(w http.ResponseWriter, r *http.Request) {
 
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(http.StatusOK)
-	_ = json.NewEncoder(w).Encode(h.cfg)
+	writeJSON(w, r, h.cfg)
 }

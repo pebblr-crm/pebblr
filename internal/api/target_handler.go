@@ -119,7 +119,7 @@ func (h *TargetHandler) List(w http.ResponseWriter, r *http.Request) {
 
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(http.StatusOK)
-	_ = json.NewEncoder(w).Encode(targetListResponse{
+	writeJSON(w, r, targetListResponse{
 		Items: targets,
 		Total: result.Total,
 		Page:  result.Page,
@@ -167,7 +167,7 @@ func (h *TargetHandler) Create(w http.ResponseWriter, r *http.Request) {
 
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(http.StatusCreated)
-	_ = json.NewEncoder(w).Encode(targetResponse{Target: created})
+	writeJSON(w, r, targetResponse{Target: created})
 }
 
 // Get handles GET /api/v1/targets/{id}
@@ -187,7 +187,7 @@ func (h *TargetHandler) Get(w http.ResponseWriter, r *http.Request) {
 
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(http.StatusOK)
-	_ = json.NewEncoder(w).Encode(targetResponse{Target: target})
+	writeJSON(w, r, targetResponse{Target: target})
 }
 
 // Update handles PUT /api/v1/targets/{id}
@@ -233,7 +233,7 @@ func (h *TargetHandler) Update(w http.ResponseWriter, r *http.Request) {
 
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(http.StatusOK)
-	_ = json.NewEncoder(w).Encode(targetResponse{Target: updated})
+	writeJSON(w, r, targetResponse{Target: updated})
 }
 
 type importTargetItem struct {
@@ -303,7 +303,7 @@ func (h *TargetHandler) Import(w http.ResponseWriter, r *http.Request) {
 
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(http.StatusOK)
-	_ = json.NewEncoder(w).Encode(importResponse{
+	writeJSON(w, r, importResponse{
 		Created: result.Created,
 		Updated: result.Updated,
 		Targets: imported,
@@ -328,5 +328,5 @@ func (h *TargetHandler) VisitStatus(w http.ResponseWriter, r *http.Request) {
 	}
 
 	w.Header().Set("Content-Type", "application/json")
-	_ = json.NewEncoder(w).Encode(map[string]any{"items": result})
+	writeJSON(w, r, map[string]any{"items": result})
 }

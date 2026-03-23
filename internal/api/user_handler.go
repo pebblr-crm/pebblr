@@ -2,7 +2,6 @@ package api
 
 import (
 	"context"
-	"encoding/json"
 	"errors"
 	"net/http"
 
@@ -76,7 +75,7 @@ func (h *UserHandler) List(w http.ResponseWriter, r *http.Request) {
 
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(http.StatusOK)
-	_ = json.NewEncoder(w).Encode(userListResponse{Items: users, Total: len(users)})
+	writeJSON(w, r, userListResponse{Items: users, Total: len(users)})
 }
 
 // Get handles GET /api/v1/users/{id}
@@ -96,5 +95,5 @@ func (h *UserHandler) Get(w http.ResponseWriter, r *http.Request) {
 
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(http.StatusOK)
-	_ = json.NewEncoder(w).Encode(userResponse{User: user})
+	writeJSON(w, r, userResponse{User: user})
 }

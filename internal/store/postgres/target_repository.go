@@ -279,7 +279,6 @@ func (r *targetRepository) VisitStatus(ctx context.Context, scope rbac.TargetSco
 	// Field activity types filter.
 	args = append(args, fieldTypes)
 	typesArg := fmt.Sprintf("$%d", argIdx)
-	argIdx++
 
 	where := ""
 	if len(conditions) > 0 {
