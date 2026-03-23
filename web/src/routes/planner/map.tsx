@@ -41,6 +41,17 @@ function formatDate(d: Date): string {
   return d.toISOString().slice(0, 10)
 }
 
+/** Haversine distance in km between two lat/lng points. */
+function haversineKm(lat1: number, lng1: number, lat2: number, lng2: number): number {
+  const R = 6371
+  const dLat = ((lat2 - lat1) * Math.PI) / 180
+  const dLng = ((lng2 - lng1) * Math.PI) / 180
+  const a =
+    Math.sin(dLat / 2) ** 2 +
+    Math.cos((lat1 * Math.PI) / 180) * Math.cos((lat2 * Math.PI) / 180) * Math.sin(dLng / 2) ** 2
+  return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a))
+}
+
 function isWithinCadence(lastVisit: string | undefined, cadenceDays: number): boolean {
   if (!lastVisit) return false
   const last = new Date(lastVisit)
@@ -92,6 +103,56 @@ function MapPlannerPage() {
     }
     return ids
   }, [dayAssignments])
+
+  // Centroid of selected targets — used to sort available targets by proximity.
+  const selectionCentroid = useMemo(() => {
+    if (selectedIds.size === 0) return null
+    let sumLat = 0
+    let sumLng = 0
+    let count = 0
+    for (const id of selectedIds) {
+      const t = targets.find((x) => x.id === id)
+      if (t?.fields?.lat != null && t?.fields?.lng != null) {
+        sumLat += t.fields.lat as number
+        sumLng += t.fields.lng as number
+        count++
+      }
+    }
+    if (count === 0) return null
+    return { lat: sumLat / count, lng: sumLng / count }
+  }, [selectedIds, targets])
+
+  // Available targets sorted by distance from selection centroid.
+  const sortedAvailable = useMemo(() => {
+    const available = geoTargets.filter((t) => !selectedIds.has(t.id) && !assignedIds.has(t.id))
+    if (!selectionCentroid) return available
+
+    return available
+      .map((t) => ({
+        target: t,
+        distance: haversineKm(
+          selectionCentroid.lat, selectionCentroid.lng,
+          t.fields.lat as number, t.fields.lng as number,
+        ),
+      }))
+      .sort((a, b) => a.distance - b.distance)
+      .map((x) => x.target)
+  }, [geoTargets, selectedIds, assignedIds, selectionCentroid])
+
+  // Distance lookup for display.
+  const distanceMap = useMemo(() => {
+    if (!selectionCentroid) return new Map<string, number>()
+    const m = new Map<string, number>()
+    for (const t of geoTargets) {
+      if (t.fields?.lat != null && t.fields?.lng != null) {
+        m.set(t.id, haversineKm(
+          selectionCentroid.lat, selectionCentroid.lng,
+          t.fields.lat as number, t.fields.lng as number,
+        ))
+      }
+    }
+    return m
+  }, [geoTargets, selectionCentroid])
 
   const weekDates = useMemo(() => {
     const base = new Date()
@@ -258,34 +319,34 @@ function MapPlannerPage() {
                   />
                 )
               })}
-              {selectedIds.size > 0 && geoTargets.length > selectedIds.size && (
+              {selectedIds.size > 0 && sortedAvailable.length > 0 && (
                 <div className="border-t border-slate-100 px-3 py-1">
                   <span className="text-[10px] uppercase tracking-widest text-slate-400 font-bold">
-                    Available
+                    {selectionCentroid ? 'Nearby' : 'Available'}
                   </span>
                 </div>
               )}
-              {/* Unselected, non-cadenced targets */}
-              {geoTargets
-                .filter((t) => !selectedIds.has(t.id) && !assignedIds.has(t.id))
-                .map((target) => {
-                  const lastVisit = visitStatusMap.get(target.id)
-                  const isCadenced = isWithinCadence(lastVisit, cadenceDays)
-                  return (
-                    <TargetListItem
-                      key={target.id}
-                      target={target}
-                      lastVisit={lastVisit}
-                      isSelected={false}
-                      isCadenced={isCadenced}
-                      onToggle={() => {
-                        if (!isCadenced) toggleTarget(target.id)
-                      }}
-                      onDragStart={() => setDragTargetId(target.id)}
-                      onDragEnd={() => setDragTargetId(null)}
-                    />
-                  )
-                })}
+              {/* Available targets sorted by proximity to selection */}
+              {sortedAvailable.map((target) => {
+                const lastVisit = visitStatusMap.get(target.id)
+                const isCadenced = isWithinCadence(lastVisit, cadenceDays)
+                const dist = distanceMap.get(target.id)
+                return (
+                  <TargetListItem
+                    key={target.id}
+                    target={target}
+                    lastVisit={lastVisit}
+                    isSelected={false}
+                    isCadenced={isCadenced}
+                    distanceKm={dist}
+                    onToggle={() => {
+                      if (!isCadenced) toggleTarget(target.id)
+                    }}
+                    onDragStart={() => setDragTargetId(target.id)}
+                    onDragEnd={() => setDragTargetId(null)}
+                  />
+                )
+              })}
             </div>
           </div>
         </div>
@@ -355,6 +416,7 @@ interface TargetListItemProps {
   lastVisit?: string
   isSelected: boolean
   isCadenced?: boolean
+  distanceKm?: number
   onToggle: () => void
   onDragStart: () => void
   onDragEnd: () => void
@@ -365,6 +427,7 @@ function TargetListItem({
   lastVisit,
   isSelected,
   isCadenced,
+  distanceKm,
   onToggle,
   onDragStart,
   onDragEnd,
@@ -393,20 +456,27 @@ function TargetListItem({
           {(target.fields?.address as string) ?? ''}
           {lastVisit && (
             <span className="ml-1">
-              — last visit: {new Date(lastVisit).toLocaleDateString()}
+              — last: {new Date(lastVisit).toLocaleDateString()}
             </span>
           )}
         </p>
       </div>
-      <span
-        className={`text-[9px] font-bold uppercase px-1.5 py-0.5 rounded ${
-          target.targetType === 'pharmacy'
-            ? 'bg-amber-100 text-amber-700'
-            : 'bg-blue-100 text-blue-700'
-        }`}
-      >
-        {(target.fields?.potential as string) ?? target.targetType}
-      </span>
+      <div className="flex flex-col items-end shrink-0 gap-0.5">
+        <span
+          className={`text-[9px] font-bold uppercase px-1.5 py-0.5 rounded ${
+            target.targetType === 'pharmacy'
+              ? 'bg-amber-100 text-amber-700'
+              : 'bg-blue-100 text-blue-700'
+          }`}
+        >
+          {(target.fields?.potential as string) ?? target.targetType}
+        </span>
+        {distanceKm != null && (
+          <span className="text-[9px] text-slate-400">
+            {distanceKm < 1 ? `${Math.round(distanceKm * 1000)}m` : `${distanceKm.toFixed(1)}km`}
+          </span>
+        )}
+      </div>
     </div>
   )
 }
