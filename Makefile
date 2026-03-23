@@ -2,7 +2,7 @@
 # CI/CD pipelines call these targets only.
 
 .DEFAULT_GOAL := help
-.PHONY: help build test lint typecheck dev-api dev-web dev-db dev-db-stop dev-db-reset seed cluster-up deploy migrate clean helm-validate e2e e2e-teardown e2e-cluster e2e-db e2e-deploy
+.PHONY: help build test lint typecheck dev-api dev-web dev-db dev-db-stop dev-db-reset seed cluster-up deploy migrate validate-config clean helm-validate e2e e2e-teardown e2e-cluster e2e-db e2e-deploy
 
 # ── Pinned versions ───────────────────────────────────────────────────────────
 ESO_VERSION           := 0.12.1
@@ -10,7 +10,7 @@ ENVOY_GW_VERSION      := v1.3.0
 CERT_MANAGER_VERSION  := v1.17.1
 
 # ── Paths ─────────────────────────────────────────────────────────────────────
-GO_CMD  := cmd/api
+GO_CMD  := cmd/pebblr
 WEB_DIR := web
 CLUSTER := pebblr-local
 KIND_CFG := deploy/kind/kind-config.yaml
@@ -24,7 +24,7 @@ help: ## Show available targets
 		awk 'BEGIN {FS = ":.*## "}; {printf "  \033[36m%-20s\033[0m %s\n", $$1, $$2}' | sort
 
 build: ## Build Go binary and React frontend
-	@go build -o bin/api ./$(GO_CMD)
+	@go build -o bin/pebblr ./$(GO_CMD)
 	@cd $(WEB_DIR) && bun install --frozen-lockfile && bun run build
 
 test: ## Run Go tests and frontend tests
@@ -37,7 +37,7 @@ typecheck: ## Run tsc --noEmit in web/
 	@cd $(WEB_DIR) && bun run typecheck
 
 dev-api: ## Run Go API server locally with hot reload
-	@air -c .air.toml || go run ./$(GO_CMD)
+	@air -c .air.toml || go run ./$(GO_CMD) serve
 
 dev-web: ## Run Vite dev server
 	@cd $(WEB_DIR) && bun run dev
@@ -99,6 +99,9 @@ e2e-db: ## Deploy PostgreSQL, run migrations, seed data, and create secrets (peb
 e2e-deploy: ## Build, load, and deploy the app into pebblr-e2e namespace via Skaffold
 	$(AKS_GUARD)
 	@skaffold run -p e2e --default-repo="" --status-check=true
+
+validate-config: ## Validate tenant config file
+	@go run ./$(GO_CMD) config validate --config config/tenant.json
 
 clean: ## Clean build artifacts
 	@rm -rf bin/ web/dist/ web/node_modules/.vite

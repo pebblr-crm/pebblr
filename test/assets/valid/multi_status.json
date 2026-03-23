@@ -1,0 +1,83 @@
+{
+  "tenant": {
+    "name": "Multi-Status Tenant",
+    "locale": "ro"
+  },
+  "accounts": {
+    "types": [
+      {
+        "key": "hospital",
+        "label": "Hospital",
+        "fields": [
+          { "key": "name", "type": "text", "required": true },
+          { "key": "tier", "type": "select", "required": false, "options_ref": "tiers" }
+        ]
+      }
+    ]
+  },
+  "activities": {
+    "statuses": [
+      { "key": "draft", "label": "Draft", "initial": true },
+      { "key": "pending", "label": "Pending Review" },
+      { "key": "approved", "label": "Approved" },
+      { "key": "rejected", "label": "Rejected" }
+    ],
+    "status_transitions": {
+      "draft": ["pending"],
+      "pending": ["approved", "rejected"],
+      "approved": [],
+      "rejected": ["draft"]
+    },
+    "durations": [
+      { "key": "30m", "label": "30 Minutes" },
+      { "key": "1h", "label": "1 Hour" },
+      { "key": "2h", "label": "2 Hours" }
+    ],
+    "types": [
+      {
+        "key": "site_visit",
+        "label": "Site Visit",
+        "category": "field",
+        "title_field": "visit_purpose",
+        "fields": [
+          { "key": "account_id", "type": "relation", "required": true },
+          { "key": "visit_purpose", "type": "select", "required": true, "options_ref": "visit_purposes" },
+          { "key": "duration", "type": "select", "required": true, "options_ref": "durations" },
+          { "key": "notes", "type": "text", "required": false }
+        ],
+        "submit_required": ["notes"]
+      },
+      {
+        "key": "day_off",
+        "label": "Day Off",
+        "category": "non_field",
+        "blocks_field_activities": true,
+        "fields": [
+          { "key": "duration", "type": "select", "required": true, "options_ref": "durations" }
+        ]
+      }
+    ],
+    "routing_options": []
+  },
+  "options": {
+    "tiers": [
+      { "key": "gold", "label": "Gold" },
+      { "key": "silver", "label": "Silver" }
+    ],
+    "visit_purposes": [
+      { "key": "sales", "label": "Sales" },
+      { "key": "support", "label": "Support" }
+    ]
+  },
+  "rules": {
+    "frequency": { "gold": 4, "silver": 2 },
+    "max_activities_per_day": 8,
+    "default_visit_duration_minutes": { "hospital": 45 },
+    "visit_duration_step_minutes": 15,
+    "recovery": {
+      "weekend_activity_flag": false,
+      "recovery_window_days": 7,
+      "recovery_type": "full_day"
+    }
+  }
+}

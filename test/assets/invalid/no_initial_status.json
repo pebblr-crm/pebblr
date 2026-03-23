@@ -1,0 +1,21 @@
+{
+  "tenant": { "name": "T", "locale": "en" },
+  "accounts": { "types": [] },
+  "activities": {
+    "statuses": [
+      { "key": "open", "label": "Open" },
+      { "key": "closed", "label": "Closed" }
+    ],
+    "status_transitions": { "open": ["closed"], "closed": [] },
+    "durations": [{ "key": "full_day", "label": "Full Day" }],
+    "types": [],
+    "routing_options": []
+  },
+  "options": {},
+  "rules": {
+    "frequency": {},
+    "max_activities_per_day": 5,
+    "default_visit_duration_minutes": {},
+    "visit_duration_step_minutes": 15
+  }
+}

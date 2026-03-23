@@ -1,0 +1,201 @@
+{
+  "tenant": {
+    "name": "Pillzilla Pharmaceuticals",
+    "locale": "en"
+  },
+  "accounts": {
+    "types": [
+      {
+        "key": "doctor",
+        "label": "Doctor",
+        "fields": [
+          { "key": "name", "label": "Name", "type": "text", "required": true, "editable": false },
+          { "key": "specialty", "label": "Specialty", "type": "select", "required": false, "editable": false, "options_ref": "specialties" },
+          { "key": "potential", "label": "Potential", "type": "select", "required": false, "editable": true, "options_ref": "classifications" },
+          { "key": "city", "label": "City", "type": "text", "required": false, "editable": false },
+          { "key": "county", "label": "County", "type": "text", "required": false, "editable": false },
+          { "key": "address", "label": "Address", "type": "text", "required": false, "editable": false }
+        ]
+      },
+      {
+        "key": "pharmacy",
+        "label": "Pharmacy",
+        "fields": [
+          { "key": "name", "label": "Name", "type": "text", "required": true, "editable": false },
+          { "key": "pharmacy_type", "label": "Pharmacy Type", "type": "select", "required": false, "editable": false, "options_ref": "pharmacy_types" },
+          { "key": "city", "label": "City", "type": "text", "required": false, "editable": false },
+          { "key": "county", "label": "County", "type": "text", "required": false, "editable": false },
+          { "key": "address", "label": "Address", "type": "text", "required": false, "editable": false }
+        ]
+      }
+    ]
+  },
+  "activities": {
+    "statuses": [
+      { "key": "planned", "label": "Planned", "initial": true },
+      { "key": "completed", "label": "Completed" },
+      { "key": "cancelled", "label": "Cancelled" }
+    ],
+    "status_transitions": {
+      "planned": ["completed", "cancelled"],
+      "completed": [],
+      "cancelled": []
+    },
+    "durations": [
+      { "key": "full_day", "label": "Full Day" },
+      { "key": "half_day", "label": "Half Day" }
+    ],
+    "types": [
+      {
+        "key": "visit",
+        "label": "Visit",
+        "category": "field",
+        "title_field": "visit_type",
+        "fields": [
+          { "key": "account_id", "label": "Account", "type": "relation", "required": true },
+          { "key": "visit_type", "label": "Visit Type", "type": "select", "required": true, "options_ref": "visit_types" },
+          { "key": "promoted_products", "label": "Promoted Products", "type": "multi_select", "required": false, "options_ref": "products" },
+          { "key": "feedback", "label": "Feedback", "type": "text", "required": false },
+          { "key": "details", "label": "Details", "type": "text", "required": false },
+          { "key": "duration", "label": "Duration", "type": "select", "required": true, "options_ref": "durations" },
+          { "key": "joint_visit_user_id", "label": "Joint Visit User", "type": "relation", "required": false, "options_ref": "users" },
+          { "key": "routing", "label": "Routing", "type": "select", "required": false, "options_ref": "routing_options" }
+        ],
+        "submit_required": ["promoted_products", "feedback"]
+      },
+      {
+        "key": "administrative",
+        "label": "Administrative",
+        "category": "non_field",
+        "fields": [
+          { "key": "duration", "label": "Duration", "type": "select", "required": true, "options_ref": "durations" },
+          { "key": "details", "label": "Details", "type": "text", "required": false }
+        ]
+      },
+      {
+        "key": "business_travel",
+        "label": "Business Travel",
+        "category": "non_field",
+        "fields": [
+          { "key": "duration", "label": "Duration", "type": "select", "required": true, "options_ref": "durations" },
+          { "key": "details", "label": "Details", "type": "text", "required": false }
+        ]
+      },
+      {
+        "key": "company_event",
+        "label": "Company Event",
+        "category": "non_field",
+        "fields": [
+          { "key": "duration", "label": "Duration", "type": "select", "required": true, "options_ref": "durations" },
+          { "key": "details", "label": "Details", "type": "text", "required": false }
+        ]
+      },
+      {
+        "key": "cycle_meeting",
+        "label": "Cycle Meeting",
+        "category": "non_field",
+        "fields": [
+          { "key": "duration", "label": "Duration", "type": "select", "required": true, "options_ref": "durations" },
+          { "key": "details", "label": "Details", "type": "text", "required": false }
+        ]
+      },
+      {
+        "key": "team_meeting",
+        "label": "Team Meeting",
+        "category": "non_field",
+        "fields": [
+          { "key": "duration", "label": "Duration", "type": "select", "required": true, "options_ref": "durations" },
+          { "key": "details", "label": "Details", "type": "text", "required": false }
+        ]
+      },
+      {
+        "key": "training",
+        "label": "Training",
+        "category": "non_field",
+        "fields": [
+          { "key": "duration", "label": "Duration", "type": "select", "required": true, "options_ref": "durations" },
+          { "key": "details", "label": "Details", "type": "text", "required": false }
+        ]
+      },
+      {
+        "key": "public_holiday",
+        "label": "Public Holiday",
+        "category": "non_field",
+        "blocks_field_activities": true,
+        "fields": [
+          { "key": "duration", "label": "Duration", "type": "select", "required": true, "options_ref": "durations" }
+        ]
+      },
+      {
+        "key": "vacation",
+        "label": "Vacation",
+        "category": "non_field",
+        "blocks_field_activities": true,
+        "fields": [
+          { "key": "duration", "label": "Duration", "type": "select", "required": true, "options_ref": "durations" }
+        ]
+      },
+      {
+        "key": "lunch_break",
+        "label": "Lunch Break",
+        "category": "non_field",
+        "fields": [
+          { "key": "duration", "label": "Duration", "type": "select", "required": true, "options_ref": "durations" }
+        ]
+      }
+    ],
+    "routing_options": []
+  },
+  "options": {
+    "visit_types": [
+      { "key": "f2f", "label": "F2F" },
+      { "key": "remote", "label": "Remote" }
+    ],
+    "routing_options": [
+      { "key": "week_1", "label": "Week 1" },
+      { "key": "week_2", "label": "Week 2" },
+      { "key": "week_3", "label": "Week 3" }
+    ],
+    "specialties": [
+      { "key": "cardiology", "label": "Cardiology" },
+      { "key": "internal_medicine", "label": "Internal Medicine" },
+      { "key": "family_medicine", "label": "Family Medicine" },
+      { "key": "emergency_medicine", "label": "Emergency Medicine" },
+      { "key": "gastroenterology", "label": "Gastroenterology" },
+      { "key": "geriatrics", "label": "Geriatrics" },
+      { "key": "neurology", "label": "Neurology" },
+      { "key": "pediatrics", "label": "Pediatrics" },
+      { "key": "pulmonology", "label": "Pulmonology" },
+      { "key": "other", "label": "Other" }
+    ],
+    "classifications": [
+      { "key": "a", "label": "A" },
+      { "key": "b", "label": "B" },
+      { "key": "c", "label": "C" }
+    ],
+    "pharmacy_types": [
+      { "key": "chain", "label": "Chain" }
+    ],
+    "products": [
+      { "key": "product_1", "label": "Product 1" }
+    ]
+  },
+  "rules": {
+    "frequency": {
+      "a": 4,
+      "b": 2,
+      "c": 1
+    },
+    "max_activities_per_day": 10,
+    "default_visit_duration_minutes": {
+      "doctor": 30,
+      "pharmacy": 15
+    },
+    "visit_duration_step_minutes": 15,
+    "recovery": {
+      "weekend_activity_flag": true,
+      "recovery_window_days": 5,
+      "recovery_type": "full_day"
+    }
+  }
+}

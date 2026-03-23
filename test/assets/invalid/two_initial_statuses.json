@@ -1,0 +1,21 @@
+{
+  "tenant": { "name": "T", "locale": "en" },
+  "accounts": { "types": [] },
+  "activities": {
+    "statuses": [
+      { "key": "a", "label": "A", "initial": true },
+      { "key": "b", "label": "B", "initial": true }
+    ],
+    "status_transitions": { "a": ["b"], "b": [] },
+    "durations": [{ "key": "full_day", "label": "Full Day" }],
+    "types": [],
+    "routing_options": []
+  },
+  "options": {},
+  "rules": {
+    "frequency": {},
+    "max_activities_per_day": 5,
+    "default_visit_duration_minutes": {},
+    "visit_duration_step_minutes": 15
+  }
+}

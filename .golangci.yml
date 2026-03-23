@@ -19,6 +19,12 @@ linters:
   exclusions:
     paths:
       - web/node_modules
+    rules:
+      # Ginkgo/Gomega idiomatically use dot imports and test runners are not parallelizable.
+      - path: test/e2e/
+        linters:
+          - revive
+          - paralleltest
 
   settings:
     gocritic:

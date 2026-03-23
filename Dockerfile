@@ -12,7 +12,7 @@ COPY cmd/ cmd/
 COPY internal/ internal/
 COPY migrations/ migrations/
 
-RUN CGO_ENABLED=0 GOOS=linux go build -ldflags="-w -s" -o /bin/api ./cmd/api && \
+RUN CGO_ENABLED=0 GOOS=linux go build -ldflags="-w -s" -o /bin/pebblr ./cmd/pebblr && \
     CGO_ENABLED=0 GOOS=linux go build -ldflags="-w -s" -o /bin/migrate ./cmd/migrate
 
 # ── Stage 2: Frontend builder ─────────────────────────────────────────────────
@@ -34,7 +34,7 @@ RUN addgroup -S pebblr && adduser -S pebblr -G pebblr
 
 WORKDIR /app
 
-COPY --from=go-builder /bin/api .
+COPY --from=go-builder /bin/pebblr .
 COPY --from=go-builder /bin/migrate .
 COPY --from=go-builder /app/migrations/ ./migrations/
 COPY --from=web-builder /app/web/dist ./web/dist
@@ -47,4 +47,4 @@ USER pebblr
 
 EXPOSE 8080
 
-ENTRYPOINT ["/app/api"]
+ENTRYPOINT ["/app/pebblr", "serve"]

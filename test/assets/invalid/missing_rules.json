@@ -1,0 +1,12 @@
+{
+  "tenant": { "name": "T", "locale": "en" },
+  "accounts": { "types": [] },
+  "activities": {
+    "statuses": [{ "key": "open", "label": "Open", "initial": true }],
+    "status_transitions": { "open": [] },
+    "durations": [{ "key": "full_day", "label": "Full Day" }],
+    "types": [],
+    "routing_options": []
+  },
+  "options": {}
+}

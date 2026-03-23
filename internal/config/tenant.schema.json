@@ -1,0 +1,207 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://pebblr.io/schemas/tenant-config.json",
+  "title": "Pebblr Tenant Configuration",
+  "description": "Configuration schema for a Pebblr CRM tenant deployment.",
+  "type": "object",
+  "required": ["tenant", "accounts", "activities", "options", "rules"],
+  "additionalProperties": false,
+  "properties": {
+    "tenant": {
+      "type": "object",
+      "required": ["name", "locale"],
+      "additionalProperties": false,
+      "properties": {
+        "name": {
+          "type": "string",
+          "minLength": 1,
+          "description": "Display name of the tenant organisation."
+        },
+        "locale": {
+          "type": "string",
+          "minLength": 2,
+          "description": "BCP-47 language tag (e.g. 'en', 'ro')."
+        }
+      }
+    },
+    "accounts": {
+      "type": "object",
+      "required": ["types"],
+      "additionalProperties": false,
+      "properties": {
+        "types": {
+          "type": "array",
+          "items": { "$ref": "#/$defs/accountType" }
+        }
+      }
+    },
+    "activities": {
+      "type": "object",
+      "required": ["statuses", "status_transitions", "durations", "types", "routing_options"],
+      "additionalProperties": false,
+      "properties": {
+        "statuses": {
+          "type": "array",
+          "minItems": 1,
+          "items": { "$ref": "#/$defs/statusDef" }
+        },
+        "status_transitions": {
+          "type": "object",
+          "additionalProperties": {
+            "type": "array",
+            "items": { "type": "string" }
+          },
+          "description": "Maps each status key to the list of statuses it can transition to."
+        },
+        "durations": {
+          "type": "array",
+          "items": { "$ref": "#/$defs/optionDef" }
+        },
+        "types": {
+          "type": "array",
+          "items": { "$ref": "#/$defs/activityType" }
+        },
+        "routing_options": {
+          "type": "array",
+          "items": { "$ref": "#/$defs/optionDef" }
+        }
+      }
+    },
+    "options": {
+      "type": "object",
+      "additionalProperties": {
+        "type": "array",
+        "items": { "$ref": "#/$defs/optionDef" }
+      },
+      "description": "Reusable option lists referenced by fields via options_ref."
+    },
+    "rules": {
+      "type": "object",
+      "required": ["frequency", "max_activities_per_day", "default_visit_duration_minutes", "visit_duration_step_minutes"],
+      "additionalProperties": false,
+      "properties": {
+        "frequency": {
+          "type": "object",
+          "additionalProperties": { "type": "integer", "minimum": 0 },
+          "description": "Minimum visit frequency per cycle, keyed by classification."
+        },
+        "max_activities_per_day": {
+          "type": "integer",
+          "minimum": 1,
+          "description": "Hard cap on activities a rep can create per day."
+        },
+        "default_visit_duration_minutes": {
+          "type": "object",
+          "additionalProperties": { "type": "integer", "minimum": 1 },
+          "description": "Default visit length in minutes, keyed by account type."
+        },
+        "visit_duration_step_minutes": {
+          "type": "integer",
+          "minimum": 1,
+          "description": "Granularity for visit duration adjustments."
+        },
+        "recovery": {
+          "$ref": "#/$defs/recoveryRule"
+        }
+      }
+    }
+  },
+  "$defs": {
+    "optionDef": {
+      "type": "object",
+      "required": ["key", "label"],
+      "additionalProperties": false,
+      "properties": {
+        "key": { "type": "string", "minLength": 1 },
+        "label": { "type": "string", "minLength": 1 }
+      }
+    },
+    "statusDef": {
+      "type": "object",
+      "required": ["key", "label"],
+      "additionalProperties": false,
+      "properties": {
+        "key": { "type": "string", "minLength": 1 },
+        "label": { "type": "string", "minLength": 1 },
+        "initial": { "type": "boolean" }
+      }
+    },
+    "fieldConfig": {
+      "type": "object",
+      "required": ["key", "type", "required"],
+      "additionalProperties": false,
+      "properties": {
+        "key": { "type": "string", "minLength": 1 },
+        "label": { "type": "string" },
+        "type": {
+          "type": "string",
+          "enum": ["text", "select", "multi_select", "relation", "date"]
+        },
+        "required": { "type": "boolean" },
+        "editable": { "type": "boolean" },
+        "options": {
+          "type": "array",
+          "items": { "type": "string" },
+          "description": "Inline option values for select/multi_select fields."
+        },
+        "options_ref": {
+          "type": "string",
+          "description": "Key into the top-level options map (or 'durations', 'users')."
+        }
+      }
+    },
+    "accountType": {
+      "type": "object",
+      "required": ["key", "label", "fields"],
+      "additionalProperties": false,
+      "properties": {
+        "key": { "type": "string", "minLength": 1 },
+        "label": { "type": "string", "minLength": 1 },
+        "fields": {
+          "type": "array",
+          "items": { "$ref": "#/$defs/fieldConfig" }
+        }
+      }
+    },
+    "activityType": {
+      "type": "object",
+      "required": ["key", "label", "category", "fields"],
+      "additionalProperties": false,
+      "properties": {
+        "key": { "type": "string", "minLength": 1 },
+        "label": { "type": "string", "minLength": 1 },
+        "category": {
+          "type": "string",
+          "enum": ["field", "non_field"]
+        },
+        "title_field": {
+          "type": "string",
+          "description": "Field key whose display label is prepended to the activity title."
+        },
+        "fields": {
+          "type": "array",
+          "items": { "$ref": "#/$defs/fieldConfig" }
+        },
+        "submit_required": {
+          "type": "array",
+          "items": { "type": "string" },
+          "description": "Field keys that become required at submit time."
+        },
+        "blocks_field_activities": {
+          "type": "boolean",
+          "description": "When true, this activity type prevents field activities on the same day."
+        }
+      }
+    },
+    "recoveryRule": {
+      "type": "object",
+      "required": ["weekend_activity_flag", "recovery_window_days", "recovery_type"],
+      "additionalProperties": false,
+      "properties": {
+        "weekend_activity_flag": { "type": "boolean" },
+        "recovery_window_days": { "type": "integer", "minimum": 0 },
+        "recovery_type": { "type": "string", "minLength": 1 }
+      }
+    }
+  }
+}

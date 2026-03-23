@@ -2,6 +2,7 @@ package main
 
 import (
 	"context"
+	"flag"
 	"fmt"
 	"log/slog"
 	"net/http"
@@ -24,21 +25,40 @@ import (
 )
 
 const (
-	defaultDSNFile           = "/run/secrets/db-dsn"
-	defaultJWTSecretFile     = "/run/secrets/jwt-secret"
-	defaultMigrationsPath    = "./migrations"
-	defaultTenantConfigPath  = "./config/tenant.json"
+	defaultDSNFile        = "/run/secrets/db-dsn"
+	defaultMigrationsPath = "./migrations"
+	defaultConfigPath     = "./config/tenant.json"
 )
 
-func main() {
-	if err := run(); err != nil {
-		slog.Error("server error", "err", err)
-		os.Exit(1)
+func runServe(args []string) int {
+	fs := flag.NewFlagSet("serve", flag.ContinueOnError)
+	configPath := fs.String("config", defaultConfigPath, "path to tenant config JSON")
+	if err := fs.Parse(args); err != nil {
+		return 2
 	}
+
+	if err := serve(*configPath); err != nil {
+		slog.Error("server error", "err", err)
+		return 1
+	}
+	return 0
 }
 
-func run() error {
+func serve(configPath string) error {
 	logger := slog.New(slog.NewJSONHandler(os.Stdout, nil))
+
+	// Validate config using the same pipeline as `pebblr config validate`.
+	tenantCfg, validationErrors, err := config.LoadAndValidate(configPath)
+	if err != nil {
+		return fmt.Errorf("config validation: %w", err)
+	}
+	if len(validationErrors) > 0 {
+		for _, e := range validationErrors {
+			logger.Error("config validation error", "error", e)
+		}
+		return fmt.Errorf("tenant config has %d validation error(s)", len(validationErrors))
+	}
+	logger.Info("tenant config validated", "path", configPath)
 
 	if err := runMigrations(logger); err != nil {
 		return fmt.Errorf("migrations: %w", err)
@@ -54,41 +74,21 @@ func run() error {
 	db := postgres.New(pool)
 	enforcer := rbac.NewEnforcer()
 
-	// Services
 	teamSvc := service.NewTeamService(db.Teams())
 	userSvc := service.NewUserService(db.Users())
-
-	// Tenant config
-	tenantConfigPath := os.Getenv("TENANT_CONFIG_PATH")
-	if tenantConfigPath == "" {
-		tenantConfigPath = defaultTenantConfigPath
-	}
-	tenantCfg, err := config.Load(tenantConfigPath)
-	if err != nil {
-		return fmt.Errorf("loading tenant config: %w", err)
-	}
-	configHandler := api.NewConfigHandler(tenantCfg)
-	logger.Info("tenant config loaded", "path", tenantConfigPath)
-
-	// Target service (needs tenant config for validation)
 	targetSvc := service.NewTargetService(db.Targets(), enforcer, tenantCfg)
-
-	// Activity service (needs tenant config, audit repo)
 	activitySvc := service.NewActivityService(db.Activities(), db.Audit(), enforcer, tenantCfg)
-
-	// Dashboard service
 	dashboardSvc := service.NewDashboardService(db.Dashboard(), enforcer, tenantCfg)
 
-	// Handlers
 	targetHandler := api.NewTargetHandler(targetSvc)
 	activityHandler := api.NewActivityHandler(activitySvc)
 	dashboardHandler := api.NewDashboardHandler(dashboardSvc)
 	teamHandler := api.NewTeamHandler(teamSvc)
 	userHandler := api.NewUserHandler(userSvc)
+	configHandler := api.NewConfigHandler(tenantCfg)
 
 	webDistPath := os.Getenv("WEB_DIST_PATH")
 
-	// Read the JWT secret for token validation.
 	secretPath := os.Getenv("SECRET_MOUNT_PATH")
 	if secretPath == "" {
 		secretPath = "/run/secrets"
