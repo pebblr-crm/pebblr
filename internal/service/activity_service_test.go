@@ -16,12 +16,13 @@ import (
 // --- stub activity repo ---
 
 type stubActivityRepo struct {
-	activity    *domain.Activity
-	created     *domain.Activity
-	updated     *domain.Activity
-	getErr      error
-	saveErr     error
-	countByDate int
+	activity             *domain.Activity
+	created              *domain.Activity
+	updated              *domain.Activity
+	getErr               error
+	saveErr              error
+	countByDate          int
+	hasActivityWithTypes bool
 }
 
 func (r *stubActivityRepo) Get(_ context.Context, _ string) (*domain.Activity, error) {
@@ -66,6 +67,10 @@ func (r *stubActivityRepo) SoftDelete(_ context.Context, _ string) error {
 
 func (r *stubActivityRepo) CountByDate(_ context.Context, _ string, _ time.Time) (int, error) {
 	return r.countByDate, nil
+}
+
+func (r *stubActivityRepo) HasActivityWithTypes(_ context.Context, _ string, _ time.Time, _ []string) (bool, error) {
+	return r.hasActivityWithTypes, nil
 }
 
 // --- stub audit repo ---
@@ -155,6 +160,7 @@ func TestActivityCreate_RepSucceeds(t *testing.T) {
 		DueDate:      time.Date(2026, 3, 23, 0, 0, 0, 0, time.UTC),
 		Duration:     "full_day",
 		Fields:       map[string]any{},
+		TargetID:     "target-1",
 	}
 	created, err := svc.Create(context.Background(), repUser(), activity)
 	if err != nil {
@@ -235,10 +241,105 @@ func TestActivityCreate_MaxActivitiesPerDay(t *testing.T) {
 		ActivityType: "visit",
 		DueDate:      time.Date(2026, 3, 23, 0, 0, 0, 0, time.UTC),
 		Fields:       map[string]any{},
+		TargetID:     "target-1",
 	}
 	_, err := svc.Create(context.Background(), repUser(), activity)
 	if !errors.Is(err, service.ErrMaxActivities) {
 		t.Errorf("expected ErrMaxActivities, got %v", err)
+	}
+}
+
+func TestActivityCreate_BlockedByVacation(t *testing.T) {
+	t.Parallel()
+	repo := &stubActivityRepo{hasActivityWithTypes: true}
+	audit := &stubAuditRepo{}
+	svc := newActivitySvc(repo, audit)
+
+	activity := &domain.Activity{
+		ActivityType: "visit",
+		DueDate:      time.Date(2026, 3, 23, 0, 0, 0, 0, time.UTC),
+		Fields:       map[string]any{},
+		TargetID:     "target-1",
+	}
+	_, err := svc.Create(context.Background(), repUser(), activity)
+	if !errors.Is(err, service.ErrBlockedDay) {
+		t.Errorf("expected ErrBlockedDay, got %v", err)
+	}
+}
+
+func TestActivityCreate_BlockingTypeBlockedByFieldActivity(t *testing.T) {
+	t.Parallel()
+	repo := &stubActivityRepo{hasActivityWithTypes: true}
+	audit := &stubAuditRepo{}
+	svc := newActivitySvc(repo, audit)
+
+	activity := &domain.Activity{
+		ActivityType: "vacation",
+		DueDate:      time.Date(2026, 3, 23, 0, 0, 0, 0, time.UTC),
+		Fields:       map[string]any{},
+	}
+	_, err := svc.Create(context.Background(), repUser(), activity)
+	if !errors.Is(err, service.ErrBlockedDay) {
+		t.Errorf("expected ErrBlockedDay, got %v", err)
+	}
+}
+
+func TestActivityCreate_VacationAllowedOnEmptyDay(t *testing.T) {
+	t.Parallel()
+	repo := &stubActivityRepo{hasActivityWithTypes: false}
+	audit := &stubAuditRepo{}
+	svc := newActivitySvc(repo, audit)
+
+	activity := &domain.Activity{
+		ActivityType: "vacation",
+		DueDate:      time.Date(2026, 3, 23, 0, 0, 0, 0, time.UTC),
+		Fields:       map[string]any{},
+	}
+	created, err := svc.Create(context.Background(), repUser(), activity)
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if created.ID == "" {
+		t.Error("expected ID to be set")
+	}
+}
+
+func TestActivityCreate_TargetRequiredForFieldActivity(t *testing.T) {
+	t.Parallel()
+	repo := &stubActivityRepo{}
+	audit := &stubAuditRepo{}
+	svc := newActivitySvc(repo, audit)
+
+	activity := &domain.Activity{
+		ActivityType: "visit",
+		DueDate:      time.Date(2026, 3, 23, 0, 0, 0, 0, time.UTC),
+		Fields:       map[string]any{},
+		// TargetID intentionally empty
+	}
+	_, err := svc.Create(context.Background(), repUser(), activity)
+	if !errors.Is(err, service.ErrTargetRequired) {
+		t.Errorf("expected ErrTargetRequired, got %v", err)
+	}
+}
+
+func TestActivityCreate_TargetNotRequiredForNonField(t *testing.T) {
+	t.Parallel()
+	repo := &stubActivityRepo{}
+	audit := &stubAuditRepo{}
+	svc := newActivitySvc(repo, audit)
+
+	activity := &domain.Activity{
+		ActivityType: "vacation",
+		DueDate:      time.Date(2026, 3, 23, 0, 0, 0, 0, time.UTC),
+		Fields:       map[string]any{},
+		// No TargetID — should be fine for non_field
+	}
+	created, err := svc.Create(context.Background(), repUser(), activity)
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if created.ID == "" {
+		t.Error("expected ID to be set")
 	}
 }
 

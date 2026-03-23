@@ -103,6 +103,10 @@ func mapActivityServiceError(w http.ResponseWriter, err error) {
 		writeError(w, http.StatusConflict, "CONFLICT", "activity is submitted and locked")
 	case errors.Is(err, service.ErrMaxActivities):
 		writeError(w, http.StatusConflict, "CONFLICT", "maximum activities per day reached")
+	case errors.Is(err, service.ErrBlockedDay):
+		writeError(w, http.StatusConflict, "CONFLICT", "day is blocked by a non-field activity")
+	case errors.Is(err, service.ErrTargetRequired):
+		writeError(w, http.StatusBadRequest, "BAD_REQUEST", "target is required for field activities")
 	default:
 		writeError(w, http.StatusInternalServerError, "INTERNAL_ERROR", "an unexpected error occurred")
 	}

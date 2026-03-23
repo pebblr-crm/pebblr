@@ -249,3 +249,21 @@ func (r *activityRepository) CountByDate(ctx context.Context, creatorID string, 
 	}
 	return count, nil
 }
+
+func (r *activityRepository) HasActivityWithTypes(ctx context.Context, creatorID string, date time.Time, types []string) (bool, error) {
+	if len(types) == 0 {
+		return false, nil
+	}
+	var exists bool
+	err := r.pool.QueryRow(ctx,
+		`SELECT EXISTS(
+			SELECT 1 FROM activities
+			WHERE creator_id = $1::UUID AND due_date = $2 AND activity_type = ANY($3) AND deleted_at IS NULL
+		)`,
+		creatorID, date, types,
+	).Scan(&exists)
+	if err != nil {
+		return false, fmt.Errorf("checking activities by type: %w", err)
+	}
+	return exists, nil
+}
