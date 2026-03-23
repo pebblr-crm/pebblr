@@ -14,9 +14,11 @@ import (
 // --- stub dashboard repo ---
 
 type stubDashboardRepo struct {
-	activityStats *store.ActivityStats
-	coverageStats *store.CoverageStats
-	frequencyRows []store.FrequencyRow
+	activityStats      *store.ActivityStats
+	coverageStats      *store.CoverageStats
+	frequencyRows      []store.FrequencyRow
+	weekendActivities  []store.WeekendActivity
+	recoveryActivities []time.Time
 }
 
 func (r *stubDashboardRepo) ActivityStats(_ context.Context, _ rbac.ActivityScope, _ store.DashboardFilter) (*store.ActivityStats, error) {
@@ -31,6 +33,14 @@ func (r *stubDashboardRepo) FrequencyStats(_ context.Context, _ rbac.ActivitySco
 	return r.frequencyRows, nil
 }
 
+func (r *stubDashboardRepo) WeekendFieldActivities(_ context.Context, _ rbac.ActivityScope, _ []string, _ store.DashboardFilter) ([]store.WeekendActivity, error) {
+	return r.weekendActivities, nil
+}
+
+func (r *stubDashboardRepo) RecoveryActivities(_ context.Context, _ rbac.ActivityScope, _ string, _ store.DashboardFilter) ([]time.Time, error) {
+	return r.recoveryActivities, nil
+}
+
 func dashboardConfig() *config.TenantConfig {
 	return &config.TenantConfig{
 		Activities: config.ActivitiesConfig{
@@ -42,6 +52,11 @@ func dashboardConfig() *config.TenantConfig {
 		},
 		Rules: config.RulesConfig{
 			Frequency: map[string]int{"a": 4, "b": 2, "c": 1},
+			Recovery: &config.RecoveryRule{
+				WeekendActivityFlag: true,
+				RecoveryWindowDays:  5,
+				RecoveryType:        "recovery",
+			},
 		},
 	}
 }
@@ -253,5 +268,119 @@ func TestDashboard_Frequency_NoFrequencyRule(t *testing.T) {
 	}
 	if x.Compliance != 0 {
 		t.Errorf("compliance = %f, want 0", x.Compliance)
+	}
+}
+
+// --- RecoveryBalance tests ---
+
+func TestDashboard_Recovery_EarnedFromWeekend(t *testing.T) {
+	t.Parallel()
+	// Saturday March 21, 2026
+	sat := time.Date(2026, 3, 21, 0, 0, 0, 0, time.UTC)
+	repo := &stubDashboardRepo{
+		weekendActivities: []store.WeekendActivity{{DueDate: sat}},
+	}
+	svc := newDashboardSvc(repo)
+
+	resp, err := svc.RecoveryBalance(context.Background(), adminUser(), marchFilter())
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if resp.Earned != 1 {
+		t.Errorf("earned = %d, want 1", resp.Earned)
+	}
+	if resp.Balance != 1 {
+		t.Errorf("balance = %d, want 1", resp.Balance)
+	}
+	if len(resp.Intervals) != 1 {
+		t.Fatalf("intervals = %d, want 1", len(resp.Intervals))
+	}
+	// Claim window: Mon Mar 23 to Fri Mar 27
+	iv := resp.Intervals[0]
+	if iv.ClaimFrom.Weekday() != time.Monday {
+		t.Errorf("claimFrom weekday = %s, want Monday", iv.ClaimFrom.Weekday())
+	}
+	if iv.ClaimBy.Weekday() != time.Friday {
+		t.Errorf("claimBy weekday = %s, want Friday", iv.ClaimBy.Weekday())
+	}
+	if iv.Claimed {
+		t.Error("expected unclaimed")
+	}
+}
+
+func TestDashboard_Recovery_ClaimedReducesBalance(t *testing.T) {
+	t.Parallel()
+	sat := time.Date(2026, 3, 21, 0, 0, 0, 0, time.UTC)
+	recoveryDay := time.Date(2026, 3, 25, 0, 0, 0, 0, time.UTC) // Wednesday within window
+	repo := &stubDashboardRepo{
+		weekendActivities:  []store.WeekendActivity{{DueDate: sat}},
+		recoveryActivities: []time.Time{recoveryDay},
+	}
+	svc := newDashboardSvc(repo)
+
+	resp, err := svc.RecoveryBalance(context.Background(), adminUser(), marchFilter())
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if resp.Earned != 1 {
+		t.Errorf("earned = %d, want 1", resp.Earned)
+	}
+	if resp.Taken != 1 {
+		t.Errorf("taken = %d, want 1", resp.Taken)
+	}
+	if resp.Balance != 0 {
+		t.Errorf("balance = %d, want 0", resp.Balance)
+	}
+	if !resp.Intervals[0].Claimed {
+		t.Error("expected claimed")
+	}
+}
+
+func TestDashboard_Recovery_NoConfigReturnsEmpty(t *testing.T) {
+	t.Parallel()
+	repo := &stubDashboardRepo{}
+	// Config without recovery rule
+	cfg := &config.TenantConfig{
+		Activities: config.ActivitiesConfig{
+			Types: []config.ActivityTypeConfig{
+				{Key: "visit", Label: "Visit", Category: "field"},
+			},
+		},
+	}
+	svc := service.NewDashboardService(repo, rbac.NewEnforcer(), cfg)
+
+	resp, err := svc.RecoveryBalance(context.Background(), adminUser(), marchFilter())
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if resp.Earned != 0 {
+		t.Errorf("earned = %d, want 0", resp.Earned)
+	}
+}
+
+func TestDashboard_Recovery_MultipleWeekends(t *testing.T) {
+	t.Parallel()
+	sat1 := time.Date(2026, 3, 7, 0, 0, 0, 0, time.UTC)  // Saturday
+	sun1 := time.Date(2026, 3, 8, 0, 0, 0, 0, time.UTC)  // Sunday
+	sat2 := time.Date(2026, 3, 14, 0, 0, 0, 0, time.UTC) // Saturday
+	repo := &stubDashboardRepo{
+		weekendActivities: []store.WeekendActivity{
+			{DueDate: sat1}, {DueDate: sun1}, {DueDate: sat2},
+		},
+	}
+	svc := newDashboardSvc(repo)
+
+	resp, err := svc.RecoveryBalance(context.Background(), adminUser(), marchFilter())
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if resp.Earned != 3 {
+		t.Errorf("earned = %d, want 3", resp.Earned)
+	}
+	if resp.Balance != 3 {
+		t.Errorf("balance = %d, want 3", resp.Balance)
+	}
+	if len(resp.Intervals) != 3 {
+		t.Errorf("intervals = %d, want 3", len(resp.Intervals))
 	}
 }

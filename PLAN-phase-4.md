@@ -4,7 +4,7 @@
 
 ## Checklist
 
-24. ❌ Weekend activity + recovery days
+24. ✅ Weekend activity + recovery days
 25. ❌ Target group management (quarterly)
 26. ❌ Plan generation (rule-based monthly plan proposal)
 27. ❌ i18n / Romanian UI
@@ -20,7 +20,7 @@ The following items from the original Phase 4 have been absorbed or superseded b
 
 ---
 
-## 1. Weekend Activity + Recovery Days ❌
+## 1. Weekend Activity + Recovery Days ✅
 
 Config rules:
 

@@ -36,6 +36,11 @@ type DashboardFilter struct {
 	TeamID   *string
 }
 
+// WeekendActivity holds a weekend field activity date for recovery tracking.
+type WeekendActivity struct {
+	DueDate time.Time
+}
+
 // DashboardRepository provides aggregation queries for the dashboard.
 type DashboardRepository interface {
 	// ActivityStats returns activity counts grouped by status and category for the given scope and filter.
@@ -46,4 +51,10 @@ type DashboardRepository interface {
 
 	// FrequencyStats returns per-classification visit counts for the given scope and filter.
 	FrequencyStats(ctx context.Context, scope rbac.ActivityScope, targetScope rbac.TargetScope, filter DashboardFilter) ([]FrequencyRow, error)
+
+	// WeekendFieldActivities returns dates of field-category activities on Saturdays/Sundays.
+	WeekendFieldActivities(ctx context.Context, scope rbac.ActivityScope, fieldTypes []string, filter DashboardFilter) ([]WeekendActivity, error)
+
+	// RecoveryActivities returns dates of recovery-type activities taken.
+	RecoveryActivities(ctx context.Context, scope rbac.ActivityScope, recoveryType string, filter DashboardFilter) ([]time.Time, error)
 }

@@ -151,6 +151,116 @@ func (s *DashboardService) Frequency(ctx context.Context, actor *domain.User, fi
 	return &FrequencyResponse{Items: items}, nil
 }
 
+// RecoveryClaimInterval represents a window in which a recovery day can be claimed.
+type RecoveryClaimInterval struct {
+	WeekendDate time.Time `json:"weekendDate"`
+	ClaimFrom   time.Time `json:"claimFrom"`
+	ClaimBy     time.Time `json:"claimBy"`
+	Claimed     bool      `json:"claimed"`
+}
+
+// RecoveryBalanceResponse is the API response for recovery day balance.
+type RecoveryBalanceResponse struct {
+	Earned    int                     `json:"earned"`
+	Taken     int                     `json:"taken"`
+	Balance   int                     `json:"balance"`
+	Intervals []RecoveryClaimInterval `json:"intervals"`
+}
+
+// RecoveryBalance returns the recovery day balance for the actor in the given period.
+func (s *DashboardService) RecoveryBalance(ctx context.Context, actor *domain.User, filter store.DashboardFilter) (*RecoveryBalanceResponse, error) {
+	if s.cfg == nil || s.cfg.Rules.Recovery == nil || !s.cfg.Rules.Recovery.WeekendActivityFlag {
+		return &RecoveryBalanceResponse{Intervals: []RecoveryClaimInterval{}}, nil
+	}
+
+	scope := s.enforcer.ScopeActivityQuery(ctx, actor)
+	recoveryRule := s.cfg.Rules.Recovery
+
+	// Get field activity types from config.
+	var fieldTypes []string
+	for i := range s.cfg.Activities.Types {
+		if s.cfg.Activities.Types[i].Category == "field" {
+			fieldTypes = append(fieldTypes, s.cfg.Activities.Types[i].Key)
+		}
+	}
+
+	weekendActivities, err := s.dashboard.WeekendFieldActivities(ctx, scope, fieldTypes, filter)
+	if err != nil {
+		return nil, fmt.Errorf("querying weekend activities: %w", err)
+	}
+
+	recoveryDates, err := s.dashboard.RecoveryActivities(ctx, scope, recoveryRule.RecoveryType, filter)
+	if err != nil {
+		return nil, fmt.Errorf("querying recovery activities: %w", err)
+	}
+
+	takenSet := make(map[string]bool)
+	for _, d := range recoveryDates {
+		takenSet[d.Format("2006-01-02")] = true
+	}
+
+	// Build claim intervals: each weekend activity earns one recovery day
+	// claimable starting the next business day, within recovery_window_days business days.
+	intervals := make([]RecoveryClaimInterval, 0, len(weekendActivities))
+	for _, wa := range weekendActivities {
+		claimFrom := nextBusinessDay(wa.DueDate)
+		claimBy := addBusinessDays(claimFrom, recoveryRule.RecoveryWindowDays-1)
+
+		// Check if any recovery was taken in this window.
+		claimed := false
+		for _, rd := range recoveryDates {
+			rdStr := rd.Format("2006-01-02")
+			if !rd.Before(claimFrom) && !rd.After(claimBy) && !takenSet[rdStr+"_used"] {
+				claimed = true
+				takenSet[rdStr+"_used"] = true
+				break
+			}
+		}
+
+		intervals = append(intervals, RecoveryClaimInterval{
+			WeekendDate: wa.DueDate,
+			ClaimFrom:   claimFrom,
+			ClaimBy:     claimBy,
+			Claimed:     claimed,
+		})
+	}
+
+	earned := len(weekendActivities)
+	claimedCount := 0
+	for _, iv := range intervals {
+		if iv.Claimed {
+			claimedCount++
+		}
+	}
+
+	return &RecoveryBalanceResponse{
+		Earned:    earned,
+		Taken:     claimedCount,
+		Balance:   earned - claimedCount,
+		Intervals: intervals,
+	}, nil
+}
+
+// nextBusinessDay returns the next Monday–Friday after the given date.
+func nextBusinessDay(d time.Time) time.Time {
+	d = d.AddDate(0, 0, 1)
+	for d.Weekday() == time.Saturday || d.Weekday() == time.Sunday {
+		d = d.AddDate(0, 0, 1)
+	}
+	return d
+}
+
+// addBusinessDays adds n business days (Mon–Fri) to a date.
+func addBusinessDays(d time.Time, n int) time.Time {
+	for n > 0 {
+		d = d.AddDate(0, 0, 1)
+		if d.Weekday() != time.Saturday && d.Weekday() != time.Sunday {
+			n--
+		}
+	}
+	return d
+}
+
 // monthsInRange returns the number of calendar months spanned by the date range (minimum 1).
 func monthsInRange(from, to time.Time) int {
 	if to.Before(from) {

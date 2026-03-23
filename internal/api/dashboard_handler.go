@@ -17,6 +17,7 @@ type DashboardServicer interface {
 	ActivityStats(ctx context.Context, actor *domain.User, filter store.DashboardFilter) (*service.ActivityStatsResponse, error)
 	Coverage(ctx context.Context, actor *domain.User, filter store.DashboardFilter) (*service.CoverageResponse, error)
 	Frequency(ctx context.Context, actor *domain.User, filter store.DashboardFilter) (*service.FrequencyResponse, error)
+	RecoveryBalance(ctx context.Context, actor *domain.User, filter store.DashboardFilter) (*service.RecoveryBalanceResponse, error)
 }
 
 // DashboardHandler handles HTTP requests for dashboard analytics.
@@ -35,6 +36,7 @@ func NewDashboardRouter(h *DashboardHandler) http.Handler {
 	r.Get("/activities", h.ActivityStats)
 	r.Get("/coverage", h.Coverage)
 	r.Get("/frequency", h.Frequency)
+	r.Get("/recovery", h.RecoveryBalance)
 	return r
 }
 
@@ -132,6 +134,31 @@ func (h *DashboardHandler) Coverage(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(http.StatusOK)
 	writeJSON(w, r, stats)
+}
+
+// RecoveryBalance handles GET /api/v1/dashboard/recovery
+func (h *DashboardHandler) RecoveryBalance(w http.ResponseWriter, r *http.Request) {
+	actor, err := rbac.UserFromContext(r.Context())
+	if err != nil {
+		writeError(w, http.StatusUnauthorized, "UNAUTHORIZED", "missing authenticated user")
+		return
+	}
+
+	filter, err := parseDashboardFilter(r)
+	if err != nil {
+		writeError(w, http.StatusBadRequest, "BAD_REQUEST", "invalid period or date format")
+		return
+	}
+
+	result, err := h.svc.RecoveryBalance(r.Context(), actor, filter)
+	if err != nil {
+		writeError(w, http.StatusInternalServerError, "INTERNAL_ERROR", "an unexpected error occurred")
+		return
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(http.StatusOK)
+	writeJSON(w, r, result)
 }
 
 // Frequency handles GET /api/v1/dashboard/frequency
