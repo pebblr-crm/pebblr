@@ -1,7 +1,7 @@
 import { createRoute } from '@tanstack/react-router'
 import { useState, useMemo, useCallback, useEffect } from 'react'
 import { APIProvider, Map as GoogleMap, AdvancedMarker } from '@vis.gl/react-google-maps'
-import { MapPin, Check, GripVertical } from 'lucide-react'
+import { MapPin, Check, GripVertical, FolderOpen, Save, Trash2 } from 'lucide-react'
 import { Route as rootRoute } from '../__root'
 import { LoadingSpinner } from '../../components/LoadingSpinner'
 import { useTargets, useTargetVisitStatus, useTargetFrequencyStatus } from '../../services/targets'
@@ -13,6 +13,7 @@ import type { TenantConfig } from '@/types/config'
 import type { Activity } from '@/types/activity'
 import type { Target } from '@/types/target'
 import { usePlannerState } from '@/contexts/planner'
+import { useCollections, useCreateCollection, useDeleteCollection } from '@/services/collections'
 
 export const Route = createRoute({
   getParentRoute: () => rootRoute,
@@ -71,6 +72,9 @@ function MapPlannerPage() {
   const { data: targetsResult, isLoading: targetsLoading } = useTargets({ limit: 200 })
   const { data: visitStatus } = useTargetVisitStatus()
   const batchCreate = useBatchCreateActivities()
+  const { data: collections } = useCollections()
+  const createCollection = useCreateCollection()
+  const deleteCollectionMut = useDeleteCollection()
   const { showToast } = useToast()
   const { state: plannerState, setWeek, setFrom } = usePlannerState()
 
@@ -111,6 +115,9 @@ function MapPlannerPage() {
   const [dragActivityId, setDragActivityId] = useState<string | null>(null)
   const [hoveredTargetId, setHoveredTargetId] = useState<string | null>(null)
   const [showCadenced, setShowCadenced] = useState(false)
+  const [savingCollection, setSavingCollection] = useState(false)
+  const [collectionName, setCollectionName] = useState('')
+  const [dragCollectionId, setDragCollectionId] = useState<string | null>(null)
 
   const patchActivity = usePatchActivity()
 
@@ -224,6 +231,21 @@ function MapPlannerPage() {
     })
   }, [])
 
+  // Handle collection drop onto a day slot
+  const handleCollectionDrop = useCallback((dateStr: string) => {
+    if (!dragCollectionId) return
+    const col = collections?.find((c) => c.id === dragCollectionId)
+    if (!col) return
+    setDayAssignments((prev) => {
+      const arr = prev[dateStr] ?? []
+      const existing = new Set(arr)
+      const toAdd = col.targetIds.filter((id) => !existing.has(id))
+      if (toAdd.length === 0) return prev
+      return { ...prev, [dateStr]: [...arr, ...toAdd] }
+    })
+    setDragCollectionId(null)
+  }, [dragCollectionId, collections])
+
   const handleDrop = useCallback((dateStr: string) => {
     // If an existing activity is being dragged, reschedule it.
     if (dragActivityId) {
@@ -237,6 +259,11 @@ function MapPlannerPage() {
       setDragActivityId(null)
       return
     }
+    // If a collection is being dragged, assign all its targets.
+    if (dragCollectionId) {
+      handleCollectionDrop(dateStr)
+      return
+    }
     // Otherwise drop all selected targets onto the day.
     setDayAssignments((prev) => {
       const arr = prev[dateStr] ?? []
@@ -246,7 +273,7 @@ function MapPlannerPage() {
       return { ...prev, [dateStr]: [...arr, ...toAdd] }
     })
     setSelectedIds(new Set())
-  }, [selectedIds, dragActivityId, patchActivity, showToast])
+  }, [selectedIds, dragActivityId, dragCollectionId, patchActivity, showToast, handleCollectionDrop])
 
   const removeFromDay = useCallback((dateStr: string, targetId: string) => {
     setDayAssignments((prev) => {
@@ -283,6 +310,33 @@ function MapPlannerPage() {
     }
   }, [dayAssignments, batchCreate, showToast])
 
+  const handleSaveCollection = useCallback(() => {
+    if (!collectionName.trim() || selectedIds.size === 0) return
+    createCollection.mutate(
+      { name: collectionName.trim(), targetIds: Array.from(selectedIds) },
+      {
+        onSuccess: () => {
+          showToast(`Collection "${collectionName.trim()}" saved.`, 'success')
+          setSavingCollection(false)
+          setCollectionName('')
+        },
+        onError: () => showToast('Failed to save collection.'),
+      },
+    )
+  }, [collectionName, selectedIds, createCollection, showToast])
+
+  const handleLoadCollection = useCallback((targetIds: string[]) => {
+    setSelectedIds(new Set(targetIds))
+  }, [])
+
+  const handleDeleteCollection = useCallback((id: string, name: string) => {
+    deleteCollectionMut.mutate(id, {
+      onSuccess: () => showToast(`Collection "${name}" deleted.`, 'success'),
+      onError: () => showToast('Failed to delete collection.'),
+    })
+  }, [deleteCollectionMut, showToast])
+
+  // Handle collection drop onto a day slot
   if (configLoading || targetsLoading) {
     return (
       <div className="flex items-center justify-center h-screen">
@@ -386,10 +440,90 @@ function MapPlannerPage() {
 
           {/* Target list (1/4) */}
           <div className="w-1/4 border-l border-slate-200 flex flex-col bg-white">
+            {/* Collections section */}
+            {collections && collections.length > 0 && (
+              <div className="border-b border-slate-100">
+                <div className="px-3 py-1.5">
+                  <span className="text-[10px] uppercase tracking-widest text-slate-400 font-bold">
+                    Collections
+                  </span>
+                </div>
+                {collections.map((col) => (
+                  <div
+                    key={col.id}
+                    draggable
+                    onDragStart={() => setDragCollectionId(col.id)}
+                    onDragEnd={() => setDragCollectionId(null)}
+                    className="flex items-center gap-2 px-3 py-1.5 hover:bg-slate-50 cursor-grab text-xs border-b border-slate-50"
+                  >
+                    <FolderOpen className="w-3 h-3 text-slate-400 shrink-0" />
+                    <button
+                      type="button"
+                      onClick={() => handleLoadCollection(col.targetIds)}
+                      className="flex-1 text-left font-medium text-on-surface truncate hover:text-primary"
+                    >
+                      {col.name}
+                    </button>
+                    <span className="text-[9px] text-slate-400 shrink-0">{col.targetIds.length}</span>
+                    <button
+                      type="button"
+                      onClick={(e) => {
+                        e.stopPropagation()
+                        handleDeleteCollection(col.id, col.name)
+                      }}
+                      className="text-slate-300 hover:text-error shrink-0"
+                    >
+                      <Trash2 className="w-3 h-3" />
+                    </button>
+                  </div>
+                ))}
+              </div>
+            )}
+
             <div className="p-3 border-b border-slate-100">
-              <h2 className="text-sm font-bold text-on-surface">
-                Selected ({selectedIds.size})
-              </h2>
+              <div className="flex items-center justify-between">
+                <h2 className="text-sm font-bold text-on-surface">
+                  Selected ({selectedIds.size})
+                </h2>
+                {selectedIds.size > 0 && !savingCollection && (
+                  <button
+                    type="button"
+                    onClick={() => setSavingCollection(true)}
+                    className="text-[10px] text-primary font-bold flex items-center gap-1 hover:opacity-70"
+                  >
+                    <Save className="w-3 h-3" />
+                    Save
+                  </button>
+                )}
+              </div>
+              {savingCollection && (
+                <div className="mt-2 flex gap-1">
+                  <input
+                    type="text"
+                    value={collectionName}
+                    onChange={(e) => setCollectionName(e.target.value)}
+                    placeholder="Collection name..."
+                    className="flex-1 px-2 py-1 text-xs border border-slate-200 rounded"
+                    onKeyDown={(e) => { if (e.key === 'Enter') handleSaveCollection() }}
+                    autoFocus
+                  />
+                  <button
+                    type="button"
+                    onClick={handleSaveCollection}
+                    disabled={!collectionName.trim() || createCollection.isPending}
+                    className="px-2 py-1 text-xs font-bold text-white bg-primary rounded disabled:opacity-50"
+                  >
+                    {createCollection.isPending ? '...' : 'Save'}
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => { setSavingCollection(false); setCollectionName('') }}
+                    className="px-2 py-1 text-xs text-slate-400 hover:text-slate-600"
+                  >
+                    ×
+                  </button>
+                </div>
+              )}
             </div>
             <div className="flex-1 overflow-y-auto">
               {/* Selected targets first */}
@@ -510,6 +644,7 @@ function MapPlannerPage() {
                   config={config!}
                   dragTargetId={dragTargetId}
                   dragActivityId={dragActivityId}
+                  dragCollectionId={dragCollectionId}
                   onDrop={() => handleDrop(dateStr)}
                   onRemove={(id) => removeFromDay(dateStr, id)}
                   onActivityDragStart={(id) => setDragActivityId(id)}
@@ -703,6 +838,7 @@ interface DayDropZoneProps {
   config: TenantConfig
   dragTargetId: string | null
   dragActivityId: string | null
+  dragCollectionId: string | null
   onDrop: () => void
   onRemove: (targetId: string) => void
   onActivityDragStart: (activityId: string) => void
@@ -717,6 +853,7 @@ function DayDropZone({
   config,
   dragTargetId,
   dragActivityId,
+  dragCollectionId,
   onDrop,
   onRemove,
   onActivityDragStart,
@@ -741,7 +878,7 @@ function DayDropZone({
       onDrop={(e) => {
         e.preventDefault()
         setDragOver(false)
-        if (dragTargetId || dragActivityId) onDrop()
+        if (dragTargetId || dragActivityId || dragCollectionId) onDrop()
       }}
       className={`rounded-lg border-2 border-dashed p-2 min-h-[100px] transition-colors ${
         dragOver

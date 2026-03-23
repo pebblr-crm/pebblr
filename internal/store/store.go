@@ -9,4 +9,5 @@ type Store interface {
 	Activities() ActivityRepository
 	Audit() AuditRepository
 	Dashboard() DashboardRepository
+	Collections() CollectionRepository
 }

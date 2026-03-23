@@ -22,8 +22,9 @@ type RouterConfig struct {
 	DashboardHandler *DashboardHandler
 	TeamHandler      *TeamHandler
 	UserHandler      *UserHandler
-	ConfigHandler    *ConfigHandler
-	WebDistPath      string
+	ConfigHandler      *ConfigHandler
+	CollectionHandler  *CollectionHandler
+	WebDistPath        string
 }
 
 // NewRouter constructs and returns the application HTTP router.
@@ -104,6 +105,19 @@ func NewRouter(cfg RouterConfig) http.Handler {
 			} else {
 				r.Get("/", notImplementedHandler)
 				r.Get("/{id}", notImplementedHandler)
+			}
+		})
+
+		// Collection routes
+		r.Route("/collections", func(r chi.Router) {
+			if cfg.CollectionHandler != nil {
+				r.Mount("/", NewCollectionRouter(cfg.CollectionHandler))
+			} else {
+				r.Get("/", notImplementedHandler)
+				r.Post("/", notImplementedHandler)
+				r.Get("/{id}", notImplementedHandler)
+				r.Put("/{id}", notImplementedHandler)
+				r.Delete("/{id}", notImplementedHandler)
 			}
 		})
 

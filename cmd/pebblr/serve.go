@@ -88,12 +88,14 @@ func serve(configPath string) error {
 	targetSvc := service.NewTargetService(db.Targets(), enforcer, tenantCfg, targetOpts...)
 	activitySvc := service.NewActivityService(db.Activities(), db.Users(), db.Audit(), enforcer, tenantCfg)
 	dashboardSvc := service.NewDashboardService(db.Dashboard(), enforcer, tenantCfg)
+	collectionSvc := service.NewCollectionService(db.Collections())
 
 	targetHandler := api.NewTargetHandler(targetSvc)
 	activityHandler := api.NewActivityHandler(activitySvc)
 	dashboardHandler := api.NewDashboardHandler(dashboardSvc)
 	teamHandler := api.NewTeamHandler(teamSvc)
 	userHandler := api.NewUserHandler(userSvc)
+	collectionHandler := api.NewCollectionHandler(collectionSvc)
 	configHandler := api.NewConfigHandler(tenantCfg)
 
 	webDistPath := os.Getenv("WEB_DIST_PATH")
@@ -117,8 +119,9 @@ func serve(configPath string) error {
 		DashboardHandler: dashboardHandler,
 		TeamHandler:      teamHandler,
 		UserHandler:      userHandler,
-		ConfigHandler:    configHandler,
-		WebDistPath:      webDistPath,
+		ConfigHandler:      configHandler,
+		CollectionHandler:  collectionHandler,
+		WebDistPath:        webDistPath,
 	})
 
 	srv := &http.Server{

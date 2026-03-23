@@ -8,7 +8,7 @@
 17. ✅ **Frontend: Dashboard** — activity KPIs, coverage, frequency compliance, period selector, 15 tests
 18. ✅ **Joint visit** — co-visitor validation, planner indicator, detail badge, 7 service tests
 19. ✅ **Frequency tracking** — visits per target vs frequency from config rules
-20. ❌ **Target collections** — user-created saved groups of targets for reuse across planning cycles
+20. ✅ **Target collections** — user-created saved groups of targets for reuse across planning cycles
 21. ❌ **Clone week** — duplicate a planned week's activities 3 weeks forward
 22. ❌ **Activity display name** — auto-generated label: type + target name + date
 23. ❌ **Planner density** — ensure 15+ activities visible per day
@@ -86,7 +86,7 @@ Implementation:
 
 ---
 
-## 5. Target Collections ❌
+## 5. Target Collections ✅
 
 Reps visit ~165 targets on a 3-week rotation. They naturally group targets by geography (e.g., "Bucharest Nord", "Ploiesti route") or day (e.g., "Monday targets"). Target collections let them save these groupings and reuse them across planning cycles.
 
