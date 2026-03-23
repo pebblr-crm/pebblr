@@ -25,7 +25,7 @@
 | **Helm / K8s / CI** | ✅ Done | Helm chart, Kind cluster, ExternalSecret, migration job, Makefile targets |
 | **Target import** | ✅ Done | `POST /api/v1/targets/import` — admin-only bulk upsert by external ID |
 | **Dead code removal** | ✅ Done | Leads, lead_events, CalendarEvent code all removed; replaced by Target + Activity domains |
-| **Next step** | | Phase 3: Dashboard stats API (item 16) |
+| **Next step** | | Phase 3: Joint visit (item 18) or Frequency tracking (item 19) |
 
 ## Context
 
@@ -66,10 +66,10 @@
 
 → [Full details](PLAN-phase-2.md)
 
-### Phase 3 — Reporting & Dashboard ❌
+### Phase 3 — Reporting & Dashboard 🔧
 
-16. ❌ **Dashboard stats API** — planned vs realized, coverage, field vs non-field, per user/team/period
-17. 🔧 **Frontend: Dashboard** — basic dashboard exists; needs DrMax KPIs (replace lead-based stats)
+16. ✅ **Dashboard stats API** — 3 endpoints (stats, coverage, user-stats) with RBAC scoping, 17 backend tests
+17. ✅ **Frontend: Dashboard** — activity-based KPIs: stat cards, status/category breakdowns, user table, period selector, 16 tests
 18. ❌ **Joint visit** — co-visitor association, activity visible to both users
 19. ❌ **Frequency tracking** — visits per target vs frequency from config rules
 

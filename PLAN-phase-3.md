@@ -1,50 +1,78 @@
-# Phase 3 — Reporting & Dashboard ❌
+# Phase 3 — Reporting & Dashboard 🔧
 
 > Back to [overview](PLAN.md)
 
 ## Checklist
 
-16. ❌ **Dashboard stats API** — planned vs realized, coverage, field vs non-field, per user/team/period
-17. 🔧 **Frontend: Dashboard** — basic dashboard exists; replace lead-based stats with DrMax KPIs
+16. ✅ **Dashboard stats API** — 3 RBAC-scoped endpoints (stats, coverage, user-stats), 17 backend tests
+17. ✅ **Frontend: Dashboard** — activity-based KPIs, stat cards, status/category breakdowns, user stats table, period selector, 16 tests
 18. ❌ **Joint visit** — co-visitor association, activity visible to both users
 19. ❌ **Frequency tracking** — visits per target vs frequency from config rules
 
 ---
 
-## 1. Dashboard Stats API ❌
+## 1. Dashboard Stats API ✅
 
-New endpoints (or rework existing `/api/v1/dashboard`) to provide DrMax-specific KPIs:
-
-- **Planned vs Realized** — count of activities by status (`planificat` vs `realizat`) for a given period
-- **Coverage** — percentage of assigned targets visited at least once in the period
-- **Field vs Non-field** — split of activities by `category` (field/non_field) from config
-- **Per user/team/period** — filterable by `creator_id`, `team_id`, date range
-- **Target compliance** — visits per classification vs `rules.frequency` targets
-
-### Possible Endpoints
+Three RBAC-scoped endpoints under `/api/v1/dashboard/`:
 
 ```
-GET /api/v1/dashboard/activities?period=2026-03&team_id=...
-GET /api/v1/dashboard/coverage?period=2026-03&user_id=...
-GET /api/v1/dashboard/frequency?period=2026-03&user_id=...
+GET /api/v1/dashboard/stats?period=2026-03&teamId=...&creatorId=...
+GET /api/v1/dashboard/coverage?period=2026-03&teamId=...&creatorId=...
+GET /api/v1/dashboard/user-stats?period=2026-03&teamId=...
 ```
 
-Remove existing lead-based dashboard stats (`DashboardService` currently aggregates lead data — replace entirely with activity-based metrics).
+### Backend Package Structure
+
+```
+internal/
+├── store/dashboard_store.go              # DashboardRepository interface, response types
+├── store/postgres/dashboard_repository.go # PostgreSQL impl (3 aggregate queries)
+├── service/dashboard_service.go          # DashboardService (RBAC, period parsing, category breakdown)
+├── service/dashboard_service_test.go     # 8 service tests
+├── api/dashboard_handler.go             # DashboardHandler (3 endpoints)
+├── api/dashboard_handler_test.go        # 9 handler tests
+└── api/router.go                        # Dashboard routes wired
+```
+
+**Stats endpoint** returns: total, submitted count, by-status breakdown, by-type breakdown, by-category (field/non_field) computed from config.
+
+**Coverage endpoint** returns: total targets, visited targets (distinct targets with realized field activities), coverage percentage. Uses both ActivityScope (for activities) and TargetScope (for targets) RBAC.
+
+**User-stats endpoint** returns: per-user breakdown with name (from JOIN), total count, and by-status breakdown. Sorted by total descending.
 
 ---
 
-## 2. Frontend Dashboard ❌
+## 2. Frontend Dashboard ✅
 
-The existing dashboard (`web/src/routes/index.tsx`) has generic stat cards. For DrMax:
+Replaced the generic dashboard with activity-based KPIs.
 
-- **Remove** `UnassignedLeadCard` (already planned for Phase 1 cleanup)
-- **Replace** lead-based `StatCard` data with activity-based KPIs
-- **Add** planned vs realized chart — bar or donut chart per user/team
-- **Add** coverage heatmap — targets visited vs not visited
-- **Add** frequency compliance table — per target classification, actual vs required
-- **Add** period selector — month/week picker to filter all KPIs
+### Components
 
-Reuse existing `StatCard` component structure, `TeamPerformanceCard` patterns.
+- `web/src/components/dashboard/PeriodSelector.tsx` — Month navigator with prev/next/today
+- `web/src/components/dashboard/UserStatsTable.tsx` — Per-user stats table with config-driven status labels
+- `web/src/components/dashboard/StatCard.tsx` — Reused from existing (unchanged)
+- `web/src/routes/index.tsx` — Dashboard page with stat cards, status/category breakdowns, user table
+
+### TanStack Query Hooks
+
+```typescript
+useDashboardStats(params)   // GET /dashboard/stats
+useCoverageStats(params)    // GET /dashboard/coverage
+useUserStats(params)        // GET /dashboard/user-stats
+```
+
+### KPI Layout
+
+1. **Stat cards row** — Total Activities, Submitted (with progress bar), Target Coverage (%), Targets Visited
+2. **Breakdowns** — Status breakdown bars (config-driven labels), Field vs Non-field category bars
+3. **User table** — Per-rep totals + per-status breakdown columns
+
+### Tests
+
+- 6 PeriodSelector tests (render, prev/next, year wrapping, today)
+- 5 UserStatsTable tests (render, labels, totals, empty state, fallback)
+- 3 StatCard tests (render, primary variant, change indicator)
+- 2 dashboard mock setup tests (TanStack Query mocks wired)
 
 ---
 
