@@ -76,6 +76,11 @@ export function patchActivityStatus({ id, status }: StatusPatchInput): Promise<A
   return api.patch<ActivityDetailResponse>(`/activities/${id}/status`, { status }).then((r) => r.activity)
 }
 
+// TODO: Replace fallback to PUT once PATCH /activities/:id endpoint is merged in the backend.
+export function patchActivity({ id, ...input }: Partial<UpdateActivityInput> & { id: string }): Promise<Activity> {
+  return api.put<ActivityDetailResponse>(`/activities/${id}`, input).then((r) => r.activity)
+}
+
 // ── TanStack Query hooks ──────────────────────────────────────────────────────
 
 export function useActivities(
@@ -141,6 +146,17 @@ export function usePatchActivityStatus(): UseMutationResult<Activity, Error, Sta
   const queryClient = useQueryClient()
   return useMutation({
     mutationFn: patchActivityStatus,
+    onSuccess: (updated) => {
+      queryClient.setQueryData(activityKeys.detail(updated.id), updated)
+      void queryClient.invalidateQueries({ queryKey: activityKeys.lists() })
+    },
+  })
+}
+
+export function usePatchActivity(): UseMutationResult<Activity, Error, Partial<UpdateActivityInput> & { id: string }> {
+  const queryClient = useQueryClient()
+  return useMutation({
+    mutationFn: patchActivity,
     onSuccess: (updated) => {
       queryClient.setQueryData(activityKeys.detail(updated.id), updated)
       void queryClient.invalidateQueries({ queryKey: activityKeys.lists() })
