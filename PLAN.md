@@ -17,14 +17,15 @@
 | **Database (migrations 001–007)** | ✅ Done | Users, teams, leads, calendar_events, targets, external_id |
 | **Database (migrations 008–011)** | ✅ Done | Drop leads (008), drop calendar_events (009), activities table with RLS (010), audit_log (011) |
 | **Activity domain + store** | ✅ Done | Entity, AuditEntry, ActivityRepository, AuditRepository, PostgreSQL impls, RBAC |
-| **Activity API** | ❌ | CRUD handlers, status transitions, submit flow, business rules |
+| **Activity API** | ✅ Done | CRUD handlers, status transitions, submit flow, business rules (7 endpoints, 38 tests) |
+| **Business rules** | ✅ Done | Max activities/day, blocked days, target required, status transitions, submit lock |
 | **Frontend foundation** | ✅ Done | React + TypeScript strict, Vite, TanStack Router/Query/Table, Tailwind |
 | **Frontend pages (existing)** | ✅ Done | Dashboard, team — with tests |
-| **Frontend pages (DrMax)** | 🔧 Partial | Targets list/detail done; planner, activity form/detail not started |
+| **Frontend pages (DrMax)** | 🔧 Partial | Targets list/detail done; activity form/detail done; planner not started |
 | **Helm / K8s / CI** | ✅ Done | Helm chart, Kind cluster, ExternalSecret, migration job, Makefile targets |
 | **Target import** | ✅ Done | `POST /api/v1/targets/import` — admin-only bulk upsert by external ID |
 | **Dead code removal** | ✅ Done | Leads, lead_events, CalendarEvent code all removed; replaced by Target + Activity domains |
-| **Next step** | | Activity API (item 10) — CRUD handlers + validation + submit |
+| **Next step** | | Frontend: Planner (item 14) — weekly/monthly calendar view |
 
 ## Context
 
@@ -32,7 +33,7 @@
 
 **Current state:** DrMax runs on Twenty CRM with a fragile per-user object duplication hack (54 custom objects, 126 workflows, PowerShell webhook) to work around Twenty's lack of row-level security. Pebblr replaces this with a proper multi-tenant CRM with native RBAC.
 
-**Current Pebblr codebase:** Core infrastructure is complete — auth, RBAC, tenant config, targets (doctors/pharmacies). Activity domain + store landed with full RBAC and PostgreSQL RLS. All dead code (Lead, CalendarEvent, lead_events) has been removed. Next: Activity API handlers + business rules + frontend.
+**Current Pebblr codebase:** Core infrastructure is complete — auth, RBAC, tenant config, targets (doctors/pharmacies). Activity domain, API, and business rules are fully implemented with 38 backend tests. Frontend activity form, detail, and edit pages are done with config-driven dynamic fields and 12 component tests. All dead code (Lead, CalendarEvent, lead_events) has been removed. Next: Planner (weekly/monthly calendar view).
 
 **Key design constraint:** Nothing client-specific is hardcoded. Enums (statuses, activity types, specialties, products, etc.) and field-level requirements are driven by a JSON tenant configuration file. Validation happens at the API layer against this config, not via DB constraints on enum values.
 
@@ -56,12 +57,12 @@
 ### Phase 2 — Activities (core workflow) 🔧
 
 9. ✅ **Activity domain + store** — `Activity` + `AuditEntry` entities, PostgreSQL repos (migrations 009–011), RBAC enforcer with activity methods
-10. ❌ **Activity API** — CRUD + status transitions + submit, all validated against config
+10. ✅ **Activity API** — CRUD + status transitions + submit, all validated against config (7 endpoints, 22 service + 16 handler tests)
 11. ✅ **Audit log** — migration 011, `AuditRepository` interface + PostgreSQL impl
-12. ❌ **Business rules enforcement** — max activities/day, blocked days (vacation/holiday), status transitions
-13. ❌ **Frontend: Activity form** — dynamic form from config, per-type field rendering
+12. ✅ **Business rules enforcement** — max activities/day, blocked days, target required, status transitions, submit lock
+13. ✅ **Frontend: Activity form** — config-driven dynamic form, create/edit routes, target search, multi-select fields, 12 tests
 14. ❌ **Frontend: Planner** — weekly/monthly calendar view with activities
-15. ❌ **Frontend: Activity detail** — view + report/submit flow
+15. ✅ **Frontend: Activity detail** — view + report/submit flow, status transitions, edit link
 
 → [Full details](PLAN-phase-2.md)
 

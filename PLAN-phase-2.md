@@ -7,10 +7,10 @@
 9. ✅ **Activity domain + store** — `Activity` + `AuditEntry` entities, PostgreSQL repos, migrations 009–011, RBAC enforcer
 10. ✅ **Activity API** — CRUD + status transitions + submit, all validated against config
 11. ✅ **Audit log** — migration 011, `AuditRepository` interface + PostgreSQL impl
-12. 🔧 **Business rules enforcement** — max activities/day ✅, status transitions ✅, submit lock ✅; blocked days (vacation/holiday) still needed
-13. ❌ **Frontend: Activity form** — dynamic form from config, per-type field rendering
+12. ✅ **Business rules enforcement** — max activities/day, blocked days, target required, status transitions, submit lock
+13. ✅ **Frontend: Activity form** — config-driven dynamic form, create/edit routes, target search, multi-select fields, 12 tests
 14. ❌ **Frontend: Planner** — weekly/monthly calendar view (replaces old calendar page)
-15. ❌ **Frontend: Activity detail** — view + report/submit flow
+15. ✅ **Frontend: Activity detail** — view + report/submit flow, status transitions, edit link
 16. ✅ **Remove calendar_event code** — backend fully removed; frontend calendar files remain until Planner lands
 
 ---
@@ -129,44 +129,96 @@ RBAC: ✅ `CanViewActivity`, `CanUpdateActivity`, `CanDeleteActivity`, `ScopeAct
 
 ---
 
-## 3. Business Rules 🔧
+## 3. Business Rules ✅
 
 - ✅ **Max activities per day:** `rules.max_activities_per_day` — enforced in `ActivityService.Create` via `CountByDate`
-- ❌ **Blocked days:** Activity types with `blocks_field_activities: true` (vacation, public_holiday) prevent scheduling field activities on that day — not yet enforced
+- ✅ **Blocked days:** Activity types with `blocks_field_activities: true` (vacation, public_holiday) prevent scheduling field activities on that day — enforced in `ActivityService.Create` via `HasActivityWithTypes`
 - ✅ **Status transitions:** Only allowed transitions from `activities.status_transitions` config — enforced in `PatchStatus`
 - ✅ **Submit lock:** Once `submitted_at` is set, activity cannot be edited or deleted — enforced in Update, Delete, Submit, PatchStatus
-- ❌ **Target required:** Visit-type activities require `target_id` — not yet enforced (needs check in service layer based on activity type category)
+- ✅ **Target required:** Field-category activities require `target_id` — enforced in `ActivityService.Create` based on activity type category
 
 ---
 
-## 4. Frontend: Activities ❌
+## 4. Frontend: Activities 🔧
 
-### 4.1 New Routes
+### 4.1 Routes
 
-| Route                    | Component        | Description                                        |
-| ------------------------ | ---------------- | -------------------------------------------------- |
-| `/planner`               | `Planner`        | Weekly/monthly calendar view of activities          |
-| `/planner/daily`         | `PlannerDaily`   | Daily agenda view with time slots                   |
-| `/activities/new`        | `ActivityForm`   | Create activity (dynamic form from config)          |
-| `/activities/:id`        | `ActivityDetail` | Activity detail + report/submit                     |
-| `/activities/:id/edit`   | `ActivityForm`   | Edit activity (blocked if submitted)                |
+| Route                    | Component           | Status | Description                                        |
+| ------------------------ | ------------------- | ------ | -------------------------------------------------- |
+| `/activities/new`        | `NewActivityPage`   | ✅     | Create activity (dynamic form from config)          |
+| `/activities/:id`        | `ActivityDetailPage`| ✅     | Activity detail + report/submit + status transitions|
+| `/activities/:id/edit`   | `EditActivityPage`  | ✅     | Edit activity (blocked if submitted)                |
+| `/planner`               | `Planner`           | ❌     | Weekly/monthly calendar view of activities          |
+| `/planner/daily`         | `PlannerDaily`      | ❌     | Daily agenda view with time slots                   |
 
-### 4.2 Dynamic Form Rendering
+### 4.2 Dynamic Form Rendering ✅
 
-The `ActivityForm` component does not hardcode fields. It:
+The `ActivityForm` component (`web/src/components/ActivityForm.tsx`) does not hardcode fields. It:
 
 1. Fetches tenant config via `useConfig()` (cached with TanStack Query, staleTime: Infinity)
 2. On activity type selection, looks up the type's `fields` array from config
 3. Renders each field based on its `type`:
    - `text` → `<input type="text">`
    - `select` → `<select>` with options from config (resolved via `options_ref`)
-   - `multi_select` → multi-select component with search
-   - `relation` → lookup/search component (targets or users)
-   - `date` → date picker
-4. Marks required fields with visual indicator
-5. On save: sends `{ activity_type, status, due_date, duration, fields: { ... } }` — backend validates
+   - `multi_select` → toggle buttons with options from config
+   - `date` → `<input type="date">`
+4. Marks required fields with visual `*` indicator
+5. Shows target search with dropdown for field-category activities
+6. On save: sends `{ activityType, status, dueDate, duration, fields: { ... } }` — backend validates
+7. 12 component tests in `ActivityForm.test.tsx`
 
-### 4.3 Planner — Reuse Patterns from Calendar
+### 4.3 Activity Detail ✅
+
+The `ActivityDetailPage` (`web/src/routes/activities/$activityId.tsx`) shows:
+- Activity header with type, status badge, date, duration
+- Submitted lock indicator
+- Edit button + Submit Report button (hidden when submitted)
+- Dynamic fields resolved via config options
+- Status transition buttons (from config `status_transitions`)
+- Link to target detail page
+
+### 4.4 TypeScript Types ✅
+
+```typescript
+// web/src/types/activity.ts
+interface Activity {
+  id: string
+  activityType: string
+  status: string
+  dueDate: string
+  duration: string
+  routing?: string
+  fields: Record<string, unknown>
+  targetId?: string
+  creatorId: string
+  jointVisitUserId?: string
+  teamId?: string
+  submittedAt?: string
+  createdAt: string
+  updatedAt: string
+}
+
+// web/src/types/config.ts — extended with:
+interface ActivitiesConfig { statuses, status_transitions, durations, types, routing_options }
+interface ActivityTypeConfig { key, label, category, fields, submit_required, blocks_field_activities }
+interface RulesConfig { frequency, max_activities_per_day, ... }
+```
+
+### 4.5 TanStack Query Hooks ✅
+
+All 7 hooks implemented in `web/src/services/activities.ts`:
+
+```typescript
+useActivities(filters)               // GET /activities
+useActivity(id)                      // GET /activities/:id
+useCreateActivity()                  // POST /activities
+useUpdateActivity()                  // PUT /activities/:id
+useDeleteActivity()                  // DELETE /activities/:id
+useSubmitActivity()                  // POST /activities/:id/submit
+usePatchActivityStatus()             // PATCH /activities/:id/status
+```
+
+### 4.6 Planner — Next ❌
 
 The old `CalendarGrid.tsx` and `EventCard.tsx` provide useful patterns:
 - Month grid layout logic
@@ -180,47 +232,11 @@ Reuse these patterns in the Planner component, then delete the originals. The Pl
 - Status indicators (planned/realized/cancelled)
 - Drag-and-drop (Phase 4)
 
-### 4.4 Frontend Cleanup
+### 4.7 Frontend Cleanup (with Planner)
 
-Remove when Activity domain is ready:
+Remove when Planner lands:
 - `web/src/routes/calendar/` → replaced by Planner
 - `web/src/services/calendar.ts` → replaced by activity service
 - `web/src/types/calendar.ts` → replaced by activity types
 - `web/src/components/calendar/` → patterns reused in Planner, originals deleted
 - Sidebar navigation: replace "Calendar" with "Planner"
-
-### 4.5 TypeScript Types
-
-```typescript
-// types/activity.ts
-interface Activity {
-  id: string
-  activity_type: string
-  status: string
-  due_date: string
-  duration: string
-  routing?: string
-  fields: Record<string, unknown>
-  target_id?: string
-  target?: Target  // populated on detail
-  creator_id: string
-  joint_visit_user_id?: string
-  team_id?: string
-  submitted_at?: string
-  created_at: string
-  updated_at: string
-}
-```
-
-### 4.6 TanStack Query Hooks
-
-```typescript
-// services/activities.ts
-useActivities(filters)               // GET /activities
-useActivity(id)                      // GET /activities/:id
-useCreateActivity()                  // POST /activities
-useUpdateActivity()                  // PUT /activities/:id
-useDeleteActivity()                  // DELETE /activities/:id
-useSubmitActivity()                  // POST /activities/:id/submit
-usePatchActivityStatus()             // PATCH /activities/:id/status
-```
