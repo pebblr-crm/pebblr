@@ -178,6 +178,32 @@ export function useBatchCreateActivities(): UseMutationResult<BatchCreateResult,
   })
 }
 
+// ── Clone week ────────────────────────────────────────────────────────────────
+
+export interface CloneWeekInput {
+  sourceWeekStart: string
+  targetWeekStart: string
+}
+
+export interface CloneWeekResult {
+  created: number
+  skipped: number
+}
+
+export function cloneWeek(input: CloneWeekInput): Promise<CloneWeekResult> {
+  return api.post<CloneWeekResult>('/activities/clone-week', input)
+}
+
+export function useCloneWeek(): UseMutationResult<CloneWeekResult, Error, CloneWeekInput> {
+  const queryClient = useQueryClient()
+  return useMutation({
+    mutationFn: cloneWeek,
+    onSuccess: () => {
+      void queryClient.invalidateQueries({ queryKey: activityKeys.lists() })
+    },
+  })
+}
+
 export function usePatchActivity(): UseMutationResult<Activity, Error, Partial<UpdateActivityInput> & { id: string }> {
   const queryClient = useQueryClient()
   return useMutation({

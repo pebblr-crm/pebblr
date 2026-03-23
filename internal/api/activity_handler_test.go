@@ -126,6 +126,10 @@ func (s *stubActivitySvc) PatchStatus(_ context.Context, _ *domain.User, id, new
 	return a, nil
 }
 
+func (s *stubActivitySvc) CloneWeek(_ context.Context, _ *domain.User, _, _ time.Time) (*service.CloneWeekResult, error) {
+	return &service.CloneWeekResult{Created: 5}, nil
+}
+
 func (s *stubActivitySvc) getActivity() *domain.Activity {
 	if s.activity != nil {
 		a := *s.activity

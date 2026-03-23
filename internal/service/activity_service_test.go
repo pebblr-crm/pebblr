@@ -17,6 +17,7 @@ import (
 
 type stubActivityRepo struct {
 	activity             *domain.Activity
+	listActivities       []*domain.Activity
 	created              *domain.Activity
 	updated              *domain.Activity
 	getErr               error
@@ -35,6 +36,9 @@ func (r *stubActivityRepo) Get(_ context.Context, _ string) (*domain.Activity, e
 }
 
 func (r *stubActivityRepo) List(_ context.Context, _ rbac.ActivityScope, _ store.ActivityFilter, page, limit int) (*store.ActivityPage, error) {
+	if r.listActivities != nil {
+		return &store.ActivityPage{Activities: r.listActivities, Total: len(r.listActivities), Page: page, Limit: limit}, nil
+	}
 	if r.activity != nil {
 		return &store.ActivityPage{Activities: []*domain.Activity{r.activity}, Total: 1, Page: page, Limit: limit}, nil
 	}
@@ -948,5 +952,82 @@ func TestActivityCreate_EmptyJointVisitorAllowed(t *testing.T) {
 	}
 	if created.JointVisitUID != "" {
 		t.Errorf("expected empty joint visit user, got %s", created.JointVisitUID)
+	}
+}
+
+// --- CloneWeek tests ---
+
+func TestCloneWeek_Success(t *testing.T) {
+	t.Parallel()
+	monday := time.Date(2026, 3, 23, 0, 0, 0, 0, time.UTC)
+	repo := &stubActivityRepo{
+		listActivities: []*domain.Activity{
+			{ID: "a1", ActivityType: "visit", DueDate: monday, Duration: "full_day", TargetID: "t1", Fields: map[string]any{"visit_type": "f2f"}},
+			{ID: "a2", ActivityType: "visit", DueDate: monday.AddDate(0, 0, 2), Duration: "full_day", TargetID: "t2", Fields: map[string]any{"visit_type": "f2f"}},
+		},
+	}
+	svc := newActivitySvc(repo, &stubAuditRepo{})
+
+	targetMonday := monday.AddDate(0, 0, 21) // +3 weeks
+	result, err := svc.CloneWeek(context.Background(), repUser(), monday, targetMonday)
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	// First List call returns source activities, second List call returns empty target week,
+	// but our stub returns the same list for both calls. The duplicate detection uses
+	// targetID+date, and since dates are shifted, no conflicts → all created.
+	if result.Created == 0 {
+		t.Error("expected at least 1 created activity")
+	}
+}
+
+func TestCloneWeek_SourceNotMonday(t *testing.T) {
+	t.Parallel()
+	tuesday := time.Date(2026, 3, 24, 0, 0, 0, 0, time.UTC) // Tuesday
+	monday := time.Date(2026, 4, 13, 0, 0, 0, 0, time.UTC)
+	repo := &stubActivityRepo{}
+	svc := newActivitySvc(repo, &stubAuditRepo{})
+
+	_, err := svc.CloneWeek(context.Background(), repUser(), tuesday, monday)
+	if err == nil {
+		t.Fatal("expected error for non-Monday source")
+	}
+}
+
+func TestCloneWeek_TargetNotMonday(t *testing.T) {
+	t.Parallel()
+	monday := time.Date(2026, 3, 23, 0, 0, 0, 0, time.UTC)
+	wednesday := time.Date(2026, 4, 15, 0, 0, 0, 0, time.UTC) // Wednesday
+	repo := &stubActivityRepo{}
+	svc := newActivitySvc(repo, &stubAuditRepo{})
+
+	_, err := svc.CloneWeek(context.Background(), repUser(), monday, wednesday)
+	if err == nil {
+		t.Fatal("expected error for non-Monday target")
+	}
+}
+
+func TestCloneWeek_SameWeek(t *testing.T) {
+	t.Parallel()
+	monday := time.Date(2026, 3, 23, 0, 0, 0, 0, time.UTC)
+	repo := &stubActivityRepo{}
+	svc := newActivitySvc(repo, &stubAuditRepo{})
+
+	_, err := svc.CloneWeek(context.Background(), repUser(), monday, monday)
+	if err == nil {
+		t.Fatal("expected error for same source and target week")
+	}
+}
+
+func TestCloneWeek_EmptySourceWeek(t *testing.T) {
+	t.Parallel()
+	monday := time.Date(2026, 3, 23, 0, 0, 0, 0, time.UTC)
+	target := monday.AddDate(0, 0, 21)
+	repo := &stubActivityRepo{} // no activities
+	svc := newActivitySvc(repo, &stubAuditRepo{})
+
+	_, err := svc.CloneWeek(context.Background(), repUser(), monday, target)
+	if err == nil {
+		t.Fatal("expected error for empty source week")
 	}
 }
