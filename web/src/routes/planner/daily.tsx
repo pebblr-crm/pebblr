@@ -7,6 +7,15 @@ import { LoadingSpinner } from '../../components/LoadingSpinner'
 import { useActivities } from '../../services/activities'
 import { useConfig } from '../../services/config'
 import { formatDate, addDays } from '@/utils/date'
+import {
+  getTypeLabel,
+  getTypeCategory,
+  getStatusLabel,
+  getDurationLabel,
+  CATEGORY_COLORS,
+  STATUS_BADGE_COLORS,
+  MONTH_NAMES,
+} from '@/utils/config'
 
 export const Route = createRoute({
   getParentRoute: () => rootRoute,
@@ -15,21 +24,6 @@ export const Route = createRoute({
 })
 
 const DAY_NAMES = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday']
-const MONTH_NAMES = [
-  'January', 'February', 'March', 'April', 'May', 'June',
-  'July', 'August', 'September', 'October', 'November', 'December',
-]
-
-const categoryColors: Record<string, string> = {
-  field: 'border-amber-500 bg-amber-50',
-  non_field: 'border-blue-400 bg-blue-50',
-}
-
-const statusBadge: Record<string, string> = {
-  planificat: 'bg-amber-100 text-amber-700',
-  realizat: 'bg-emerald-100 text-emerald-700',
-  anulat: 'bg-red-100 text-red-700',
-}
 
 export function PlannerDailyPage() {
   const [currentDate, setCurrentDate] = useState(() => new Date())
@@ -124,13 +118,12 @@ export function PlannerDailyPage() {
       ) : (
         <div className="space-y-3" data-testid="daily-activities">
           {activities.map((activity) => {
-            const typeConfig = config?.activities.types.find((t) => t.key === activity.activityType)
-            const typeLabel = typeConfig?.label ?? activity.activityType
-            const category = typeConfig?.category ?? 'field'
-            const style = categoryColors[category] ?? categoryColors.field
-            const statusLabel = config?.activities.statuses.find((s) => s.key === activity.status)?.label ?? activity.status
-            const statusStyle = statusBadge[activity.status] ?? 'bg-slate-100 text-slate-600'
-            const durationLabel = config?.activities.durations.find((d) => d.key === activity.duration)?.label ?? activity.duration
+            const typeLabel = getTypeLabel(config?.activities, activity.activityType)
+            const category = getTypeCategory(config?.activities, activity.activityType)
+            const style = CATEGORY_COLORS[category] ?? CATEGORY_COLORS.field
+            const statusLabel = getStatusLabel(config?.activities, activity.status)
+            const statusStyle = STATUS_BADGE_COLORS[activity.status] ?? 'bg-slate-100 text-slate-600'
+            const durationLabel = getDurationLabel(config?.activities, activity.duration)
 
             return (
               <Link

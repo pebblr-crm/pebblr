@@ -9,6 +9,7 @@ import { useConfig } from '../../services/config'
 import { MonthGrid } from '../../components/planner/MonthGrid'
 import { WeekGrid } from '../../components/planner/WeekGrid'
 import { formatDate, addDays, getMonday, extractDate } from '@/utils/date'
+import { MONTH_NAMES } from '@/utils/config'
 
 export const Route = createRoute({
   getParentRoute: () => rootRoute,
@@ -18,10 +19,6 @@ export const Route = createRoute({
 
 type ViewMode = 'week' | 'month'
 
-const MONTH_NAMES = [
-  'January', 'February', 'March', 'April', 'May', 'June',
-  'July', 'August', 'September', 'October', 'November', 'December',
-]
 
 export function PlannerPage() {
   const now = new Date()

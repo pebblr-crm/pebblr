@@ -1,15 +1,16 @@
 import { Link } from '@tanstack/react-router'
 import type { Activity } from '@/types/activity'
 import type { TenantConfig } from '@/types/config'
+import {
+  getTypeLabel,
+  getTypeCategory,
+  getDurationLabel,
+  CATEGORY_COLORS,
+} from '@/utils/config'
 
 interface ActivityCardProps {
   activity: Activity
   config?: TenantConfig
-}
-
-const categoryColors: Record<string, string> = {
-  field: 'bg-amber-100 border-amber-500 text-amber-900',
-  non_field: 'bg-blue-100 border-blue-400 text-blue-900',
 }
 
 const statusDots: Record<string, string> = {
@@ -19,12 +20,11 @@ const statusDots: Record<string, string> = {
 }
 
 export function ActivityCard({ activity, config }: ActivityCardProps) {
-  const typeConfig = config?.activities.types.find((t) => t.key === activity.activityType)
-  const typeLabel = typeConfig?.label ?? activity.activityType
-  const category = typeConfig?.category ?? 'field'
-  const style = categoryColors[category] ?? categoryColors.field
+  const typeLabel = getTypeLabel(config?.activities, activity.activityType)
+  const category = getTypeCategory(config?.activities, activity.activityType)
+  const style = CATEGORY_COLORS[category] ?? CATEGORY_COLORS.field
   const statusDot = statusDots[activity.status] ?? 'bg-slate-400'
-  const durationLabel = config?.activities.durations.find((d) => d.key === activity.duration)?.label ?? activity.duration
+  const durationLabel = getDurationLabel(config?.activities, activity.duration)
 
   return (
     <Link

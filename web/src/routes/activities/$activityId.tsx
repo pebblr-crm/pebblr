@@ -6,6 +6,7 @@ import { LoadingSpinner } from '../../components/LoadingSpinner'
 import { useActivity, useSubmitActivity, usePatchActivityStatus } from '../../services/activities'
 import { useConfig } from '../../services/config'
 import { displayDate } from '@/utils/date'
+import { getTypeConfig, getTypeLabel, getStatusLabel, getDurationLabel, STATUS_BADGE_COLORS } from '@/utils/config'
 
 export const Route = createRoute({
   getParentRoute: () => rootRoute,
@@ -44,10 +45,10 @@ export function ActivityDetailPage() {
     )
   }
 
-  const typeConfig = config?.activities.types.find((t) => t.key === activity.activityType)
-  const typeLabel = typeConfig?.label ?? activity.activityType
-  const statusLabel = config?.activities.statuses.find((s) => s.key === activity.status)?.label ?? activity.status
-  const durationLabel = config?.activities.durations.find((d) => d.key === activity.duration)?.label ?? activity.duration
+  const typeConfig = getTypeConfig(config?.activities, activity.activityType)
+  const typeLabel = getTypeLabel(config?.activities, activity.activityType)
+  const statusLabel = getStatusLabel(config?.activities, activity.status)
+  const durationLabel = getDurationLabel(config?.activities, activity.duration)
   const isSubmitted = Boolean(activity.submittedAt)
 
   const allowedTransitions = config?.activities.status_transitions[activity.status] ?? []
@@ -74,11 +75,7 @@ export function ActivityDetailPage() {
     return String(value)
   }
 
-  const statusColor = activity.status === 'realizat'
-    ? 'bg-emerald-100 text-emerald-700'
-    : activity.status === 'anulat'
-      ? 'bg-red-100 text-red-700'
-      : 'bg-primary-fixed text-primary'
+  const statusColor = STATUS_BADGE_COLORS[activity.status] ?? 'bg-primary-fixed text-primary'
 
   return (
     <motion.div
@@ -215,7 +212,7 @@ export function ActivityDetailPage() {
           <h2 className="text-lg font-bold text-on-surface mb-4 font-headline">Change Status</h2>
           <div className="flex flex-wrap gap-2">
             {allowedTransitions.map((toStatus) => {
-              const label = config?.activities.statuses.find((s) => s.key === toStatus)?.label ?? toStatus
+              const label = getStatusLabel(config?.activities, toStatus)
               return (
                 <button
                   key={toStatus}

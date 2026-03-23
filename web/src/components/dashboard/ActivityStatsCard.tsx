@@ -1,14 +1,10 @@
 import type { ActivityStatsResponse } from '@/types/dashboard'
 import type { ActivitiesConfig } from '@/types/config'
+import { getStatusLabel } from '@/utils/config'
 
 interface ActivityStatsCardProps {
   data: ActivityStatsResponse
   activitiesConfig?: ActivitiesConfig
-}
-
-function statusLabel(key: string, config?: ActivitiesConfig): string {
-  const def = config?.statuses.find((s) => s.key === key)
-  return def?.label ?? key
 }
 
 export function ActivityStatsCard({ data, activitiesConfig }: ActivityStatsCardProps) {
@@ -33,7 +29,7 @@ export function ActivityStatsCard({ data, activitiesConfig }: ActivityStatsCardP
           const pct = data.total > 0 ? Math.round((count / data.total) * 100) : 0
           return (
             <div key={status} className="flex items-center justify-between text-sm">
-              <span className="text-on-surface-variant">{statusLabel(status, activitiesConfig)}</span>
+              <span className="text-on-surface-variant">{getStatusLabel(activitiesConfig, status)}</span>
               <span className="font-semibold text-on-surface">{count} <span className="text-on-surface-variant font-normal">({pct}%)</span></span>
             </div>
           )
