@@ -8,7 +8,7 @@ import { useActivities } from '../../services/activities'
 import { useConfig } from '../../services/config'
 import { formatDate, addDays } from '@/utils/date'
 import {
-  getTypeLabel,
+  getActivityTitle,
   getTypeCategory,
   getStatusLabel,
   getDurationLabel,
@@ -122,7 +122,7 @@ export function PlannerDailyPage() {
       ) : (
         <div className="space-y-3" data-testid="daily-activities">
           {activities.map((activity) => {
-            const typeLabel = getTypeLabel(config?.activities, activity.activityType)
+            const title = getActivityTitle(config, activity)
             const category = getTypeCategory(config?.activities, activity.activityType)
             const style = CATEGORY_COLORS[category] ?? CATEGORY_COLORS.field
             const statusLabel = getStatusLabel(config?.activities, activity.status)
@@ -139,7 +139,7 @@ export function PlannerDailyPage() {
               >
                 <div className="flex items-start justify-between">
                   <div>
-                    <h3 className="text-sm font-bold text-on-surface">{typeLabel}</h3>
+                    <h3 className="text-sm font-bold text-on-surface">{title}</h3>
                     <p className="text-xs text-on-surface-variant mt-1">{durationLabel}</p>
                     {activity.routing && (
                       <p className="text-xs text-on-surface-variant mt-0.5">Route: {activity.routing}</p>

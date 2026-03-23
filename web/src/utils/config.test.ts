@@ -5,10 +5,13 @@ import {
   getTypeCategory,
   getStatusLabel,
   getDurationLabel,
+  getActivityTitle,
+  getActivityDisplayName,
   CATEGORY_COLORS,
   MONTH_NAMES,
 } from './config'
-import type { ActivitiesConfig } from '@/types/config'
+import type { ActivitiesConfig, TenantConfig } from '@/types/config'
+import type { Activity } from '@/types/activity'
 
 const mockConfig: ActivitiesConfig = {
   types: [
@@ -127,5 +130,82 @@ describe('MONTH_NAMES', () => {
   it('starts with January and ends with December', () => {
     expect(MONTH_NAMES[0]).toBe('January')
     expect(MONTH_NAMES[11]).toBe('December')
+  })
+})
+
+// ── getActivityTitle / getActivityDisplayName ─────────────────────────────
+
+const fullConfig: TenantConfig = {
+  tenant: { name: 'Test', locale: 'en' },
+  accounts: { types: [] },
+  activities: mockConfig,
+  options: {},
+  rules: {
+    frequency: {},
+    max_activities_per_day: 10,
+    default_visit_duration_minutes: {},
+    visit_duration_step_minutes: 30,
+  },
+}
+
+function makeActivity(overrides: Partial<Activity> = {}): Activity {
+  return {
+    id: 'a1',
+    activityType: 'visit',
+    status: 'planificat',
+    dueDate: '2026-03-24',
+    duration: '1h',
+    fields: {},
+    creatorId: 'u1',
+    createdAt: '2026-03-24T00:00:00Z',
+    updatedAt: '2026-03-24T00:00:00Z',
+    ...overrides,
+  }
+}
+
+describe('getActivityTitle', () => {
+  it('returns type label with target name for field activities', () => {
+    const a = makeActivity({ targetName: 'Dr. Popescu' })
+    expect(getActivityTitle(fullConfig, a)).toBe('Vizită — Dr. Popescu')
+  })
+
+  it('returns just type label when no target name', () => {
+    const a = makeActivity({ activityType: 'training' })
+    expect(getActivityTitle(fullConfig, a)).toBe('Training')
+  })
+
+  it('returns label override when set', () => {
+    const a = makeActivity({ label: 'Custom Label', targetName: 'Dr. Popescu' })
+    expect(getActivityTitle(fullConfig, a)).toBe('Custom Label')
+  })
+
+  it('falls back to activityType key when config is undefined', () => {
+    const a = makeActivity({ targetName: 'Dr. Popescu' })
+    expect(getActivityTitle(undefined, a)).toBe('visit — Dr. Popescu')
+  })
+
+  it('returns type key without target for non-field activity and no config', () => {
+    const a = makeActivity({ activityType: 'training' })
+    expect(getActivityTitle(undefined, a)).toBe('training')
+  })
+})
+
+describe('getActivityDisplayName', () => {
+  it('appends short date to title', () => {
+    const a = makeActivity({ targetName: 'Dr. Popescu', dueDate: '2026-03-24' })
+    const result = getActivityDisplayName(fullConfig, a)
+    expect(result).toBe('Vizită — Dr. Popescu — 24 Mar')
+  })
+
+  it('works for non-field activities without target', () => {
+    const a = makeActivity({ activityType: 'training', dueDate: '2026-01-15' })
+    const result = getActivityDisplayName(fullConfig, a)
+    expect(result).toBe('Training — 15 Jan')
+  })
+
+  it('uses label override with date', () => {
+    const a = makeActivity({ label: 'Custom', dueDate: '2026-12-25' })
+    const result = getActivityDisplayName(fullConfig, a)
+    expect(result).toBe('Custom — 25 Dec')
   })
 })

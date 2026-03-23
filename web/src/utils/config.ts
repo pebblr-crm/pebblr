@@ -88,15 +88,33 @@ export function getActivityTitle(config: TenantConfig | undefined, activity: Act
   const typeLabel = getTypeLabel(ac, activity.activityType)
   const typeCfg = getTypeConfig(ac, activity.activityType)
 
+  const parts: string[] = []
+
   if (typeCfg?.title_field) {
     const fieldValue = activity.fields?.[typeCfg.title_field] as string | undefined
     const prefix = fieldValue ? resolveOptionLabel(config, typeCfg, typeCfg.title_field, fieldValue) : null
-    const parts = [prefix, typeLabel].filter(Boolean)
-    if (activity.targetName) parts.push(`— ${activity.targetName}`)
-    return parts.join(' ')
+    if (prefix) parts.push(prefix)
   }
 
-  return typeLabel
+  parts.push(typeLabel)
+
+  if (activity.targetName) {
+    parts.push(`— ${activity.targetName}`)
+  }
+
+  return parts.join(' ')
+}
+
+/**
+ * Returns a full display name including the date, for contexts where the
+ * date isn't already shown (e.g. activity list, search results).
+ * Format: "Visit — Dr. Popescu — Mar 24" or "Training — Mar 24"
+ */
+export function getActivityDisplayName(config: TenantConfig | undefined, activity: Activity): string {
+  const title = getActivityTitle(config, activity)
+  const date = new Date(activity.dueDate)
+  const dateStr = date.toLocaleDateString('en-GB', { day: 'numeric', month: 'short' })
+  return `${title} — ${dateStr}`
 }
 
 /**
