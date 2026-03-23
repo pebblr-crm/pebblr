@@ -19,7 +19,7 @@ RUN CGO_ENABLED=0 GOOS=linux go build -ldflags="-w -s" -o /bin/pebblr ./cmd/pebb
 FROM node:25-alpine AS web-builder
 
 WORKDIR /app/web
-COPY web/package.json web/bun.lockb* ./
+COPY web/package.json web/bun.lock* ./
 RUN npm install -g bun && bun install --frozen-lockfile
 
 COPY web/ ./
