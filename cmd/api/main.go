@@ -77,9 +77,13 @@ func run() error {
 	// Activity service (needs tenant config, audit repo)
 	activitySvc := service.NewActivityService(db.Activities(), db.Audit(), enforcer, tenantCfg)
 
+	// Dashboard service
+	dashboardSvc := service.NewDashboardService(db.Dashboard(), enforcer, tenantCfg)
+
 	// Handlers
 	targetHandler := api.NewTargetHandler(targetSvc)
 	activityHandler := api.NewActivityHandler(activitySvc)
+	dashboardHandler := api.NewDashboardHandler(dashboardSvc)
 	teamHandler := api.NewTeamHandler(teamSvc)
 	userHandler := api.NewUserHandler(userSvc)
 
@@ -98,14 +102,15 @@ func run() error {
 	logger.Info("using static token authenticator")
 
 	router := api.NewRouter(api.RouterConfig{
-		Logger:          logger,
-		Authenticator:   authenticator,
-		TargetHandler:   targetHandler,
-		ActivityHandler: activityHandler,
-		TeamHandler:     teamHandler,
-		UserHandler:     userHandler,
-		ConfigHandler:   configHandler,
-		WebDistPath:     webDistPath,
+		Logger:           logger,
+		Authenticator:    authenticator,
+		TargetHandler:    targetHandler,
+		ActivityHandler:  activityHandler,
+		DashboardHandler: dashboardHandler,
+		TeamHandler:      teamHandler,
+		UserHandler:      userHandler,
+		ConfigHandler:    configHandler,
+		WebDistPath:      webDistPath,
 	})
 
 	srv := &http.Server{
