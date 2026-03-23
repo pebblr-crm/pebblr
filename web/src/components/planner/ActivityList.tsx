@@ -4,9 +4,8 @@ import { ChevronLeft, ChevronRight, Lock } from 'lucide-react'
 import { useActivities } from '../../services/activities'
 import { useConfig } from '../../services/config'
 import { LoadingSpinner } from '../LoadingSpinner'
-import { extractDate } from '@/utils/date'
 import {
-  getActivityTitle,
+  getActivityDisplayName,
   getStatusLabel,
   getDurationLabel,
   getTypeCategory,
@@ -152,7 +151,7 @@ interface RowProps {
 
 function ActivityRow({ activity: a, config }: RowProps) {
   const ac = config?.activities
-  const title = getActivityTitle(config, a)
+  const displayName = getActivityDisplayName(config, a)
   const catClass = CATEGORY_COLORS[getTypeCategory(ac, a.activityType)] ?? ''
   const statusColor = getStatusBadgeColor(ac, a.status)
 
@@ -164,9 +163,8 @@ function ActivityRow({ activity: a, config }: RowProps) {
           params={{ activityId: a.id }}
           className="text-primary font-medium no-underline hover:underline"
         >
-          {title}
+          {displayName}
         </Link>
-        <p className="text-[10px] text-on-surface-variant mt-0.5">{extractDate(a.dueDate)}</p>
       </td>
       <td className="px-4 py-3">
         <span className={`inline-block px-2 py-0.5 rounded text-xs font-medium border-l-2 ${catClass}`}>
@@ -189,7 +187,7 @@ function ActivityRow({ activity: a, config }: RowProps) {
 
 function ActivityCardRow({ activity: a, config }: RowProps) {
   const ac = config?.activities
-  const title = getActivityTitle(config, a)
+  const displayName = getActivityDisplayName(config, a)
   const catClass = CATEGORY_COLORS[getTypeCategory(ac, a.activityType)] ?? ''
   const statusColor = getStatusBadgeColor(ac, a.status)
 
@@ -201,7 +199,7 @@ function ActivityCardRow({ activity: a, config }: RowProps) {
     >
       <div className="flex items-center justify-between gap-2">
         <span className={`inline-block px-2 py-0.5 rounded text-xs font-medium border-l-2 ${catClass}`}>
-          {title}
+          {displayName}
         </span>
         <div className="flex items-center gap-2">
           <span className={`inline-block px-2 py-0.5 rounded-full text-xs font-bold ${statusColor}`}>
@@ -211,7 +209,6 @@ function ActivityCardRow({ activity: a, config }: RowProps) {
         </div>
       </div>
       <div className="mt-2 flex items-center gap-3 text-xs text-on-surface-variant">
-        <span>{extractDate(a.dueDate)}</span>
         <span>{getDurationLabel(ac, a.duration)}</span>
       </div>
     </Link>
