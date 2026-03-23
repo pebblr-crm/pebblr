@@ -24,6 +24,9 @@ func Load(path string) (*TenantConfig, error) {
 		return nil, fmt.Errorf("invalid tenant config: %w", err)
 	}
 
+	// Populate computed fields for the frontend.
+	cfg.Activities.HoistedFields = HoistedFieldKeys()
+
 	return &cfg, nil
 }
 
@@ -107,6 +110,11 @@ func validateConfig(cfg *TenantConfig) error {
 			if !fieldKeys[sr] {
 				return fmt.Errorf("activity type %q: submit_required references unknown field %q", at.Key, sr)
 			}
+		}
+
+		// title_field must reference an existing field.
+		if at.TitleField != "" && !fieldKeys[at.TitleField] {
+			return fmt.Errorf("activity type %q: title_field references unknown field %q", at.Key, at.TitleField)
 		}
 	}
 

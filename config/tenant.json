@@ -50,9 +50,10 @@
         "key": "visit",
         "label": "Visit",
         "category": "field",
+        "title_field": "visit_type",
         "fields": [
           { "key": "account_id", "label": "Account", "type": "relation", "required": true },
-          { "key": "visit_type", "label": "Visit Type", "type": "select", "required": true, "options": ["f2f", "remote"] },
+          { "key": "visit_type", "label": "Visit Type", "type": "select", "required": true, "options_ref": "visit_types" },
           { "key": "promoted_products", "label": "Promoted Products", "type": "multi_select", "required": false, "options_ref": "products" },
           { "key": "feedback", "label": "Feedback", "type": "text", "required": false },
           { "key": "details", "label": "Details", "type": "text", "required": false },
@@ -146,6 +147,10 @@
     "routing_options": []
   },
   "options": {
+    "visit_types": [
+      { "key": "f2f", "label": "F2F" },
+      { "key": "remote", "label": "Remote" }
+    ],
     "routing_options": [
       { "key": "week_1", "label": "Week 1" },
       { "key": "week_2", "label": "Week 2" },

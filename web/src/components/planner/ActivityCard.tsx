@@ -15,7 +15,7 @@ interface ActivityCardProps {
 }
 
 export function ActivityCard({ activity, config }: ActivityCardProps) {
-  const title = getActivityTitle(config?.activities, activity)
+  const title = getActivityTitle(config, activity)
   const category = getTypeCategory(config?.activities, activity.activityType)
   const style = CATEGORY_COLORS[category] ?? CATEGORY_COLORS.field
   const statusDot = getStatusDotColor(config?.activities, activity.status)

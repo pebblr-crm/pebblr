@@ -34,6 +34,7 @@ export interface ActivityTypeConfig {
   key: string
   label: string
   category: 'field' | 'non_field'
+  title_field?: string
   fields: FieldConfig[]
   submit_required?: string[]
   blocks_field_activities?: boolean
@@ -45,6 +46,7 @@ export interface ActivitiesConfig {
   durations: OptionDef[]
   types: ActivityTypeConfig[]
   routing_options: OptionDef[]
+  hoisted_fields?: string[] // Populated by backend: field keys that map to top-level DB columns
 }
 
 export interface RulesConfig {

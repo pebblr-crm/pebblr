@@ -67,6 +67,7 @@ const testConfig: TenantConfig = {
       { key: 'week_1', label: 'Week 1' },
       { key: 'week_2', label: 'Week 2' },
     ],
+    hoisted_fields: ['duration', 'account_id', 'routing', 'joint_visit_user_id'],
   },
   options: {
     products: [

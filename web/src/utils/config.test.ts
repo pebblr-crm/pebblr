@@ -6,7 +6,6 @@ import {
   getStatusLabel,
   getDurationLabel,
   CATEGORY_COLORS,
-  STATUS_BADGE_COLORS,
   MONTH_NAMES,
 } from './config'
 import type { ActivitiesConfig } from '@/types/config'
@@ -117,14 +116,6 @@ describe('CATEGORY_COLORS', () => {
 
   it('non_field includes blue colors', () => {
     expect(CATEGORY_COLORS.non_field).toContain('blue')
-  })
-})
-
-describe('STATUS_BADGE_COLORS', () => {
-  it('has planificat, realizat, anulat entries', () => {
-    expect(STATUS_BADGE_COLORS).toHaveProperty('planificat')
-    expect(STATUS_BADGE_COLORS).toHaveProperty('realizat')
-    expect(STATUS_BADGE_COLORS).toHaveProperty('anulat')
   })
 })
 

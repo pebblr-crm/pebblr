@@ -100,7 +100,7 @@ export function ActivityList() {
               </thead>
               <tbody>
                 {activities.map((a) => (
-                  <ActivityRow key={a.id} activity={a} config={config?.activities} />
+                  <ActivityRow key={a.id} activity={a} config={config} />
                 ))}
               </tbody>
             </table>
@@ -109,7 +109,7 @@ export function ActivityList() {
           {/* Mobile cards */}
           <div className="sm:hidden space-y-2">
             {activities.map((a) => (
-              <ActivityCardRow key={a.id} activity={a} config={config?.activities} />
+              <ActivityCardRow key={a.id} activity={a} config={config} />
             ))}
           </div>
         </>
@@ -147,13 +147,14 @@ export function ActivityList() {
 
 interface RowProps {
   activity: Activity
-  config: import('@/types/config').ActivitiesConfig | undefined
+  config: import('@/types/config').TenantConfig | undefined
 }
 
 function ActivityRow({ activity: a, config }: RowProps) {
+  const ac = config?.activities
   const title = getActivityTitle(config, a)
-  const catClass = CATEGORY_COLORS[getTypeCategory(config, a.activityType)] ?? ''
-  const statusColor = getStatusBadgeColor(config, a.status)
+  const catClass = CATEGORY_COLORS[getTypeCategory(ac, a.activityType)] ?? ''
+  const statusColor = getStatusBadgeColor(ac, a.status)
 
   return (
     <tr className="border-b border-slate-50 hover:bg-slate-50/50 transition-colors">
@@ -169,12 +170,12 @@ function ActivityRow({ activity: a, config }: RowProps) {
       </td>
       <td className="px-4 py-3">
         <span className={`inline-block px-2 py-0.5 rounded text-xs font-medium border-l-2 ${catClass}`}>
-          {getDurationLabel(config, a.duration)}
+          {getDurationLabel(ac, a.duration)}
         </span>
       </td>
       <td className="px-4 py-3">
         <span className={`inline-block px-2 py-0.5 rounded-full text-xs font-bold ${statusColor}`}>
-          {getStatusLabel(config, a.status)}
+          {getStatusLabel(ac, a.status)}
         </span>
       </td>
       <td className="px-4 py-3">
@@ -187,9 +188,10 @@ function ActivityRow({ activity: a, config }: RowProps) {
 // ── Card row (mobile) ──────────────────────────────────────────────────────
 
 function ActivityCardRow({ activity: a, config }: RowProps) {
+  const ac = config?.activities
   const title = getActivityTitle(config, a)
-  const catClass = CATEGORY_COLORS[getTypeCategory(config, a.activityType)] ?? ''
-  const statusColor = getStatusBadgeColor(config, a.status)
+  const catClass = CATEGORY_COLORS[getTypeCategory(ac, a.activityType)] ?? ''
+  const statusColor = getStatusBadgeColor(ac, a.status)
 
   return (
     <Link
@@ -203,14 +205,14 @@ function ActivityCardRow({ activity: a, config }: RowProps) {
         </span>
         <div className="flex items-center gap-2">
           <span className={`inline-block px-2 py-0.5 rounded-full text-xs font-bold ${statusColor}`}>
-            {getStatusLabel(config, a.status)}
+            {getStatusLabel(ac, a.status)}
           </span>
           {a.submittedAt && <Lock className="w-3.5 h-3.5 text-slate-400" />}
         </div>
       </div>
       <div className="mt-2 flex items-center gap-3 text-xs text-on-surface-variant">
         <span>{extractDate(a.dueDate)}</span>
-        <span>{getDurationLabel(config, a.duration)}</span>
+        <span>{getDurationLabel(ac, a.duration)}</span>
       </div>
     </Link>
   )

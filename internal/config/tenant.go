@@ -37,6 +37,7 @@ type ActivitiesConfig struct {
 	Durations         []OptionDef              `json:"durations"`
 	Types             []ActivityTypeConfig     `json:"types"`
 	RoutingOptions    []OptionDef              `json:"routing_options"`
+	HoistedFields     []string                 `json:"hoisted_fields"`
 }
 
 // StatusDef defines a valid activity status.
@@ -58,6 +59,7 @@ type ActivityTypeConfig struct {
 	Key                    string        `json:"key"`
 	Label                  string        `json:"label"`
 	Category               string        `json:"category"` // "field" or "non_field"
+	TitleField             string        `json:"title_field,omitempty"`
 	Fields                 []FieldConfig `json:"fields"`
 	SubmitRequired         []string      `json:"submit_required,omitempty"`
 	BlocksFieldActivities  bool          `json:"blocks_field_activities,omitempty"`

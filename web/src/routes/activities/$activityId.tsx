@@ -89,7 +89,7 @@ export function ActivityDetailInner({ activityId, config }: InnerProps) {
   const isSubmitted = Boolean(act.submittedAt)
   const typeConfig = getTypeConfig(config?.activities, act.activityType)
   const typeLabel = getTypeLabel(config?.activities, act.activityType)
-  const activityTitle = getActivityTitle(config?.activities, act)
+  const activityTitle = getActivityTitle(config, act)
   const statusLabel = getStatusLabel(config?.activities, localData.status ?? act.status)
   const statusColor = getStatusBadgeColor(config?.activities, localData.status ?? act.status)
   const allowedTransitions = config?.activities.status_transitions[localData.status ?? act.status] ?? []

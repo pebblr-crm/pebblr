@@ -48,8 +48,11 @@ export function DashboardPage() {
   }
 
   const statuses = config?.activities.statuses ?? []
-  const plannedKey = statuses.find((s) => s.initial)?.key ?? statuses[0]?.key
-  const completedKey = statuses[1]?.key
+  const transitions = config?.activities.status_transitions ?? {}
+  const initialStatus = statuses.find((s) => s.initial)
+  const plannedKey = initialStatus?.key ?? statuses[0]?.key
+  // The first allowed transition from the initial status is the "completed" outcome.
+  const completedKey = plannedKey ? transitions[plannedKey]?.[0] : undefined
   const planned = plannedKey ? (activityStats?.byStatus[plannedKey] ?? 0) : 0
   const completed = completedKey ? (activityStats?.byStatus[completedKey] ?? 0) : 0
   const realizationPct = planned > 0 ? Math.round((completed / planned) * 100) : 0
@@ -77,12 +80,12 @@ export function DashboardPage() {
       {/* Top-level KPI cards */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
         <StatCard
-          label={statuses.find((s) => s.initial)?.label ?? 'Planned'}
+          label={initialStatus?.label ?? statuses[0]?.label ?? 'Planned'}
           value={String(planned)}
           variant="default"
         />
         <StatCard
-          label={statuses[1]?.label ?? 'Completed'}
+          label={completedKey ? (statuses.find((s) => s.key === completedKey)?.label ?? completedKey) : 'Completed'}
           value={String(completed)}
           variant="primary"
           progress={realizationPct}

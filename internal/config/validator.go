@@ -22,6 +22,15 @@ var hoistedFields = map[string]bool{
 	"joint_visit_user_id": true,
 }
 
+// HoistedFieldKeys returns the keys of all hoisted fields as a slice.
+func HoistedFieldKeys() []string {
+	keys := make([]string, 0, len(hoistedFields))
+	for k := range hoistedFields {
+		keys = append(keys, k)
+	}
+	return keys
+}
+
 // ValidateActivity validates field values for an activity against the
 // tenant config. phase is "save" or "submit" — submit enforces
 // additional required fields defined in submit_required.

@@ -1,4 +1,4 @@
-import type { ActivitiesConfig, ActivityTypeConfig } from '@/types/config'
+import type { ActivitiesConfig, ActivityTypeConfig, TenantConfig } from '@/types/config'
 import type { Activity } from '@/types/activity'
 
 // ── Lookup helpers ──────────────────────────────────────────────────────────
@@ -72,41 +72,57 @@ export function getStatusDotColor(config: ActivitiesConfig | undefined, statusKe
   return resolveStatusStyle(config, statusKey).dot
 }
 
-/**
- * @deprecated Use getStatusBadgeColor() instead. Kept for existing references.
- */
-export const STATUS_BADGE_COLORS: Record<string, string> = {
-  planned: 'bg-amber-100 text-amber-700',
-  completed: 'bg-emerald-100 text-emerald-700',
-  cancelled: 'bg-red-100 text-red-700',
-  // Legacy keys for backwards compatibility with tests
-  planificat: 'bg-amber-100 text-amber-700',
-  realizat: 'bg-emerald-100 text-emerald-700',
-  anulat: 'bg-red-100 text-red-700',
-}
-
 // ── Activity title ─────────────────────────────────────────────────────────
 
 /**
  * Returns a human-readable title for an activity.
  * Priority: activity.label (user override) → computed title.
- * For visits: "F2f Visit" / "Remote Visit" (visit_type + type label).
+ * When the activity type defines a title_field, the field's display label
+ * is prepended to the type label (e.g. "F2F Visit — Dr. Smith").
  * For everything else: the activity type label.
  */
-export function getActivityTitle(config: ActivitiesConfig | undefined, activity: Activity): string {
+export function getActivityTitle(config: TenantConfig | undefined, activity: Activity): string {
   if (activity.label) return activity.label
 
-  const typeLabel = getTypeLabel(config, activity.activityType)
+  const ac = config?.activities
+  const typeLabel = getTypeLabel(ac, activity.activityType)
+  const typeCfg = getTypeConfig(ac, activity.activityType)
 
-  if (activity.activityType === 'visit') {
-    const visitType = activity.fields?.visit_type as string | undefined
-    const vtLabel = visitType ? (visitType === 'f2f' ? 'F2F' : visitType.charAt(0).toUpperCase() + visitType.slice(1)) : null
-    const parts = [vtLabel, typeLabel].filter(Boolean)
+  if (typeCfg?.title_field) {
+    const fieldValue = activity.fields?.[typeCfg.title_field] as string | undefined
+    const prefix = fieldValue ? resolveOptionLabel(config, typeCfg, typeCfg.title_field, fieldValue) : null
+    const parts = [prefix, typeLabel].filter(Boolean)
     if (activity.targetName) parts.push(`— ${activity.targetName}`)
     return parts.join(' ')
   }
 
   return typeLabel
+}
+
+/**
+ * Resolves the display label for an option value on a given field.
+ * Checks options_ref (via the tenant options map), then inline options.
+ * Falls back to the raw value.
+ */
+function resolveOptionLabel(
+  config: TenantConfig | undefined,
+  typeCfg: ActivityTypeConfig,
+  fieldKey: string,
+  value: string,
+): string {
+  const fieldCfg = typeCfg.fields.find((f) => f.key === fieldKey)
+  if (!fieldCfg) return value
+
+  // options_ref: look up in the tenant options map, then special refs.
+  if (fieldCfg.options_ref && config) {
+    const opts = config.options[fieldCfg.options_ref]
+      ?? (fieldCfg.options_ref === 'durations' ? config.activities.durations : undefined)
+    const match = opts?.find((o) => o.key === value)
+    if (match) return match.label
+  }
+
+  // Inline string options have no labels — return the raw value.
+  return value
 }
 
 /** Month names indexed 0–11. */

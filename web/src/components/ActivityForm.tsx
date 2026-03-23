@@ -7,6 +7,13 @@ import type { FieldConfig, OptionDef, TenantConfig } from '../types/config'
 import { LoadingSpinner } from './LoadingSpinner'
 import { extractDate } from '@/utils/date'
 
+/**
+ * Field keys that have dedicated core widgets in the form (duration selector,
+ * target search). These are excluded from the dynamic fields section because
+ * the form renders them in the core section above.
+ */
+const CORE_WIDGET_FIELDS = new Set(['duration', 'account_id'])
+
 interface ActivityFormProps {
   initialData?: Activity
   onSubmit: (data: CreateActivityInput) => void
@@ -406,14 +413,14 @@ function ActivityFormInner({
       </div>
 
       {/* Dynamic fields based on activity type */}
-      {selectedType && selectedType.fields.filter((f) => !['duration', 'account_id'].includes(f.key)).length > 0 && (
+      {selectedType && selectedType.fields.filter((f) => !CORE_WIDGET_FIELDS.has(f.key)).length > 0 && (
         <div className="bg-surface-container-lowest p-8 rounded-xl shadow-[0px_24px_48px_rgba(25,28,30,0.06)]">
           <h2 className="text-lg font-bold text-on-surface mb-6 font-headline">
             {selectedType.label} Details
           </h2>
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
             {selectedType.fields
-              .filter((f) => !['duration', 'account_id'].includes(f.key))
+              .filter((f) => !CORE_WIDGET_FIELDS.has(f.key))
               .map((f) => renderDynamicField(f))}
           </div>
         </div>
