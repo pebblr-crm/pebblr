@@ -16,7 +16,7 @@ CLUSTER := pebblr-local
 KIND_CFG := deploy/kind/kind-config.yaml
 
 # ── AKS safety guard ─────────────────────────────────────────────────────────
-# Blocks cluster-up and deploy from running against an AKS cluster.
+# Blocks destructive/local-only targets from running against an AKS cluster.
 AKS_GUARD := @if kubectl get nodes -o jsonpath='{.items[*].metadata.name}' 2>/dev/null | grep -q 'aks-'; then echo 'ERROR: Refusing to run against AKS cluster. This target is for local Kind only.'; exit 1; fi
 
 help: ## Show available targets
@@ -43,15 +43,19 @@ dev-web: ## Run Vite dev server
 	@cd $(WEB_DIR) && bun run dev
 
 dev-db: ## Deploy on-cluster PostgreSQL, run migrations, and seed data (pebblr namespace)
+	$(AKS_GUARD)
 	@scripts/cluster-db.sh pebblr
 
 dev-db-stop: ## Remove PostgreSQL from the pebblr namespace
+	$(AKS_GUARD)
 	@scripts/cluster-db.sh pebblr stop
 
 dev-db-reset: ## Destroy and recreate on-cluster PostgreSQL with fresh seed data
+	$(AKS_GUARD)
 	@scripts/cluster-db.sh pebblr reset
 
 seed: ## Load sample data (users, teams, customers, leads, calendar events) into on-cluster PostgreSQL
+	$(AKS_GUARD)
 	@scripts/seed.sh
 
 cluster-up: ## Recreate local Kind cluster; install cert-manager, ESO, and Envoy Gateway (pinned versions)
@@ -78,6 +82,7 @@ deploy: ## Build and deploy to local Kind cluster via Skaffold
 	@skaffold run --default-repo=""
 
 migrate: ## Run database migrations
+	$(AKS_GUARD)
 	@go run ./cmd/migrate
 
 helm-validate: ## Validate Helm chart against a running Kind cluster (dry-run)
@@ -94,6 +99,7 @@ e2e-cluster: ## Create a lightweight Kind cluster for E2E (no cert-manager/ESO/E
 	@kind create cluster --name $(CLUSTER) --config $(KIND_CFG) --wait 120s
 
 e2e-db: ## Deploy PostgreSQL, run migrations, seed data, and create secrets (pebblr-e2e namespace)
+	$(AKS_GUARD)
 	@scripts/cluster-db.sh pebblr-e2e
 
 e2e-deploy: ## Build, load, and deploy the app into pebblr-e2e namespace via Skaffold
