@@ -38,6 +38,7 @@ COPY --from=go-builder /bin/api .
 COPY --from=go-builder /bin/migrate .
 COPY --from=go-builder /app/migrations/ ./migrations/
 COPY --from=web-builder /app/web/dist ./web/dist
+COPY config/ ./config/
 
 # Secrets are read from file mounts — never from environment variables
 # Mount secrets at /run/secrets/ (e.g., /run/secrets/db-password)
