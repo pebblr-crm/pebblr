@@ -309,6 +309,40 @@ func TestActivityListReturnsOK(t *testing.T) {
 	}
 }
 
+// ── Config Endpoint Tests ────────────────────────────────────────────────
+
+func TestConfigEndpointReturnsOK(t *testing.T) {
+	resp := apiRequest(t, "GET", "/api/v1/config", "")
+	body := readBody(t, resp)
+
+	if resp.StatusCode != http.StatusOK {
+		t.Fatalf("expected 200 for GET /config, got %d: %s", resp.StatusCode, body)
+	}
+
+	var cfg map[string]any
+	if err := json.Unmarshal([]byte(body), &cfg); err != nil {
+		t.Fatalf("decoding config response: %v\nbody: %s", err, body)
+	}
+	if _, ok := cfg["tenant"]; !ok {
+		t.Error("expected 'tenant' key in config response")
+	}
+	if _, ok := cfg["activities"]; !ok {
+		t.Error("expected 'activities' key in config response")
+	}
+	if _, ok := cfg["accounts"]; !ok {
+		t.Error("expected 'accounts' key in config response")
+	}
+}
+
+func TestConfigEndpointRequiresAuth(t *testing.T) {
+	resp := doRequest(t, "GET", "/api/v1/config", "", nil)
+	body := readBody(t, resp)
+
+	if resp.StatusCode != http.StatusUnauthorized {
+		t.Fatalf("expected 401 for unauthenticated GET /config, got %d: %s", resp.StatusCode, body)
+	}
+}
+
 // ── Routing Tests ────────────────────────────────────────────────────────
 
 func TestMethodNotAllowed(t *testing.T) {

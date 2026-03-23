@@ -24,9 +24,10 @@ import (
 )
 
 const (
-	defaultDSNFile        = "/run/secrets/db-dsn"
-	defaultJWTSecretFile  = "/run/secrets/jwt-secret"
-	defaultMigrationsPath = "./migrations"
+	defaultDSNFile           = "/run/secrets/db-dsn"
+	defaultJWTSecretFile     = "/run/secrets/jwt-secret"
+	defaultMigrationsPath    = "./migrations"
+	defaultTenantConfigPath  = "./config/tenant.json"
 )
 
 func main() {
@@ -59,17 +60,15 @@ func run() error {
 
 	// Tenant config
 	tenantConfigPath := os.Getenv("TENANT_CONFIG_PATH")
-	var configHandler *api.ConfigHandler
-	var tenantCfg *config.TenantConfig
-	if tenantConfigPath != "" {
-		var err error
-		tenantCfg, err = config.Load(tenantConfigPath)
-		if err != nil {
-			return fmt.Errorf("loading tenant config: %w", err)
-		}
-		configHandler = api.NewConfigHandler(tenantCfg)
-		logger.Info("tenant config loaded", "path", tenantConfigPath)
+	if tenantConfigPath == "" {
+		tenantConfigPath = defaultTenantConfigPath
 	}
+	tenantCfg, err := config.Load(tenantConfigPath)
+	if err != nil {
+		return fmt.Errorf("loading tenant config: %w", err)
+	}
+	configHandler := api.NewConfigHandler(tenantCfg)
+	logger.Info("tenant config loaded", "path", tenantConfigPath)
 
 	// Target service (needs tenant config for validation)
 	targetSvc := service.NewTargetService(db.Targets(), enforcer, tenantCfg)
