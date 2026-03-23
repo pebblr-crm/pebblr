@@ -5,7 +5,7 @@
 ## Checklist
 
 16. ✅ **Dashboard stats API** — planned vs realized, coverage, field vs non-field, per user/team/period
-17. 🔧 **Frontend: Dashboard** — basic dashboard exists; replace lead-based stats with DrMax KPIs
+17. ✅ **Frontend: Dashboard** — activity KPIs, coverage, frequency compliance, period selector, 15 tests
 18. ❌ **Joint visit** — co-visitor association, activity visible to both users
 19. ❌ **Frequency tracking** — visits per target vs frequency from config rules
 
@@ -33,7 +33,7 @@ Remove existing lead-based dashboard stats (`DashboardService` currently aggrega
 
 ---
 
-## 2. Frontend Dashboard ❌
+## 2. Frontend Dashboard ✅
 
 The existing dashboard (`web/src/routes/index.tsx`) has generic stat cards. For DrMax:
 

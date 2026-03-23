@@ -26,7 +26,8 @@
 | **Target import** | ✅ Done | `POST /api/v1/targets/import` — admin-only bulk upsert by external ID |
 | **Dead code removal** | ✅ Done | Leads, lead_events, CalendarEvent code all removed; replaced by Target + Activity domains |
 | **Dashboard stats API** | ✅ Done | `GET /api/v1/dashboard/{activities,coverage,frequency}` — RBAC-scoped, config-driven, 19 tests |
-| **Next step** | | Phase 3: Frontend dashboard (item 17) |
+| **Frontend dashboard** | ✅ Done | Activity KPIs, coverage, frequency compliance, period selector, 15 tests |
+| **Next step** | | Phase 3: Joint visit (item 18) |
 
 ## Context
 
@@ -34,7 +35,7 @@
 
 **Current state:** DrMax runs on Twenty CRM with a fragile per-user object duplication hack (54 custom objects, 126 workflows, PowerShell webhook) to work around Twenty's lack of row-level security. Pebblr replaces this with a proper multi-tenant CRM with native RBAC.
 
-**Current Pebblr codebase:** Core infrastructure is complete — auth, RBAC, tenant config, targets (doctors/pharmacies). Activity domain, API, and business rules are fully implemented with 38 backend tests. Dashboard stats API provides activity stats (by status/category), target coverage, and frequency compliance — all RBAC-scoped with 19 tests. Frontend is feature-complete for Phase 2: activity form/detail/edit pages with config-driven dynamic fields (12 tests), and Planner with week/month/daily views (25 tests). All dead code (Lead, CalendarEvent, old Calendar page) has been removed. Next: Phase 3 — Frontend dashboard.
+**Current Pebblr codebase:** Core infrastructure is complete — auth, RBAC, tenant config, targets (doctors/pharmacies). Activity domain, API, and business rules are fully implemented with 38 backend tests. Dashboard stats API provides activity stats (by status/category), target coverage, and frequency compliance — all RBAC-scoped with 19 tests. Frontend is feature-complete for Phase 2: activity form/detail/edit pages with config-driven dynamic fields (12 tests), and Planner with week/month/daily views (25 tests). Frontend dashboard replaced lead-based stats with activity KPIs (planned/realized/rate), coverage card, frequency compliance table, and period selector (15 tests). All dead code (Lead, CalendarEvent, old Calendar page) has been removed. Next: Phase 3 — Joint visit (item 18).
 
 **Key design constraint:** Nothing client-specific is hardcoded. Enums (statuses, activity types, specialties, products, etc.) and field-level requirements are driven by a JSON tenant configuration file. Validation happens at the API layer against this config, not via DB constraints on enum values.
 
@@ -67,10 +68,10 @@
 
 → [Full details](PLAN-phase-2.md)
 
-### Phase 3 — Reporting & Dashboard ❌
+### Phase 3 — Reporting & Dashboard 🔧
 
 16. ✅ **Dashboard stats API** — planned vs realized, coverage, field vs non-field, per user/team/period
-17. 🔧 **Frontend: Dashboard** — basic dashboard exists; needs DrMax KPIs (replace lead-based stats)
+17. ✅ **Frontend: Dashboard** — activity KPIs (planned/realized/rate), coverage, frequency compliance, period selector, 15 tests
 18. ❌ **Joint visit** — co-visitor association, activity visible to both users
 19. ❌ **Frequency tracking** — visits per target vs frequency from config rules
 
