@@ -1,0 +1,94 @@
+# Build, push to ACR, and deploy to AKS.
+#
+# Triggers on push to main (after CI passes).
+#
+# TODO: Replace ACR admin credentials + kubeconfig with Azure Workload
+# Identity (OIDC federation) once AD app registration permissions are
+# available. See: https://learn.microsoft.com/en-us/entra/workload-id/
+# workload-identity-federation-create-trust-github
+
+name: Deploy
+
+on:
+  push:
+    branches: [main]
+
+concurrency:
+  group: deploy-aks
+  cancel-in-progress: false
+
+env:
+  ACR_LOGIN_SERVER: ${{ secrets.ACR_LOGIN_SERVER }}
+  IMAGE_NAME: pebblr-api
+  HELM_RELEASE: pebblr
+  NAMESPACE: pebblr
+
+jobs:
+  ci:
+    name: CI
+    uses: ./.github/workflows/ci.yml
+
+  build-and-push:
+    name: Build & Push
+    runs-on: ubuntu-latest
+    needs: ci
+    outputs:
+      image-tag: ${{ steps.meta.outputs.tag }}
+    steps:
+      - uses: actions/checkout@v6
+
+      - name: Generate image tag
+        id: meta
+        run: echo "tag=sha-${GITHUB_SHA::8}" >> "$GITHUB_OUTPUT"
+
+      - name: Log in to ACR
+        uses: docker/login-action@v3
+        with:
+          registry: ${{ secrets.ACR_LOGIN_SERVER }}
+          username: ${{ secrets.ACR_USERNAME }}
+          password: ${{ secrets.ACR_PASSWORD }}
+
+      - name: Build and push
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          push: true
+          build-args: |
+            VITE_STATIC_TOKEN=${{ secrets.VITE_STATIC_TOKEN }}
+          tags: |
+            ${{ secrets.ACR_LOGIN_SERVER }}/${{ env.IMAGE_NAME }}:${{ steps.meta.outputs.tag }}
+            ${{ secrets.ACR_LOGIN_SERVER }}/${{ env.IMAGE_NAME }}:latest
+
+  deploy:
+    name: Deploy to AKS
+    runs-on: ubuntu-latest
+    needs: build-and-push
+    steps:
+      - uses: actions/checkout@v6
+
+      - name: Set up Helm
+        uses: azure/setup-helm@v4
+        with:
+          version: "v3.14.0"
+
+      - name: Set up kubeconfig
+        run: |
+          mkdir -p ~/.kube
+          echo "${{ secrets.KUBE_CONFIG }}" | base64 -d > ~/.kube/config
+          chmod 600 ~/.kube/config
+
+      - name: Deploy with Helm
+        run: |
+          helm upgrade --install ${{ env.HELM_RELEASE }} deploy/helm/pebblr \
+            -f deploy/helm/pebblr/values-aks.yaml \
+            --set image.repository=${{ secrets.ACR_LOGIN_SERVER }}/${{ env.IMAGE_NAME }} \
+            --set image.tag=${{ needs.build-and-push.outputs.image-tag }} \
+            --set image.pullPolicy=Always \
+            --namespace ${{ env.NAMESPACE }} \
+            --wait --timeout 120s
+
+      - name: Verify deployment
+        run: |
+          kubectl rollout status deployment/${{ env.HELM_RELEASE }} \
+            -n ${{ env.NAMESPACE }} --timeout=60s
+          kubectl get pods -n ${{ env.NAMESPACE }}
