@@ -31,3 +31,8 @@ func (db *DB) Activities() store.ActivityRepository {
 func (db *DB) Audit() store.AuditRepository {
 	return &auditRepository{pool: db.pool}
 }
+
+// Dashboard returns the PostgreSQL-backed dashboard repository.
+func (db *DB) Dashboard() store.DashboardRepository {
+	return &dashboardRepository{pool: db.pool}
+}

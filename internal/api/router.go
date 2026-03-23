@@ -16,14 +16,15 @@ import (
 
 // RouterConfig holds dependencies for the HTTP router.
 type RouterConfig struct {
-	Logger          *slog.Logger
-	Authenticator   auth.Authenticator
-	TargetHandler   *TargetHandler
-	ActivityHandler *ActivityHandler
-	TeamHandler     *TeamHandler
-	UserHandler     *UserHandler
-	ConfigHandler   *ConfigHandler
-	WebDistPath     string
+	Logger           *slog.Logger
+	Authenticator    auth.Authenticator
+	TargetHandler    *TargetHandler
+	ActivityHandler  *ActivityHandler
+	DashboardHandler *DashboardHandler
+	TeamHandler      *TeamHandler
+	UserHandler      *UserHandler
+	ConfigHandler    *ConfigHandler
+	WebDistPath      string
 }
 
 // NewRouter constructs and returns the application HTTP router.
@@ -73,6 +74,17 @@ func NewRouter(cfg RouterConfig) http.Handler {
 				r.Delete("/{id}", notImplementedHandler)
 				r.Post("/{id}/submit", notImplementedHandler)
 				r.Patch("/{id}/status", notImplementedHandler)
+			}
+		})
+
+		// Dashboard routes
+		r.Route("/dashboard", func(r chi.Router) {
+			if cfg.DashboardHandler != nil {
+				r.Mount("/", NewDashboardRouter(cfg.DashboardHandler))
+			} else {
+				r.Get("/activities", notImplementedHandler)
+				r.Get("/coverage", notImplementedHandler)
+				r.Get("/frequency", notImplementedHandler)
 			}
 		})
 
