@@ -83,7 +83,7 @@ cluster-up: ## Recreate local Kind cluster and install all dependencies
 
 deploy: ## Build and deploy to local Kind cluster via Skaffold
 	$(AKS_GUARD)
-	@skaffold run --default-repo=""
+	@scripts/deploy-local.sh
 
 migrate: ## Run database migrations
 	$(AKS_GUARD)
