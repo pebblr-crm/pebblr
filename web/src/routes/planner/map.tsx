@@ -5,9 +5,11 @@ import { MapPin, Check, GripVertical } from 'lucide-react'
 import { Route as rootRoute } from '../__root'
 import { LoadingSpinner } from '../../components/LoadingSpinner'
 import { useTargets, useTargetVisitStatus } from '../../services/targets'
-import { useActivities, useBatchCreateActivities } from '../../services/activities'
+import { useActivities, useBatchCreateActivities, usePatchActivity } from '../../services/activities'
 import { useConfig } from '../../services/config'
 import { useToast } from '../../hooks/useToast'
+import { getStatusDotColor, getStatusLabel, getTypeCategory } from '@/utils/config'
+import type { TenantConfig } from '@/types/config'
 import type { Activity } from '@/types/activity'
 import type { Target } from '@/types/target'
 
@@ -92,6 +94,9 @@ function MapPlannerPage() {
   // dayAssignments: dateString → set of target IDs
   const [dayAssignments, setDayAssignments] = useState<Record<string, string[]>>({})
   const [dragTargetId, setDragTargetId] = useState<string | null>(null)
+  const [dragActivityId, setDragActivityId] = useState<string | null>(null)
+
+  const patchActivity = usePatchActivity()
 
   const cadenceDays = config?.rules?.visit_cadence_days ?? 21
   const targets = targetsResult?.items ?? []
@@ -199,17 +204,29 @@ function MapPlannerPage() {
     })
   }, [])
 
-  const handleDrop = useCallback((_dateStr: string, _targetId: string) => {
-    // Drop all selected targets onto the day, not just the dragged one.
+  const handleDrop = useCallback((dateStr: string) => {
+    // If an existing activity is being dragged, reschedule it.
+    if (dragActivityId) {
+      patchActivity.mutate(
+        { id: dragActivityId, dueDate: dateStr },
+        {
+          onSuccess: () => showToast('Activity rescheduled.'),
+          onError: () => showToast('Failed to reschedule activity.'),
+        },
+      )
+      setDragActivityId(null)
+      return
+    }
+    // Otherwise drop all selected targets onto the day.
     setDayAssignments((prev) => {
-      const arr = prev[_dateStr] ?? []
+      const arr = prev[dateStr] ?? []
       const existing = new Set(arr)
       const toAdd = Array.from(selectedIds).filter((id) => !existing.has(id))
       if (toAdd.length === 0) return prev
-      return { ...prev, [_dateStr]: [...arr, ...toAdd] }
+      return { ...prev, [dateStr]: [...arr, ...toAdd] }
     })
     setSelectedIds(new Set())
-  }, [selectedIds])
+  }, [selectedIds, dragActivityId, patchActivity, showToast])
 
   const removeFromDay = useCallback((dateStr: string, targetId: string) => {
     setDayAssignments((prev) => {
@@ -427,9 +444,13 @@ function MapPlannerPage() {
                   targetIds={dayTargets}
                   existingActivities={activitiesByDate.get(dateStr) ?? []}
                   targetMap={targetMap}
+                  config={config!}
                   dragTargetId={dragTargetId}
-                  onDrop={(id) => handleDrop(dateStr, id)}
+                  dragActivityId={dragActivityId}
+                  onDrop={() => handleDrop(dateStr)}
                   onRemove={(id) => removeFromDay(dateStr, id)}
+                  onActivityDragStart={(id) => setDragActivityId(id)}
+                  onActivityDragEnd={() => setDragActivityId(null)}
                 />
               )
             })}
@@ -519,9 +540,13 @@ interface DayDropZoneProps {
   targetIds: string[]
   existingActivities: Activity[]
   targetMap: Map<string, Target>
+  config: TenantConfig
   dragTargetId: string | null
-  onDrop: (targetId: string) => void
+  dragActivityId: string | null
+  onDrop: () => void
   onRemove: (targetId: string) => void
+  onActivityDragStart: (activityId: string) => void
+  onActivityDragEnd: () => void
 }
 
 function DayDropZone({
@@ -529,12 +554,22 @@ function DayDropZone({
   targetIds,
   existingActivities,
   targetMap,
+  config,
   dragTargetId,
+  dragActivityId,
   onDrop,
   onRemove,
+  onActivityDragStart,
+  onActivityDragEnd,
 }: DayDropZoneProps) {
   const [dragOver, setDragOver] = useState(false)
   const totalCount = existingActivities.length + targetIds.length
+  const ac = config.activities
+
+  // Closed statuses cannot be rescheduled.
+  const closedStatuses = new Set(
+    ac.statuses.filter((s) => s.submittable).map((s) => s.key),
+  )
 
   return (
     <div
@@ -546,8 +581,7 @@ function DayDropZone({
       onDrop={(e) => {
         e.preventDefault()
         setDragOver(false)
-        const id = dragTargetId ?? e.dataTransfer.getData('text/plain')
-        if (id) onDrop(id)
+        if (dragTargetId || dragActivityId) onDrop()
       }}
       className={`rounded-lg border-2 border-dashed p-2 min-h-[100px] transition-colors ${
         dragOver
@@ -562,18 +596,33 @@ function DayDropZone({
 
       <div className="space-y-0.5">
         {/* Existing scheduled activities */}
-        {existingActivities.map((a) => (
-          <div
-            key={a.id}
-            className="flex items-center gap-1 bg-slate-100 rounded px-1.5 py-0.5 text-[10px] text-slate-500"
-          >
-            <span className="w-1.5 h-1.5 rounded-full bg-slate-400 shrink-0" />
-            <span className="truncate flex-1">
-              {a.targetName || a.activityType}
-            </span>
-            <span className="text-[8px] text-slate-400 shrink-0">{a.status}</span>
-          </div>
-        ))}
+        {existingActivities.map((a) => {
+          const dotColor = getStatusDotColor(ac, a.status)
+          const statusLabel = getStatusLabel(ac, a.status)
+          const category = getTypeCategory(ac, a.activityType)
+          const bgColor = category === 'field' ? 'bg-amber-50' : 'bg-blue-50'
+          const textColor = category === 'field' ? 'text-amber-900' : 'text-blue-900'
+          const isClosed = closedStatuses.has(a.status) || Boolean(a.submittedAt)
+          const canDrag = !isClosed
+
+          return (
+            <div
+              key={a.id}
+              draggable={canDrag}
+              onDragStart={() => { if (canDrag) onActivityDragStart(a.id) }}
+              onDragEnd={onActivityDragEnd}
+              className={`flex items-center gap-1 ${bgColor} rounded px-1.5 py-0.5 text-[10px] ${textColor} ${
+                canDrag ? 'cursor-grab' : ''
+              }`}
+            >
+              <span className={`w-1.5 h-1.5 rounded-full ${dotColor} shrink-0`} />
+              <span className="truncate flex-1">
+                {a.targetName || a.activityType}
+              </span>
+              <span className="text-[8px] opacity-60 shrink-0">{statusLabel}</span>
+            </div>
+          )
+        })}
 
         {/* Newly assigned targets (pending creation) */}
         {targetIds.map((id) => {
