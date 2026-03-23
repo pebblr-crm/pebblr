@@ -352,6 +352,112 @@ func (s *ActivityService) PatchStatus(ctx context.Context, actor *domain.User, i
 	return updated, nil
 }
 
+// CloneWeekResult holds the outcome of a clone-week operation.
+type CloneWeekResult struct {
+	Created int `json:"created"`
+	Skipped int `json:"skipped"`
+}
+
+// CloneWeek duplicates all activities from sourceWeekStart (Mon) to targetWeekStart (Mon),
+// preserving the weekday offset, resetting status to initial, and generating new IDs.
+func (s *ActivityService) CloneWeek(ctx context.Context, actor *domain.User, sourceWeekStart, targetWeekStart time.Time) (*CloneWeekResult, error) {
+	// Validate: both must be Mondays.
+	if sourceWeekStart.Weekday() != time.Monday {
+		return nil, fmt.Errorf("sourceWeekStart must be a Monday: %w", ErrInvalidInput)
+	}
+	if targetWeekStart.Weekday() != time.Monday {
+		return nil, fmt.Errorf("targetWeekStart must be a Monday: %w", ErrInvalidInput)
+	}
+
+	sourceEnd := sourceWeekStart.AddDate(0, 0, 4) // Friday
+	targetEnd := targetWeekStart.AddDate(0, 0, 4)
+
+	// Validate: target week must not be the same as source.
+	if sourceWeekStart.Equal(targetWeekStart) {
+		return nil, fmt.Errorf("target week must differ from source week: %w", ErrInvalidInput)
+	}
+
+	// List source week activities.
+	scope := s.enforcer.ScopeActivityQuery(ctx, actor)
+	sourcePage, err := s.activities.List(ctx, scope, store.ActivityFilter{
+		DateFrom: &sourceWeekStart,
+		DateTo:   &sourceEnd,
+	}, 1, 200)
+	if err != nil {
+		return nil, fmt.Errorf("listing source week activities: %w", err)
+	}
+
+	if len(sourcePage.Activities) == 0 {
+		return nil, fmt.Errorf("source week has no activities: %w", ErrInvalidInput)
+	}
+
+	// Check existing activities in target week to avoid duplicates.
+	targetPage, err := s.activities.List(ctx, scope, store.ActivityFilter{
+		DateFrom: &targetWeekStart,
+		DateTo:   &targetEnd,
+	}, 1, 200)
+	if err != nil {
+		return nil, fmt.Errorf("listing target week activities: %w", err)
+	}
+	existingTargets := make(map[string]map[string]bool) // date → targetID → exists
+	for _, a := range targetPage.Activities {
+		dateStr := a.DueDate.Format("2006-01-02")
+		if existingTargets[dateStr] == nil {
+			existingTargets[dateStr] = make(map[string]bool)
+		}
+		if a.TargetID != "" {
+			existingTargets[dateStr][a.TargetID] = true
+		}
+	}
+
+	result := &CloneWeekResult{}
+	dayOffset := targetWeekStart.Sub(sourceWeekStart)
+
+	for _, src := range sourcePage.Activities {
+		newDueDate := src.DueDate.Add(dayOffset)
+		newDateStr := newDueDate.Format("2006-01-02")
+
+		// Skip if same target already exists on the target date.
+		if src.TargetID != "" && existingTargets[newDateStr][src.TargetID] {
+			result.Skipped++
+			continue
+		}
+
+		clone := &domain.Activity{
+			ActivityType:  src.ActivityType,
+			Label:         src.Label,
+			Status:        "", // will be set to initial by validateCore
+			DueDate:       newDueDate,
+			Duration:      src.Duration,
+			Routing:       src.Routing,
+			Fields:        copyFields(src.Fields),
+			TargetID:      src.TargetID,
+			JointVisitUID: src.JointVisitUID,
+		}
+
+		if _, err := s.Create(ctx, actor, clone); err != nil {
+			// Skip activities that fail validation (e.g. blocked day, max per day).
+			result.Skipped++
+			continue
+		}
+		result.Created++
+	}
+
+	return result, nil
+}
+
+// copyFields returns a shallow copy of a fields map.
+func copyFields(fields map[string]any) map[string]any {
+	if fields == nil {
+		return map[string]any{}
+	}
+	out := make(map[string]any, len(fields))
+	for k, v := range fields {
+		out[k] = v
+	}
+	return out
+}
+
 // validateCore checks that an activity has valid core fields (type, status, duration).
 func (s *ActivityService) validateCore(activity *domain.Activity) error {
 	if activity.ActivityType == "" {

@@ -1,11 +1,11 @@
 import { createRoute } from '@tanstack/react-router'
 import { useState, useMemo, useCallback, useEffect } from 'react'
 import { APIProvider, Map as GoogleMap, AdvancedMarker } from '@vis.gl/react-google-maps'
-import { MapPin, Check, GripVertical, FolderOpen, Save, Trash2 } from 'lucide-react'
+import { MapPin, Check, GripVertical, FolderOpen, Save, Trash2, Copy } from 'lucide-react'
 import { Route as rootRoute } from '../__root'
 import { LoadingSpinner } from '../../components/LoadingSpinner'
 import { useTargets, useTargetVisitStatus, useTargetFrequencyStatus } from '../../services/targets'
-import { useActivities, useBatchCreateActivities, usePatchActivity } from '../../services/activities'
+import { useActivities, useBatchCreateActivities, usePatchActivity, useCloneWeek } from '../../services/activities'
 import { useConfig } from '../../services/config'
 import { useToast } from '../../hooks/useToast'
 import { getStatusDotColor, getStatusLabel, getTypeCategory } from '@/utils/config'
@@ -75,6 +75,7 @@ function MapPlannerPage() {
   const { data: collections } = useCollections()
   const createCollection = useCreateCollection()
   const deleteCollectionMut = useDeleteCollection()
+  const cloneWeek = useCloneWeek()
   const { showToast } = useToast()
   const { state: plannerState, setWeek, setFrom } = usePlannerState()
 
@@ -118,6 +119,7 @@ function MapPlannerPage() {
   const [savingCollection, setSavingCollection] = useState(false)
   const [collectionName, setCollectionName] = useState('')
   const [dragCollectionId, setDragCollectionId] = useState<string | null>(null)
+  const [showCloneWeek, setShowCloneWeek] = useState(false)
 
   const patchActivity = usePatchActivity()
 
@@ -336,7 +338,29 @@ function MapPlannerPage() {
     })
   }, [deleteCollectionMut, showToast])
 
-  // Handle collection drop onto a day slot
+  const handleCloneWeek = useCallback(() => {
+    const sourceMonday = weekRange.dateFrom
+    // Default target: +3 weeks
+    const source = new Date(sourceMonday + 'T00:00:00')
+    const target = new Date(source)
+    target.setDate(target.getDate() + 21)
+    const targetStr = target.toISOString().slice(0, 10)
+
+    cloneWeek.mutate(
+      { sourceWeekStart: sourceMonday, targetWeekStart: targetStr },
+      {
+        onSuccess: (result) => {
+          const msg = result.skipped > 0
+            ? `Cloned ${result.created} activities (${result.skipped} skipped).`
+            : `Cloned ${result.created} activities.`
+          showToast(msg, 'success')
+          setShowCloneWeek(false)
+        },
+        onError: () => showToast('Failed to clone week.'),
+      },
+    )
+  }, [weekRange.dateFrom, cloneWeek, showToast])
+
   if (configLoading || targetsLoading) {
     return (
       <div className="flex items-center justify-center h-screen">
@@ -617,6 +641,32 @@ function MapPlannerPage() {
               >
                 Next
               </button>
+              {!showCloneWeek ? (
+                <button
+                  onClick={() => setShowCloneWeek(true)}
+                  className="px-2 py-1 text-xs rounded border border-slate-200 hover:bg-slate-100 flex items-center gap-1"
+                >
+                  <Copy className="w-3 h-3" />
+                  Clone +3w
+                </button>
+              ) : (
+                <span className="flex items-center gap-1">
+                  <span className="text-xs text-slate-500">Clone to +3 weeks?</span>
+                  <button
+                    onClick={handleCloneWeek}
+                    disabled={cloneWeek.isPending}
+                    className="px-2 py-1 text-xs font-bold text-white bg-primary rounded disabled:opacity-50"
+                  >
+                    {cloneWeek.isPending ? '...' : 'Confirm'}
+                  </button>
+                  <button
+                    onClick={() => setShowCloneWeek(false)}
+                    className="px-2 py-1 text-xs text-slate-400 hover:text-slate-600"
+                  >
+                    ×
+                  </button>
+                </span>
+              )}
             </div>
             {totalAssigned > 0 && (
               <button

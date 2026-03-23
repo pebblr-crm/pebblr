@@ -27,6 +27,7 @@ type ActivityServicer interface {
 	Delete(ctx context.Context, actor *domain.User, id string) error
 	Submit(ctx context.Context, actor *domain.User, id string) (*domain.Activity, error)
 	PatchStatus(ctx context.Context, actor *domain.User, id, newStatus string) (*domain.Activity, error)
+	CloneWeek(ctx context.Context, actor *domain.User, sourceWeekStart, targetWeekStart time.Time) (*service.CloneWeekResult, error)
 }
 
 // ActivityHandler handles HTTP requests for activity CRUD operations.
@@ -45,6 +46,7 @@ func NewActivityRouter(h *ActivityHandler) http.Handler {
 	r.Get("/", h.List)
 	r.Post("/", h.Create)
 	r.Post("/batch", h.BatchCreate)
+	r.Post("/clone-week", h.CloneWeek)
 	r.Get("/{id}", h.Get)
 	r.Put("/{id}", h.Update)
 	r.Patch("/{id}", h.Patch)
@@ -580,6 +582,45 @@ func (h *ActivityHandler) BatchCreate(w http.ResponseWriter, r *http.Request) {
 		"created": created,
 		"errors":  batchErrors,
 	})
+}
+
+// CloneWeek handles POST /api/v1/activities/clone-week
+func (h *ActivityHandler) CloneWeek(w http.ResponseWriter, r *http.Request) {
+	actor, err := rbac.UserFromContext(r.Context())
+	if err != nil {
+		writeError(w, http.StatusUnauthorized, "UNAUTHORIZED", "missing authenticated user")
+		return
+	}
+
+	var req struct {
+		SourceWeekStart string `json:"sourceWeekStart"`
+		TargetWeekStart string `json:"targetWeekStart"`
+	}
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		writeError(w, http.StatusBadRequest, "BAD_REQUEST", "invalid request body")
+		return
+	}
+
+	source, err := time.Parse("2006-01-02", req.SourceWeekStart)
+	if err != nil {
+		writeError(w, http.StatusBadRequest, "BAD_REQUEST", "sourceWeekStart must be YYYY-MM-DD")
+		return
+	}
+	target, err := time.Parse("2006-01-02", req.TargetWeekStart)
+	if err != nil {
+		writeError(w, http.StatusBadRequest, "BAD_REQUEST", "targetWeekStart must be YYYY-MM-DD")
+		return
+	}
+
+	result, err := h.svc.CloneWeek(r.Context(), actor, source, target)
+	if err != nil {
+		mapActivityServiceError(w, err)
+		return
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(http.StatusCreated)
+	_ = json.NewEncoder(w).Encode(result)
 }
 
 // PatchStatus handles PATCH /api/v1/activities/{id}/status

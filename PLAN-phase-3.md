@@ -9,7 +9,7 @@
 18. ✅ **Joint visit** — co-visitor validation, planner indicator, detail badge, 7 service tests
 19. ✅ **Frequency tracking** — visits per target vs frequency from config rules
 20. ✅ **Target collections** — user-created saved groups of targets for reuse across planning cycles
-21. ❌ **Clone week** — duplicate a planned week's activities 3 weeks forward
+21. ✅ **Clone week** — duplicate a planned week's activities 3 weeks forward
 22. ❌ **Activity display name** — auto-generated label: type + target name + date
 23. ❌ **Planner density** — ensure 15+ activities visible per day
 
@@ -130,7 +130,7 @@ This is the primary consumer. In the map planner:
 
 ---
 
-## 6. Clone Week ❌
+## 6. Clone Week ✅
 
 Reps plan on a 3-week rotation: Week 1, Week 2, Week 3, then repeat. After planning Week 1, they should be able to clone it to the next Week 1 occurrence (3 weeks later) in one action.
 
