@@ -4,12 +4,19 @@
 
 ## Checklist
 
-20. ❌ Weekend activity + recovery days
-21. ❌ Drag & drop calendar
-22. ❌ Copy-paste activities
-23. ❌ Advanced filtering with saved filters
-24. ❌ Target group management (quarterly)
-25. ❌ Plan generation (rule-based monthly plan proposal)
+24. ❌ Weekend activity + recovery days
+25. ❌ Target group management (quarterly)
+26. ❌ Plan generation (rule-based monthly plan proposal)
+27. ❌ i18n / Romanian UI
+28. ❌ Data migration from Twenty CRM
+
+### Removed / Superseded
+
+The following items from the original Phase 4 have been absorbed or superseded by the map planner:
+
+- ~~Drag & drop calendar~~ — the map planner provides drag-and-drop target-to-day assignment. The week/month views remain read-only calendars; rescheduling individual activities can be done via edit.
+- ~~Copy-paste activities~~ — replaced by **Clone week** (Phase 3, item 21), which operates at the right abstraction level for the 3-week rotation cycle.
+- ~~Advanced filtering with saved filters~~ — replaced by **Target collections** (Phase 3, item 20). Reps don't need to filter activities — they need to quickly re-select groups of targets for planning. Collections solve this at the source.
 
 ---
 
@@ -33,38 +40,7 @@ Config rules:
 
 ---
 
-## 2. Drag & Drop Calendar ❌
-
-Enhance the planner with drag-and-drop:
-
-- Drag activities between days to reschedule
-- Drag to resize (change duration)
-- Visual feedback for blocked days (vacation/holiday)
-- Calls `PUT /activities/:id` with updated `due_date` and `duration`
-- Blocked if activity is submitted
-
----
-
-## 3. Copy-Paste Activities ❌
-
-Allow reps to duplicate activities:
-
-- Select one or more activities → "Copy"
-- Click a target day → "Paste" (creates new activities with same type/fields, new date)
-- Useful for recurring weekly patterns
-- Copied activities get `planificat` status regardless of source status
-
----
-
-## 4. Advanced Filtering with Saved Filters ❌
-
-- Filter activities by: type, status, date range, target, creator, team, routing week
-- Save filter combinations as named presets (stored in localStorage or user preferences)
-- Quick-switch between saved filters in planner and activity list
-
----
-
-## 5. Target Group Management (Quarterly) ❌
+## 2. Target Group Management (Quarterly) ❌
 
 Each quarter, managers define which targets each rep should focus on:
 
@@ -74,26 +50,44 @@ Each quarter, managers define which targets each rep should focus on:
 - Frequency rules apply to target group specifically
 - Dashboard shows target group coverage vs all-target coverage
 
+Note: This is distinct from **Target collections** (Phase 3, item 20). Collections are user-created groupings for planning convenience. Target group management is manager-driven assignment of which targets a rep is responsible for in a given quarter.
+
 ---
 
-## 6. Plan Generation ❌
+## 3. Plan Generation ❌
 
 Auto-propose a monthly activity plan based on rules:
 
-- Input: rep's target group, frequency rules, blocked days (holidays, vacations), routing preferences
-- Algorithm: distribute required visits across available days, respecting max activities/day
-- Output: draft activities in `planificat` status for the rep to review and adjust
+- Input: rep's assigned targets, frequency rules, blocked days (holidays, vacations), routing preferences, saved collections
+- Algorithm: distribute required visits across available days, respecting max activities/day and target collections as scheduling hints
+- Output: draft activities in `planned` status for the rep to review and adjust
 - Rep can accept, modify, or reject proposed activities
 - Not replacing manual planning — augmenting it
+- **Map planner integration:** generated plan shown on map with routes visualized
 
 ---
 
-## 7. Data Migration from Twenty CRM ❌
+## 4. i18n / Romanian UI ❌
+
+DrMax Romania needs a Romanian-language interface. The tenant config already drives labels for domain concepts (activity types, statuses, field labels), but the UI chrome (buttons, navigation, empty states, error messages) is in English.
+
+### Approach
+
+- Lightweight i18n: tenant config `locale` field already exists (`"locale": "en"`)
+- Add a `ui_strings` section to tenant config with overridable UI labels
+- Fallback to English for any missing keys
+- No heavy i18n framework needed — this is single-tenant, single-locale per deployment
+- Key areas: navigation labels, button text ("Create", "Save", "Submit"), planner headers, empty states, error/success toasts
+
+---
+
+## 5. Data Migration from Twenty CRM ❌
 
 For go-live, existing Twenty CRM data needs to be imported:
 
 - **Doctors** — export from per-user `*Doctori` objects → `POST /targets/import`
 - **Pharmacies** — export from per-user `*Farmacii` objects → `POST /targets/import`
 - **Historical activities** — export from per-user `*Tasks` + master `tasks` → `POST /activities/import` (new endpoint, admin only)
+- **Target collections** — if reps have informal groupings in Twenty, import as collections
 
 Script in `scripts/import-twenty.sh` or a Go CLI tool under `cmd/import/`.

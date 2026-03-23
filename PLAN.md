@@ -28,7 +28,8 @@
 | **Dashboard stats API** | ✅ Done | `GET /api/v1/dashboard/{activities,coverage,frequency}` — RBAC-scoped, config-driven, 19 tests |
 | **Frontend dashboard** | ✅ Done | Activity KPIs, coverage, frequency compliance, period selector, 15 tests |
 | **Joint visit** | ✅ Done | Co-visitor validation, planner indicator, detail badge, 7 service tests |
-| **Next step** | | Phase 3: Frequency tracking (item 19) |
+| **Map planner** | ✅ Done | Google Maps with proximity sorting, drag-and-drop batch creation, cadence filtering, routing weeks |
+| **Next step** | | Phase 3: Frequency tracking + target collections + clone week (items 19–23) |
 
 ## Context
 
@@ -36,7 +37,7 @@
 
 **Current state:** DrMax runs on Twenty CRM with a fragile per-user object duplication hack (54 custom objects, 126 workflows, PowerShell webhook) to work around Twenty's lack of row-level security. Pebblr replaces this with a proper multi-tenant CRM with native RBAC.
 
-**Current Pebblr codebase:** Core infrastructure is complete — auth, RBAC, tenant config, targets (doctors/pharmacies). Activity domain, API, and business rules are fully implemented with 38 backend tests. Dashboard stats API provides activity stats (by status/category), target coverage, and frequency compliance — all RBAC-scoped with 19 tests. Frontend is feature-complete for Phase 2: activity form/detail/edit pages with config-driven dynamic fields (12 tests), and Planner with week/month/daily views (25 tests). Frontend dashboard replaced lead-based stats with activity KPIs (planned/realized/rate), coverage card, frequency compliance table, and period selector (15 tests). All dead code (Lead, CalendarEvent, old Calendar page) has been removed. Next: Phase 3 — Joint visit (item 18).
+**Current Pebblr codebase:** Core infrastructure is complete — auth, RBAC, tenant config, targets (doctors/pharmacies). Activity domain, API, and business rules are fully implemented with 38 backend tests. Dashboard stats API provides activity stats (by status/category), target coverage, and frequency compliance — all RBAC-scoped with 19 tests. Frontend is feature-complete for Phase 2: activity form/detail/edit pages with config-driven dynamic fields (12 tests), and Planner with week/month/daily views plus a map planner with proximity sorting, drag-and-drop batch creation, and cadence-based filtering (25 tests). Frontend dashboard has activity KPIs, coverage card, frequency compliance table, and period selector (15 tests). Joint visit is implemented with co-visitor validation and planner indicators. The map planner is the primary planning interface — reps select targets on a map, drag them to day slots, and batch-create activities. Next: Phase 3 — Frequency tracking + map planner enhancements (items 19–23).
 
 **Key design constraint:** Nothing client-specific is hardcoded. Enums (statuses, activity types, specialties, products, etc.) and field-level requirements are driven by a JSON tenant configuration file. Validation happens at the API layer against this config, not via DB constraints on enum values.
 
@@ -69,23 +70,26 @@
 
 → [Full details](PLAN-phase-2.md)
 
-### Phase 3 — Reporting & Dashboard 🔧
+### Phase 3 — Reporting & Map Planner 🔧
 
 16. ✅ **Dashboard stats API** — planned vs realized, coverage, field vs non-field, per user/team/period
 17. ✅ **Frontend: Dashboard** — activity KPIs (planned/realized/rate), coverage, frequency compliance, period selector, 15 tests
 18. ✅ **Joint visit** — co-visitor validation, planner indicator, detail badge, 7 service tests
 19. ❌ **Frequency tracking** — visits per target vs frequency from config rules
+20. ❌ **Target collections** — user-created saved groups of targets (e.g., "Monday route", "Bucharest cluster") for reuse across planning cycles
+21. ❌ **Clone week** — duplicate a planned week's activities 3 weeks forward (new activities as planned status)
+22. ❌ **Activity display name** — auto-generated label: type + target name + date, shown in planner cards and lists
+23. ❌ **Planner density** — ensure 15+ activities visible per day in week/daily views without scrolling
 
 → [Full details](PLAN-phase-3.md)
 
 ### Phase 4 — Post Go-Live Optimizations ❌
 
-20. ❌ Weekend activity + recovery days
-21. ❌ Drag & drop calendar
-22. ❌ Copy-paste activities
-23. ❌ Advanced filtering with saved filters
-24. ❌ Target group management (quarterly)
-25. ❌ Plan generation (rule-based monthly plan proposal)
+24. ❌ Weekend activity + recovery days
+25. ❌ Target group management (quarterly manager assignment)
+26. ❌ Plan generation (rule-based monthly plan proposal)
+27. ❌ i18n / Romanian UI
+28. ❌ Data migration from Twenty CRM
 
 → [Full details](PLAN-phase-4.md)
 
