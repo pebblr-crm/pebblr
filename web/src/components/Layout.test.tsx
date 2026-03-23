@@ -38,7 +38,7 @@ describe('Layout', () => {
     await waitFor(() => {
       expect(screen.getByText('Dashboard')).toBeInTheDocument()
       expect(screen.getByText('Targets')).toBeInTheDocument()
-      expect(screen.getByText('Calendar')).toBeInTheDocument()
+      expect(screen.getByText('Planner')).toBeInTheDocument()
       expect(screen.getByText('Team')).toBeInTheDocument()
     })
   })

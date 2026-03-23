@@ -21,11 +21,11 @@
 | **Business rules** | ✅ Done | Max activities/day, blocked days, target required, status transitions, submit lock |
 | **Frontend foundation** | ✅ Done | React + TypeScript strict, Vite, TanStack Router/Query/Table, Tailwind |
 | **Frontend pages (existing)** | ✅ Done | Dashboard, team — with tests |
-| **Frontend pages (DrMax)** | 🔧 Partial | Targets list/detail done; activity form/detail done; planner not started |
+| **Frontend pages (DrMax)** | ✅ Done | Targets list/detail, activity form/detail/edit, planner (week/month/daily views) — 25 planner tests |
 | **Helm / K8s / CI** | ✅ Done | Helm chart, Kind cluster, ExternalSecret, migration job, Makefile targets |
 | **Target import** | ✅ Done | `POST /api/v1/targets/import` — admin-only bulk upsert by external ID |
 | **Dead code removal** | ✅ Done | Leads, lead_events, CalendarEvent code all removed; replaced by Target + Activity domains |
-| **Next step** | | Frontend: Planner (item 14) — weekly/monthly calendar view |
+| **Next step** | | Phase 3: Dashboard stats API (item 16) |
 
 ## Context
 
@@ -33,7 +33,7 @@
 
 **Current state:** DrMax runs on Twenty CRM with a fragile per-user object duplication hack (54 custom objects, 126 workflows, PowerShell webhook) to work around Twenty's lack of row-level security. Pebblr replaces this with a proper multi-tenant CRM with native RBAC.
 
-**Current Pebblr codebase:** Core infrastructure is complete — auth, RBAC, tenant config, targets (doctors/pharmacies). Activity domain, API, and business rules are fully implemented with 38 backend tests. Frontend activity form, detail, and edit pages are done with config-driven dynamic fields and 12 component tests. All dead code (Lead, CalendarEvent, lead_events) has been removed. Next: Planner (weekly/monthly calendar view).
+**Current Pebblr codebase:** Core infrastructure is complete — auth, RBAC, tenant config, targets (doctors/pharmacies). Activity domain, API, and business rules are fully implemented with 38 backend tests. Frontend is feature-complete for Phase 2: activity form/detail/edit pages with config-driven dynamic fields (12 tests), and Planner with week/month/daily views (25 tests). All dead code (Lead, CalendarEvent, old Calendar page) has been removed. Next: Phase 3 — Dashboard stats API.
 
 **Key design constraint:** Nothing client-specific is hardcoded. Enums (statuses, activity types, specialties, products, etc.) and field-level requirements are driven by a JSON tenant configuration file. Validation happens at the API layer against this config, not via DB constraints on enum values.
 
@@ -54,14 +54,14 @@
 
 → [Full details](PLAN-phase-1.md)
 
-### Phase 2 — Activities (core workflow) 🔧
+### Phase 2 — Activities (core workflow) ✅
 
 9. ✅ **Activity domain + store** — `Activity` + `AuditEntry` entities, PostgreSQL repos (migrations 009–011), RBAC enforcer with activity methods
 10. ✅ **Activity API** — CRUD + status transitions + submit, all validated against config (7 endpoints, 22 service + 16 handler tests)
 11. ✅ **Audit log** — migration 011, `AuditRepository` interface + PostgreSQL impl
 12. ✅ **Business rules enforcement** — max activities/day, blocked days, target required, status transitions, submit lock
 13. ✅ **Frontend: Activity form** — config-driven dynamic form, create/edit routes, target search, multi-select fields, 12 tests
-14. ❌ **Frontend: Planner** — weekly/monthly calendar view with activities
+14. ✅ **Frontend: Planner** — week/month/daily views with config-driven colors, status legend, daily pulse stats, 25 tests
 15. ✅ **Frontend: Activity detail** — view + report/submit flow, status transitions, edit link
 
 → [Full details](PLAN-phase-2.md)
@@ -93,10 +93,10 @@
 All generic CRM scaffold code has been removed:
 
 - **Lead domain** — removed in commit `e260728` (PR #51): domain, service, store, handler, events, RBAC methods, frontend pages/services/types
-- **CalendarEvent domain** — removed when Activity domain landed: domain, service, store, handler, tests, frontend calendar page/service/types still present (to be cleaned in frontend activity work)
+- **CalendarEvent domain** — removed when Activity domain landed: domain, service, store, handler, tests
 - **Database** — migration 008 drops `leads` + `lead_events`; migration 009 drops `calendar_events`
 - **Frontend leads/my-leads pages** — removed in PR #51
-- **Frontend calendar components** — `web/src/routes/calendar/`, `web/src/services/calendar.ts`, `web/src/types/calendar.ts`, `web/src/components/calendar/` still present; will be removed when Planner lands (item 14)
+- **Frontend calendar components** — `web/src/routes/calendar/`, `web/src/services/calendar.ts`, `web/src/types/calendar.ts`, `web/src/components/calendar/` all removed when Planner landed (commit `313c8c5`, PR #56)
 
 ---
 

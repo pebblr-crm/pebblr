@@ -1,4 +1,4 @@
-# Phase 2 — Activities (Core Workflow) 🔧
+# Phase 2 — Activities (Core Workflow) ✅
 
 > Back to [overview](PLAN.md)
 
@@ -9,9 +9,9 @@
 11. ✅ **Audit log** — migration 011, `AuditRepository` interface + PostgreSQL impl
 12. ✅ **Business rules enforcement** — max activities/day, blocked days, target required, status transitions, submit lock
 13. ✅ **Frontend: Activity form** — config-driven dynamic form, create/edit routes, target search, multi-select fields, 12 tests
-14. ❌ **Frontend: Planner** — weekly/monthly calendar view (replaces old calendar page)
+14. ✅ **Frontend: Planner** — week/month/daily views, config-driven colors/legends, 25 tests (replaces old calendar page)
 15. ✅ **Frontend: Activity detail** — view + report/submit flow, status transitions, edit link
-16. ✅ **Remove calendar_event code** — backend fully removed; frontend calendar files remain until Planner lands
+16. ✅ **Remove calendar_event code** — backend + frontend fully removed; old calendar files deleted when Planner landed
 
 ---
 
@@ -139,7 +139,7 @@ RBAC: ✅ `CanViewActivity`, `CanUpdateActivity`, `CanDeleteActivity`, `ScopeAct
 
 ---
 
-## 4. Frontend: Activities 🔧
+## 4. Frontend: Activities ✅
 
 ### 4.1 Routes
 
@@ -148,8 +148,8 @@ RBAC: ✅ `CanViewActivity`, `CanUpdateActivity`, `CanDeleteActivity`, `ScopeAct
 | `/activities/new`        | `NewActivityPage`   | ✅     | Create activity (dynamic form from config)          |
 | `/activities/:id`        | `ActivityDetailPage`| ✅     | Activity detail + report/submit + status transitions|
 | `/activities/:id/edit`   | `EditActivityPage`  | ✅     | Edit activity (blocked if submitted)                |
-| `/planner`               | `Planner`           | ❌     | Weekly/monthly calendar view of activities          |
-| `/planner/daily`         | `PlannerDaily`      | ❌     | Daily agenda view with time slots                   |
+| `/planner`               | `PlannerPage`       | ✅     | Week/month calendar view of activities              |
+| `/planner/daily`         | `PlannerDailyPage`  | ✅     | Daily agenda view with activity list                |
 
 ### 4.2 Dynamic Form Rendering ✅
 
@@ -218,25 +218,34 @@ useSubmitActivity()                  // POST /activities/:id/submit
 usePatchActivityStatus()             // PATCH /activities/:id/status
 ```
 
-### 4.6 Planner — Next ❌
+### 4.6 Planner ✅
 
-The old `CalendarGrid.tsx` and `EventCard.tsx` provide useful patterns:
-- Month grid layout logic
-- Color-coded event cards by type
-- Date navigation (prev/next month)
+Implemented in commit `313c8c5` (PR #56). Reused patterns from old `CalendarGrid.tsx` and `EventCard.tsx`, then deleted originals.
 
-Reuse these patterns in the Planner component, then delete the originals. The Planner adds:
-- Week view (in addition to month)
-- Daily agenda view
-- Activity type color coding from config
-- Status indicators (planned/realized/cancelled)
-- Drag-and-drop (Phase 4)
+**Components:**
 
-### 4.7 Frontend Cleanup (with Planner)
+- `web/src/routes/planner/index.tsx` — `PlannerPage` with week/month toggle, period navigation, Today button
+- `web/src/routes/planner/daily.tsx` — `PlannerDailyPage` with daily agenda, day navigation, status badges
+- `web/src/components/planner/MonthGrid.tsx` — Month grid with proper day-of-week alignment, activity cards per day
+- `web/src/components/planner/WeekGrid.tsx` — 7-column week view with activity cards and quick-add links
+- `web/src/components/planner/ActivityCard.tsx` — Compact card with config-driven type labels, category colors (field=amber, non-field=blue), status dots
 
-Remove when Planner lands:
-- `web/src/routes/calendar/` → replaced by Planner
-- `web/src/services/calendar.ts` → replaced by activity service
-- `web/src/types/calendar.ts` → replaced by activity types
-- `web/src/components/calendar/` → patterns reused in Planner, originals deleted
-- Sidebar navigation: replace "Calendar" with "Planner"
+**Features:**
+
+- Week view (default) + month view toggle
+- Daily agenda view at `/planner/daily`
+- Config-driven status legend + category legend sidebar
+- Daily pulse stats (today count, period total)
+- Period navigation (prev/next) + Today button
+- Activity cards link to detail page
+- Quick-add links in week view cells
+- 14 planner tests + 12 daily tests = 26 total
+
+### 4.7 Frontend Cleanup ✅
+
+All old calendar files removed when Planner landed:
+- `web/src/routes/calendar/` → replaced by `web/src/routes/planner/`
+- `web/src/services/calendar.ts` → replaced by `useActivities` with date range filters
+- `web/src/types/calendar.ts` → replaced by `Activity` type
+- `web/src/components/calendar/` → patterns reused in `web/src/components/planner/`, originals deleted
+- Sidebar: "Calendar" → "Planner" with improved active state for sub-routes

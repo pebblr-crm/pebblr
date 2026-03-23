@@ -2,7 +2,8 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { createRouter, RouterProvider } from '@tanstack/react-router'
 import { Route as rootRoute } from './routes/__root'
 import { Route as indexRoute } from './routes/index'
-import { Route as calendarRoute } from './routes/calendar/index'
+import { Route as plannerRoute } from './routes/planner/index'
+import { Route as plannerDailyRoute } from './routes/planner/daily'
 import { Route as teamRoute } from './routes/team/index'
 import { Route as targetsIndexRoute } from './routes/targets/index'
 import { Route as targetDetailRoute } from './routes/targets/$targetId'
@@ -12,7 +13,8 @@ import { Route as editActivityRoute } from './routes/activities/$activityId.edit
 
 const routeTree = rootRoute.addChildren([
   indexRoute,
-  calendarRoute,
+  plannerRoute,
+  plannerDailyRoute,
   teamRoute,
   targetsIndexRoute,
   targetDetailRoute,

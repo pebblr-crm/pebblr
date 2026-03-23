@@ -5,7 +5,7 @@ const navItems = [
   { to: '/', label: 'Dashboard', icon: LayoutDashboard },
   { to: '/targets', label: 'Targets', icon: Target },
   { to: '/activities/new', label: 'New Activity', icon: ClipboardList },
-  { to: '/calendar', label: 'Calendar', icon: CalendarDays },
+  { to: '/planner', label: 'Planner', icon: CalendarDays },
   { to: '/team', label: 'Team', icon: Users },
 ] as const
 
@@ -20,7 +20,7 @@ export function Sidebar() {
         <nav className="space-y-1">
           {navItems.map((item) => {
             const Icon = item.icon
-            const isActive = location.pathname === item.to
+            const isActive = location.pathname === item.to || location.pathname.startsWith(item.to + '/')
             return (
               <Link
                 key={item.to}
