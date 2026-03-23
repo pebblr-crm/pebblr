@@ -8,4 +8,5 @@ type Store interface {
 	Targets() TargetRepository
 	Activities() ActivityRepository
 	Audit() AuditRepository
+	Dashboard() DashboardRepository
 }

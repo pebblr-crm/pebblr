@@ -25,7 +25,8 @@
 | **Helm / K8s / CI** | ✅ Done | Helm chart, Kind cluster, ExternalSecret, migration job, Makefile targets |
 | **Target import** | ✅ Done | `POST /api/v1/targets/import` — admin-only bulk upsert by external ID |
 | **Dead code removal** | ✅ Done | Leads, lead_events, CalendarEvent code all removed; replaced by Target + Activity domains |
-| **Next step** | | Phase 3: Dashboard stats API (item 16) |
+| **Dashboard stats API** | ✅ Done | `GET /api/v1/dashboard/{activities,coverage,frequency}` — RBAC-scoped, config-driven, 19 tests |
+| **Next step** | | Phase 3: Frontend dashboard (item 17) |
 
 ## Context
 
@@ -33,7 +34,7 @@
 
 **Current state:** DrMax runs on Twenty CRM with a fragile per-user object duplication hack (54 custom objects, 126 workflows, PowerShell webhook) to work around Twenty's lack of row-level security. Pebblr replaces this with a proper multi-tenant CRM with native RBAC.
 
-**Current Pebblr codebase:** Core infrastructure is complete — auth, RBAC, tenant config, targets (doctors/pharmacies). Activity domain, API, and business rules are fully implemented with 38 backend tests. Frontend is feature-complete for Phase 2: activity form/detail/edit pages with config-driven dynamic fields (12 tests), and Planner with week/month/daily views (25 tests). All dead code (Lead, CalendarEvent, old Calendar page) has been removed. Next: Phase 3 — Dashboard stats API.
+**Current Pebblr codebase:** Core infrastructure is complete — auth, RBAC, tenant config, targets (doctors/pharmacies). Activity domain, API, and business rules are fully implemented with 38 backend tests. Dashboard stats API provides activity stats (by status/category), target coverage, and frequency compliance — all RBAC-scoped with 19 tests. Frontend is feature-complete for Phase 2: activity form/detail/edit pages with config-driven dynamic fields (12 tests), and Planner with week/month/daily views (25 tests). All dead code (Lead, CalendarEvent, old Calendar page) has been removed. Next: Phase 3 — Frontend dashboard.
 
 **Key design constraint:** Nothing client-specific is hardcoded. Enums (statuses, activity types, specialties, products, etc.) and field-level requirements are driven by a JSON tenant configuration file. Validation happens at the API layer against this config, not via DB constraints on enum values.
 
@@ -68,7 +69,7 @@
 
 ### Phase 3 — Reporting & Dashboard ❌
 
-16. ❌ **Dashboard stats API** — planned vs realized, coverage, field vs non-field, per user/team/period
+16. ✅ **Dashboard stats API** — planned vs realized, coverage, field vs non-field, per user/team/period
 17. 🔧 **Frontend: Dashboard** — basic dashboard exists; needs DrMax KPIs (replace lead-based stats)
 18. ❌ **Joint visit** — co-visitor association, activity visible to both users
 19. ❌ **Frequency tracking** — visits per target vs frequency from config rules

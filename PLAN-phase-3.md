@@ -4,14 +4,14 @@
 
 ## Checklist
 
-16. ❌ **Dashboard stats API** — planned vs realized, coverage, field vs non-field, per user/team/period
+16. ✅ **Dashboard stats API** — planned vs realized, coverage, field vs non-field, per user/team/period
 17. 🔧 **Frontend: Dashboard** — basic dashboard exists; replace lead-based stats with DrMax KPIs
 18. ❌ **Joint visit** — co-visitor association, activity visible to both users
 19. ❌ **Frequency tracking** — visits per target vs frequency from config rules
 
 ---
 
-## 1. Dashboard Stats API ❌
+## 1. Dashboard Stats API ✅
 
 New endpoints (or rework existing `/api/v1/dashboard`) to provide DrMax-specific KPIs:
 
