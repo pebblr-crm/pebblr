@@ -55,10 +55,10 @@ function haversineKm(lat1: number, lng1: number, lat2: number, lng2: number): nu
   return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a))
 }
 
-function isWithinCadence(lastVisit: string | undefined, cadenceDays: number): boolean {
+function isWithinCadence(lastVisit: string | undefined, cadenceDays: number, referenceDate: Date): boolean {
   if (!lastVisit) return false
   const last = new Date(lastVisit)
-  const cutoff = new Date()
+  const cutoff = new Date(referenceDate)
   cutoff.setDate(cutoff.getDate() - cadenceDays)
   return last >= cutoff
 }
@@ -129,6 +129,12 @@ function MapPlannerPage() {
     return ids
   }, [dayAssignments])
 
+  const weekDates = useMemo(() => {
+    const base = new Date()
+    base.setDate(base.getDate() + weekOffset * 7)
+    return getWeekDates(base)
+  }, [weekOffset])
+
   // Centroid of selected targets — used to sort available targets by proximity.
   const selectionCentroid = useMemo(() => {
     if (selectedIds.size === 0) return null
@@ -155,7 +161,7 @@ function MapPlannerPage() {
       const dist = selectionCentroid
         ? haversineKm(selectionCentroid.lat, selectionCentroid.lng, t.fields.lat as number, t.fields.lng as number)
         : undefined
-      const isCadenced = isWithinCadence(visitStatusMap.get(t.id), cadenceDays)
+      const isCadenced = isWithinCadence(visitStatusMap.get(t.id), cadenceDays, weekDates[0].date)
       return { target: t, distance: dist, isCadenced }
     })
 
@@ -164,13 +170,7 @@ function MapPlannerPage() {
     }
 
     return items
-  }, [geoTargets, selectedIds, assignedIds, selectionCentroid, visitStatusMap, cadenceDays])
-
-  const weekDates = useMemo(() => {
-    const base = new Date()
-    base.setDate(base.getDate() + weekOffset * 7)
-    return getWeekDates(base)
-  }, [weekOffset])
+  }, [geoTargets, selectedIds, assignedIds, selectionCentroid, visitStatusMap, cadenceDays, weekDates])
 
   // Existing activities grouped by date string.
   const activitiesByDate = useMemo(() => {
@@ -293,7 +293,7 @@ function MapPlannerPage() {
                 const isSelected = selectedIds.has(target.id)
                 const isAssigned = assignedIds.has(target.id)
                 const lastVisit = visitStatusMap.get(target.id)
-                const isCadenced = isWithinCadence(lastVisit, cadenceDays)
+                const isCadenced = isWithinCadence(lastVisit, cadenceDays, weekDates[0].date)
                 const isHovered = hoveredTargetId === target.id
 
                 const cadenceLocked = isCadenced && !showCadenced
