@@ -1,4 +1,5 @@
 import { Link } from '@tanstack/react-router'
+import { Users } from 'lucide-react'
 import type { Activity } from '@/types/activity'
 import type { TenantConfig } from '@/types/config'
 import {
@@ -20,6 +21,9 @@ export function ActivityCard({ activity, config }: ActivityCardProps) {
   const style = CATEGORY_COLORS[category] ?? CATEGORY_COLORS.field
   const statusDot = getStatusDotColor(config?.activities, activity.status)
   const durationLabel = getDurationLabel(config?.activities, activity.duration)
+  const jointVisitUserId = activity.jointVisitUserId
+    ?? (activity.fields?.joint_visit_user_id as string | undefined)
+  const hasJointVisit = Boolean(jointVisitUserId)
 
   return (
     <Link
@@ -31,6 +35,9 @@ export function ActivityCard({ activity, config }: ActivityCardProps) {
       <div className="flex items-center gap-1">
         <span className={`w-1.5 h-1.5 rounded-full shrink-0 ${statusDot}`} />
         <p className="text-[10px] font-semibold truncate">{title}</p>
+        {hasJointVisit && (
+          <Users className="w-2.5 h-2.5 shrink-0 opacity-60" data-testid="joint-visit-icon" />
+        )}
       </div>
       <p className="text-[8px] opacity-70 truncate">{durationLabel}</p>
     </Link>

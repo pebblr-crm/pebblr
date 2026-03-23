@@ -6,7 +6,7 @@
 
 16. ✅ **Dashboard stats API** — planned vs realized, coverage, field vs non-field, per user/team/period
 17. ✅ **Frontend: Dashboard** — activity KPIs, coverage, frequency compliance, period selector, 15 tests
-18. ❌ **Joint visit** — co-visitor association, activity visible to both users
+18. ✅ **Joint visit** — co-visitor validation, planner indicator, detail badge, 7 service tests
 19. ❌ **Frequency tracking** — visits per target vs frequency from config rules
 
 ---
@@ -48,15 +48,17 @@ Reuse existing `StatCard` component structure, `TeamPerformanceCard` patterns.
 
 ---
 
-## 3. Joint Visit ❌
+## 3. Joint Visit ✅
 
 When a visit has `joint_visit_user_id` set:
 
-- The activity appears in both users' planners
-- Both users can view the activity detail
-- Only the creator can edit/submit
-- RLS policy already accounts for this (see activities migration: `OR joint_visit_user_id = current_setting('app.user_id')::uuid`)
-- Dashboard stats count the visit for the creator, not the co-visitor
+- The activity appears in both users' planners (repo List query includes `OR joint_visit_user_id`)
+- Both users can view the activity detail (RBAC `CanViewActivity` checks JointVisitUID)
+- Only the creator can edit/submit (RBAC `CanUpdateActivity` checks CreatorID only)
+- RLS policy as defense-in-depth (`OR joint_visit_user_id = current_setting('app.user_id')::uuid`)
+- Dashboard stats count the visit for the creator, not the co-visitor (`DashboardFilter.UserID` → `creator_id`)
+- **Service validation:** self-reference rejected, non-existent user rejected (7 tests)
+- **Frontend:** Users icon on planner ActivityCard, "Joint visit with {name}" badge on detail page
 
 ---
 

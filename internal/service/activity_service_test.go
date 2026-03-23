@@ -73,6 +73,31 @@ func (r *stubActivityRepo) HasActivityWithTypes(_ context.Context, _ string, _ t
 	return r.hasActivityWithTypes, nil
 }
 
+// --- stub user repo ---
+
+type stubUserRepo struct {
+	users map[string]*domain.User
+}
+
+func (r *stubUserRepo) GetByID(_ context.Context, id string) (*domain.User, error) {
+	if u, ok := r.users[id]; ok {
+		return u, nil
+	}
+	return nil, store.ErrNotFound
+}
+
+func (r *stubUserRepo) GetByExternalID(_ context.Context, _ string) (*domain.User, error) {
+	return nil, store.ErrNotFound
+}
+
+func (r *stubUserRepo) List(_ context.Context) ([]*domain.User, error) {
+	return nil, nil
+}
+
+func (r *stubUserRepo) Upsert(_ context.Context, u *domain.User) (*domain.User, error) {
+	return u, nil
+}
+
 // --- stub audit repo ---
 
 type stubAuditRepo struct {
@@ -143,8 +168,17 @@ func sampleActivity() *domain.Activity {
 	}
 }
 
+func defaultUserRepo() *stubUserRepo {
+	return &stubUserRepo{users: map[string]*domain.User{
+		"rep-1":   {ID: "rep-1", Name: "Rep User", Role: domain.RoleRep, TeamIDs: []string{"team-1"}},
+		"rep-2":   {ID: "rep-2", Name: "Rep Two", Role: domain.RoleRep, TeamIDs: []string{"team-1"}},
+		"mgr-1":   {ID: "mgr-1", Name: "Manager User", Role: domain.RoleManager, TeamIDs: []string{"team-1"}},
+		"admin-1": {ID: "admin-1", Name: "Admin User", Role: domain.RoleAdmin, TeamIDs: []string{"team-1"}},
+	}}
+}
+
 func newActivitySvc(repo *stubActivityRepo, audit *stubAuditRepo) *service.ActivityService {
-	return service.NewActivityService(repo, audit, rbac.NewEnforcer(), activityTestConfig())
+	return service.NewActivityService(repo, defaultUserRepo(), audit, rbac.NewEnforcer(), activityTestConfig())
 }
 
 // --- Create tests ---
@@ -772,5 +806,131 @@ func TestActivityPatchStatus_SubmittedBlocked(t *testing.T) {
 	_, err := svc.PatchStatus(context.Background(), repUser(), "activity-1", "realizat")
 	if !errors.Is(err, service.ErrSubmitted) {
 		t.Errorf("expected ErrSubmitted, got %v", err)
+	}
+}
+
+// --- Joint visit tests ---
+
+func TestActivityCreate_WithValidJointVisitor(t *testing.T) {
+	t.Parallel()
+	repo := &stubActivityRepo{}
+	audit := &stubAuditRepo{}
+	svc := newActivitySvc(repo, audit)
+
+	activity := &domain.Activity{
+		ActivityType:  "visit",
+		DueDate:       time.Date(2026, 3, 23, 0, 0, 0, 0, time.UTC),
+		Duration:      "full_day",
+		Fields:        map[string]any{},
+		TargetID:      "target-1",
+		JointVisitUID: "rep-2",
+	}
+	created, err := svc.Create(context.Background(), repUser(), activity)
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if created.JointVisitUID != "rep-2" {
+		t.Errorf("expected joint visit user rep-2, got %s", created.JointVisitUID)
+	}
+}
+
+func TestActivityCreate_SelfJointVisitorRejected(t *testing.T) {
+	t.Parallel()
+	repo := &stubActivityRepo{}
+	audit := &stubAuditRepo{}
+	svc := newActivitySvc(repo, audit)
+
+	activity := &domain.Activity{
+		ActivityType:  "visit",
+		DueDate:       time.Date(2026, 3, 23, 0, 0, 0, 0, time.UTC),
+		Duration:      "full_day",
+		Fields:        map[string]any{},
+		TargetID:      "target-1",
+		JointVisitUID: "rep-1", // same as creator
+	}
+	_, err := svc.Create(context.Background(), repUser(), activity)
+	if !errors.Is(err, service.ErrInvalidJointVisitor) {
+		t.Errorf("expected ErrInvalidJointVisitor, got %v", err)
+	}
+}
+
+func TestActivityCreate_NonExistentJointVisitorRejected(t *testing.T) {
+	t.Parallel()
+	repo := &stubActivityRepo{}
+	audit := &stubAuditRepo{}
+	svc := newActivitySvc(repo, audit)
+
+	activity := &domain.Activity{
+		ActivityType:  "visit",
+		DueDate:       time.Date(2026, 3, 23, 0, 0, 0, 0, time.UTC),
+		Duration:      "full_day",
+		Fields:        map[string]any{},
+		TargetID:      "target-1",
+		JointVisitUID: "nonexistent-user",
+	}
+	_, err := svc.Create(context.Background(), repUser(), activity)
+	if !errors.Is(err, service.ErrInvalidJointVisitor) {
+		t.Errorf("expected ErrInvalidJointVisitor, got %v", err)
+	}
+}
+
+func TestActivityGet_RepCanViewAsJointVisitor(t *testing.T) {
+	t.Parallel()
+	jointActivity := sampleActivity()
+	jointActivity.CreatorID = "rep-2"
+	jointActivity.JointVisitUID = "rep-1"
+	repo := &stubActivityRepo{activity: jointActivity}
+	audit := &stubAuditRepo{}
+	svc := newActivitySvc(repo, audit)
+
+	activity, err := svc.Get(context.Background(), repUser(), "activity-1")
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if activity.ID != "activity-1" {
+		t.Errorf("expected activity-1, got %s", activity.ID)
+	}
+}
+
+func TestActivityUpdate_JointVisitorCannotUpdate(t *testing.T) {
+	t.Parallel()
+	jointActivity := sampleActivity()
+	jointActivity.CreatorID = "rep-2"
+	jointActivity.JointVisitUID = "rep-1"
+	repo := &stubActivityRepo{activity: jointActivity}
+	audit := &stubAuditRepo{}
+	svc := newActivitySvc(repo, audit)
+
+	update := &domain.Activity{
+		ActivityType: "visit",
+		Status:       "planificat",
+		DueDate:      time.Date(2026, 3, 24, 0, 0, 0, 0, time.UTC),
+		Fields:       map[string]any{},
+	}
+	_, err := svc.Update(context.Background(), repUser(), "activity-1", update)
+	if !errors.Is(err, service.ErrForbidden) {
+		t.Errorf("expected ErrForbidden for joint visitor update, got %v", err)
+	}
+}
+
+func TestActivityCreate_EmptyJointVisitorAllowed(t *testing.T) {
+	t.Parallel()
+	repo := &stubActivityRepo{}
+	audit := &stubAuditRepo{}
+	svc := newActivitySvc(repo, audit)
+
+	activity := &domain.Activity{
+		ActivityType: "visit",
+		DueDate:      time.Date(2026, 3, 23, 0, 0, 0, 0, time.UTC),
+		Duration:     "full_day",
+		Fields:       map[string]any{},
+		TargetID:     "target-1",
+	}
+	created, err := svc.Create(context.Background(), repUser(), activity)
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if created.JointVisitUID != "" {
+		t.Errorf("expected empty joint visit user, got %s", created.JointVisitUID)
 	}
 }

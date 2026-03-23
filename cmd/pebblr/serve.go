@@ -77,7 +77,7 @@ func serve(configPath string) error {
 	teamSvc := service.NewTeamService(db.Teams())
 	userSvc := service.NewUserService(db.Users())
 	targetSvc := service.NewTargetService(db.Targets(), enforcer, tenantCfg)
-	activitySvc := service.NewActivityService(db.Activities(), db.Audit(), enforcer, tenantCfg)
+	activitySvc := service.NewActivityService(db.Activities(), db.Users(), db.Audit(), enforcer, tenantCfg)
 	dashboardSvc := service.NewDashboardService(db.Dashboard(), enforcer, tenantCfg)
 
 	targetHandler := api.NewTargetHandler(targetSvc)

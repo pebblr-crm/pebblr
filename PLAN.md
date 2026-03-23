@@ -27,7 +27,8 @@
 | **Dead code removal** | ✅ Done | Leads, lead_events, CalendarEvent code all removed; replaced by Target + Activity domains |
 | **Dashboard stats API** | ✅ Done | `GET /api/v1/dashboard/{activities,coverage,frequency}` — RBAC-scoped, config-driven, 19 tests |
 | **Frontend dashboard** | ✅ Done | Activity KPIs, coverage, frequency compliance, period selector, 15 tests |
-| **Next step** | | Phase 3: Joint visit (item 18) |
+| **Joint visit** | ✅ Done | Co-visitor validation, planner indicator, detail badge, 7 service tests |
+| **Next step** | | Phase 3: Frequency tracking (item 19) |
 
 ## Context
 
@@ -72,7 +73,7 @@
 
 16. ✅ **Dashboard stats API** — planned vs realized, coverage, field vs non-field, per user/team/period
 17. ✅ **Frontend: Dashboard** — activity KPIs (planned/realized/rate), coverage, frequency compliance, period selector, 15 tests
-18. ❌ **Joint visit** — co-visitor association, activity visible to both users
+18. ✅ **Joint visit** — co-visitor validation, planner indicator, detail badge, 7 service tests
 19. ❌ **Frequency tracking** — visits per target vs frequency from config rules
 
 → [Full details](PLAN-phase-3.md)
