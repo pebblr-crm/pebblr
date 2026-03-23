@@ -175,6 +175,10 @@ export function ActivityDetailInner({ activityId, config }: InnerProps) {
       retrySave()
       return
     }
+    if (!isSubmittable) {
+      showToast('Set status to completed or cancelled before submitting.')
+      return
+    }
     setConfirmAction({
       title: 'Submit report?',
       message: 'Once submitted, the activity will be locked and can no longer be edited.',
@@ -356,7 +360,6 @@ export function ActivityDetailInner({ activityId, config }: InnerProps) {
                 saveState={saveState}
                 isSubmitting={isSubmitting}
                 isStatusPending={statusMutation.isPending}
-                isSubmittable={isSubmittable}
                 onClick={requestSubmit}
               />
             </div>
@@ -376,7 +379,6 @@ export function ActivityDetailInner({ activityId, config }: InnerProps) {
               saveState={saveState}
               isSubmitting={isSubmitting}
               isStatusPending={statusMutation.isPending}
-              isSubmittable={isSubmittable}
               onClick={requestSubmit}
             />
           </div>
@@ -402,18 +404,16 @@ interface SubmitButtonProps {
   saveState: string
   isSubmitting: boolean
   isStatusPending: boolean
-  isSubmittable: boolean
   onClick: () => void
 }
 
-function SubmitButton({ saveState, isSubmitting, isStatusPending, isSubmittable, onClick }: SubmitButtonProps) {
-  const disabled = isSubmitting || isStatusPending || !isSubmittable
+function SubmitButton({ saveState, isSubmitting, isStatusPending, onClick }: SubmitButtonProps) {
+  const disabled = isSubmitting || isStatusPending
   return (
     <button
       type="button"
       onClick={onClick}
       disabled={disabled}
-      title={!isSubmittable ? 'Set status to completed or cancelled before submitting' : undefined}
       className="w-full sm:w-auto inline-flex items-center justify-center gap-2 px-6 py-3 min-h-[44px] text-sm font-medium text-white bg-primary rounded-xl hover:bg-primary/90 transition-colors disabled:opacity-50"
       data-testid="submit-report-button"
     >
