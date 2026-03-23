@@ -90,6 +90,11 @@
           "minimum": 1,
           "description": "Hard cap on activities a rep can create per day."
         },
+        "visit_cadence_days": {
+          "type": "integer",
+          "minimum": 1,
+          "description": "Minimum days between visits to the same target."
+        },
         "default_visit_duration_minutes": {
           "type": "object",
           "additionalProperties": { "type": "integer", "minimum": 1 },

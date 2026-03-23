@@ -195,6 +195,7 @@
       "c": 1
     },
     "max_activities_per_day": 10,
+    "visit_cadence_days": 21,
     "default_visit_duration_minutes": {
       "doctor": 30,
       "pharmacy": 15

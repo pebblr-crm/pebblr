@@ -54,6 +54,7 @@ export interface ActivitiesConfig {
 export interface RulesConfig {
   frequency: Record<string, number>
   max_activities_per_day: number
+  visit_cadence_days?: number
   default_visit_duration_minutes: Record<string, number>
   visit_duration_step_minutes: number
 }

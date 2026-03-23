@@ -82,6 +82,7 @@ type FieldConfig struct {
 type RulesConfig struct {
 	Frequency                    map[string]int `json:"frequency"`
 	MaxActivitiesPerDay          int            `json:"max_activities_per_day"`
+	VisitCadenceDays             int            `json:"visit_cadence_days"` // min days between visits to the same target
 	DefaultVisitDurationMinutes  map[string]int `json:"default_visit_duration_minutes"`
 	VisitDurationStepMinutes     int            `json:"visit_duration_step_minutes"`
 	Recovery                     *RecoveryRule  `json:"recovery,omitempty"`
