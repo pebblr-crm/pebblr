@@ -9,6 +9,7 @@ import (
 
 	"github.com/pebblr/pebblr/internal/config"
 	"github.com/pebblr/pebblr/internal/domain"
+	"github.com/pebblr/pebblr/internal/geo"
 	"github.com/pebblr/pebblr/internal/rbac"
 	"github.com/pebblr/pebblr/internal/service"
 	"github.com/pebblr/pebblr/internal/store"
@@ -341,5 +342,84 @@ func TestTargetImport_EmptyName(t *testing.T) {
 	_, err := svc.Import(context.Background(), adminUser(), targets)
 	if !errors.Is(err, service.ErrInvalidInput) {
 		t.Errorf("expected ErrInvalidInput, got %v", err)
+	}
+}
+
+// --- Geocoding tests ---
+
+type stubGeocoder struct {
+	result *geo.Result
+	err    error
+	calls  int
+}
+
+func (g *stubGeocoder) Geocode(_ context.Context, _ string) (*geo.Result, error) {
+	g.calls++
+	return g.result, g.err
+}
+
+func TestTargetImport_GeocodesAddresses(t *testing.T) {
+	t.Parallel()
+	repo := &stubTargetRepo{}
+	gc := &stubGeocoder{result: &geo.Result{Lat: 44.4268, Lng: 26.1025, FormattedAddress: "București, Romania"}}
+	svc := service.NewTargetService(repo, rbac.NewEnforcer(), testConfig(), service.WithGeocoder(gc))
+
+	targets := []*domain.Target{
+		{ExternalID: "ext-1", TargetType: "doctor", Name: "Dr. Test", Fields: map[string]any{
+			"address": "Str. Exemplu 1", "city": "București",
+		}},
+	}
+	_, err := svc.Import(context.Background(), adminUser(), targets)
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if gc.calls != 1 {
+		t.Errorf("expected 1 geocode call, got %d", gc.calls)
+	}
+	if targets[0].Fields["lat"] != 44.4268 {
+		t.Errorf("expected lat 44.4268, got %v", targets[0].Fields["lat"])
+	}
+	if targets[0].Fields["lng"] != 26.1025 {
+		t.Errorf("expected lng 26.1025, got %v", targets[0].Fields["lng"])
+	}
+}
+
+func TestTargetImport_SkipsAlreadyGeocoded(t *testing.T) {
+	t.Parallel()
+	repo := &stubTargetRepo{}
+	gc := &stubGeocoder{result: &geo.Result{Lat: 1, Lng: 2}}
+	svc := service.NewTargetService(repo, rbac.NewEnforcer(), testConfig(), service.WithGeocoder(gc))
+
+	targets := []*domain.Target{
+		{ExternalID: "ext-1", TargetType: "doctor", Name: "Dr. Test", Fields: map[string]any{
+			"address": "Str. Exemplu 1", "city": "București", "lat": 44.0, "lng": 26.0,
+		}},
+	}
+	_, err := svc.Import(context.Background(), adminUser(), targets)
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if gc.calls != 0 {
+		t.Errorf("expected 0 geocode calls for already-geocoded target, got %d", gc.calls)
+	}
+}
+
+func TestTargetImport_GeocodingFailureDoesNotBlock(t *testing.T) {
+	t.Parallel()
+	repo := &stubTargetRepo{}
+	gc := &stubGeocoder{err: geo.ErrNoResults}
+	svc := service.NewTargetService(repo, rbac.NewEnforcer(), testConfig(), service.WithGeocoder(gc))
+
+	targets := []*domain.Target{
+		{ExternalID: "ext-1", TargetType: "doctor", Name: "Dr. Test", Fields: map[string]any{
+			"address": "Nonexistent Address", "city": "Nowhere",
+		}},
+	}
+	_, err := svc.Import(context.Background(), adminUser(), targets)
+	if err != nil {
+		t.Fatalf("expected import to succeed despite geocoding failure, got %v", err)
+	}
+	if _, hasLat := targets[0].Fields["lat"]; hasLat {
+		t.Error("expected no lat field after geocoding failure")
 	}
 }

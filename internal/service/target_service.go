@@ -3,9 +3,11 @@ package service
 import (
 	"context"
 	"fmt"
+	"log/slog"
 
 	"github.com/pebblr/pebblr/internal/config"
 	"github.com/pebblr/pebblr/internal/domain"
+	"github.com/pebblr/pebblr/internal/geo"
 	"github.com/pebblr/pebblr/internal/rbac"
 	"github.com/pebblr/pebblr/internal/store"
 )
@@ -15,11 +17,24 @@ type TargetService struct {
 	targets  store.TargetRepository
 	enforcer rbac.Enforcer
 	cfg      *config.TenantConfig
+	geocoder geo.Geocoder // optional; nil skips geocoding
 }
 
 // NewTargetService constructs a TargetService with the given dependencies.
-func NewTargetService(targets store.TargetRepository, enforcer rbac.Enforcer, cfg *config.TenantConfig) *TargetService {
-	return &TargetService{targets: targets, enforcer: enforcer, cfg: cfg}
+func NewTargetService(targets store.TargetRepository, enforcer rbac.Enforcer, cfg *config.TenantConfig, opts ...TargetServiceOption) *TargetService {
+	s := &TargetService{targets: targets, enforcer: enforcer, cfg: cfg}
+	for _, o := range opts {
+		o(s)
+	}
+	return s
+}
+
+// TargetServiceOption configures optional dependencies on TargetService.
+type TargetServiceOption func(*TargetService)
+
+// WithGeocoder sets the geocoder used to enrich targets during import.
+func WithGeocoder(g geo.Geocoder) TargetServiceOption {
+	return func(s *TargetService) { s.geocoder = g }
 }
 
 // Create persists a new target. Only managers and admins may create targets.
@@ -82,6 +97,7 @@ func (s *TargetService) Update(ctx context.Context, actor *domain.User, target *
 }
 
 // Import bulk-upserts targets by external ID. Admin-only.
+// When a geocoder is configured, targets without lat/lng are geocoded from their address fields.
 func (s *TargetService) Import(ctx context.Context, actor *domain.User, targets []*domain.Target) (*store.ImportResult, error) {
 	if actor.Role != domain.RoleAdmin {
 		return nil, ErrForbidden
@@ -94,11 +110,64 @@ func (s *TargetService) Import(ctx context.Context, actor *domain.User, targets 
 			return nil, fmt.Errorf("target at index %d: %w", i, err)
 		}
 	}
+
+	// Geocode targets that have an address but no coordinates.
+	if s.geocoder != nil {
+		s.geocodeTargets(ctx, targets)
+	}
+
 	result, err := s.targets.Upsert(ctx, targets)
 	if err != nil {
 		return nil, fmt.Errorf("importing targets: %w", err)
 	}
 	return result, nil
+}
+
+// geocodeTargets enriches targets with lat/lng from their address fields.
+// Geocoding failures are logged but do not block the import.
+func (s *TargetService) geocodeTargets(ctx context.Context, targets []*domain.Target) {
+	for _, t := range targets {
+		if t.Fields == nil {
+			continue
+		}
+		// Skip if already geocoded.
+		if _, hasLat := t.Fields["lat"]; hasLat {
+			continue
+		}
+		addr := buildAddress(t.Fields)
+		if addr == "" {
+			continue
+		}
+		result, err := s.geocoder.Geocode(ctx, addr)
+		if err != nil {
+			slog.Warn("geocoding failed, skipping", "target", t.Name, "address", addr, "err", err)
+			continue
+		}
+		t.Fields["lat"] = result.Lat
+		t.Fields["lng"] = result.Lng
+		t.Fields["formatted_address"] = result.FormattedAddress
+	}
+}
+
+// buildAddress assembles a geocodable address string from target fields.
+func buildAddress(fields map[string]any) string {
+	addr, _ := fields["address"].(string)
+	city, _ := fields["city"].(string)
+	county, _ := fields["county"].(string)
+	if addr == "" && city == "" {
+		return ""
+	}
+	s := addr
+	if city != "" {
+		if s != "" {
+			s += ", "
+		}
+		s += city
+	}
+	if county != "" && county != city {
+		s += ", " + county
+	}
+	return s
 }
 
 // validateTarget checks that the target has a valid type and name.

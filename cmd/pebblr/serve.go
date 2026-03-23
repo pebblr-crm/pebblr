@@ -19,15 +19,17 @@ import (
 	"github.com/pebblr/pebblr/internal/api"
 	"github.com/pebblr/pebblr/internal/auth"
 	"github.com/pebblr/pebblr/internal/config"
+	"github.com/pebblr/pebblr/internal/geo"
 	"github.com/pebblr/pebblr/internal/rbac"
 	"github.com/pebblr/pebblr/internal/service"
 	"github.com/pebblr/pebblr/internal/store/postgres"
 )
 
 const (
-	defaultDSNFile        = "/run/secrets/db-dsn"
-	defaultMigrationsPath = "./migrations"
-	defaultConfigPath     = "./config/tenant.json"
+	defaultDSNFile           = "/run/secrets/db-dsn"
+	defaultGeoAPIKeyFile     = "/run/secrets/google-geocoding-api-key"
+	defaultMigrationsPath    = "./migrations"
+	defaultConfigPath        = "./config/tenant.json"
 )
 
 func runServe(args []string) int {
@@ -76,7 +78,14 @@ func serve(configPath string) error {
 
 	teamSvc := service.NewTeamService(db.Teams())
 	userSvc := service.NewUserService(db.Users())
-	targetSvc := service.NewTargetService(db.Targets(), enforcer, tenantCfg)
+	var targetOpts []service.TargetServiceOption
+	if apiKey, err := readOptionalSecret(defaultGeoAPIKeyFile); err == nil && apiKey != "" {
+		logger.Info("geocoding enabled (Google Maps API key loaded)")
+		targetOpts = append(targetOpts, service.WithGeocoder(geo.NewGoogleGeocoder(apiKey)))
+	} else {
+		logger.Info("geocoding disabled (no API key file)")
+	}
+	targetSvc := service.NewTargetService(db.Targets(), enforcer, tenantCfg, targetOpts...)
 	activitySvc := service.NewActivityService(db.Activities(), db.Users(), db.Audit(), enforcer, tenantCfg)
 	dashboardSvc := service.NewDashboardService(db.Dashboard(), enforcer, tenantCfg)
 
@@ -176,6 +185,18 @@ func readSecretFile(path string) (string, error) {
 	data, err := os.ReadFile(path)
 	if err != nil {
 		return "", fmt.Errorf("reading secret file %s: %w", path, err)
+	}
+	return strings.TrimSpace(string(data)), nil
+}
+
+// readOptionalSecret reads a secret file, returning "" if the file doesn't exist.
+func readOptionalSecret(path string) (string, error) {
+	data, err := os.ReadFile(path)
+	if err != nil {
+		if os.IsNotExist(err) {
+			return "", nil
+		}
+		return "", err
 	}
 	return strings.TrimSpace(string(data)), nil
 }
