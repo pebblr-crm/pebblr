@@ -1,4 +1,5 @@
 -- Generic audit log for tracking entity changes.
+
 CREATE TABLE audit_log (
     id          UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     entity_type TEXT NOT NULL,

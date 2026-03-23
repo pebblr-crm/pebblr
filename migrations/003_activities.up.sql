@@ -1,4 +1,6 @@
--- Create the activities table for field sales activity tracking.
+-- Activities: scheduled or completed field actions (visits, admin tasks, time-off).
+-- Activity types, statuses, and dynamic fields are driven by the tenant configuration.
+
 CREATE TABLE activities (
     id                  UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     activity_type       TEXT NOT NULL,

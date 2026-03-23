@@ -1,2 +1,3 @@
 DROP POLICY IF EXISTS activities_access ON activities;
+ALTER TABLE activities DISABLE ROW LEVEL SECURITY;
 DROP TABLE IF EXISTS activities;
