@@ -23,6 +23,10 @@ var ErrBlockedDay = fmt.Errorf("day is blocked by a non-field activity")
 // ErrTargetRequired indicates that a field activity requires a target.
 var ErrTargetRequired = fmt.Errorf("target required")
 
+// ErrInvalidJointVisitor indicates that the joint visit user ID is invalid
+// (e.g. self-reference or non-existent user).
+var ErrInvalidJointVisitor = fmt.Errorf("invalid joint visit user")
+
 // ValidationErrors wraps a slice of config.FieldError for returning from the service layer.
 type ValidationErrors struct {
 	Errors []config.FieldError
@@ -38,6 +42,7 @@ func (e *ValidationErrors) Error() string {
 // ActivityService handles activity business logic with RBAC enforcement and config validation.
 type ActivityService struct {
 	activities store.ActivityRepository
+	users      store.UserRepository
 	audit      store.AuditRepository
 	enforcer   rbac.Enforcer
 	cfg        *config.TenantConfig
@@ -46,12 +51,14 @@ type ActivityService struct {
 // NewActivityService constructs an ActivityService with the given dependencies.
 func NewActivityService(
 	activities store.ActivityRepository,
+	users store.UserRepository,
 	audit store.AuditRepository,
 	enforcer rbac.Enforcer,
 	cfg *config.TenantConfig,
 ) *ActivityService {
 	return &ActivityService{
 		activities: activities,
+		users:      users,
 		audit:      audit,
 		enforcer:   enforcer,
 		cfg:        cfg,
@@ -73,6 +80,11 @@ func (s *ActivityService) Create(ctx context.Context, actor *domain.User, activi
 		if errs := config.ValidateActivity(s.cfg, activity.ActivityType, activity.Fields, "save"); len(errs) > 0 {
 			return nil, &ValidationErrors{Errors: errs}
 		}
+	}
+
+	// Business rule: validate joint visit user.
+	if err := s.checkJointVisitUser(ctx, activity.CreatorID, activity.JointVisitUID); err != nil {
+		return nil, err
 	}
 
 	// Business rule: target required for field activities.
@@ -149,6 +161,11 @@ func (s *ActivityService) Update(ctx context.Context, actor *domain.User, id str
 		if errs := config.ValidateActivity(s.cfg, activity.ActivityType, activity.Fields, "save"); len(errs) > 0 {
 			return nil, &ValidationErrors{Errors: errs}
 		}
+	}
+
+	// Business rule: validate joint visit user.
+	if err := s.checkJointVisitUser(ctx, existing.CreatorID, activity.JointVisitUID); err != nil {
+		return nil, err
 	}
 
 	// Preserve immutable fields from the existing record.
@@ -451,4 +468,21 @@ func (s *ActivityService) fieldActivityTypes() []string {
 		}
 	}
 	return types
+}
+
+// checkJointVisitUser validates the joint visit user ID when set.
+// It must not be the creator themselves, and must reference an existing user.
+func (s *ActivityService) checkJointVisitUser(ctx context.Context, creatorID, jointVisitUID string) error {
+	if jointVisitUID == "" {
+		return nil
+	}
+	if jointVisitUID == creatorID {
+		return ErrInvalidJointVisitor
+	}
+	if s.users != nil {
+		if _, err := s.users.GetByID(ctx, jointVisitUID); err != nil {
+			return ErrInvalidJointVisitor
+		}
+	}
+	return nil
 }

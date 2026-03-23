@@ -1,6 +1,6 @@
 import { createRoute, Link } from '@tanstack/react-router'
 import { motion } from 'motion/react'
-import { ArrowLeft, Lock, Send } from 'lucide-react'
+import { ArrowLeft, Lock, Send, Users } from 'lucide-react'
 import { useState, useEffect, useRef } from 'react'
 import { Route as rootRoute } from '../__root'
 import { LoadingSpinner } from '../../components/LoadingSpinner'
@@ -86,9 +86,16 @@ export function ActivityDetailInner({ activityId, config }: InnerProps) {
   const { localData, saveState, fieldErrors, handleFieldChange, handleFieldBlur,
           handleStatusChange, handleSubmit, retrySave, isSubmitting } = editor
 
+  const { data: membersResult } = useTeamMembers()
+
   const isSubmitted = Boolean(act.submittedAt)
   const typeConfig = getTypeConfig(config?.activities, act.activityType)
   const typeLabel = getTypeLabel(config?.activities, act.activityType)
+  const jointVisitUserId = act.jointVisitUserId
+    ?? (act.fields?.joint_visit_user_id as string | undefined)
+  const jointVisitorName = jointVisitUserId
+    ? (membersResult?.items.find((u) => u.id === jointVisitUserId)?.name ?? 'Unknown user')
+    : undefined
   const activityTitle = getActivityTitle(config, act)
   const statusLabel = getStatusLabel(config?.activities, localData.status ?? act.status)
   const statusColor = getStatusBadgeColor(config?.activities, localData.status ?? act.status)
@@ -208,6 +215,16 @@ export function ActivityDetailInner({ activityId, config }: InnerProps) {
                 <span className="inline-flex items-center gap-1 px-3 py-1 rounded-full text-[10px] font-bold uppercase tracking-tight bg-slate-200 text-slate-600">
                   <Lock className="w-3 h-3" />
                   Submitted
+                </span>
+              )}
+
+              {jointVisitorName && (
+                <span
+                  className="inline-flex items-center gap-1 px-3 py-1 rounded-full text-[10px] font-bold tracking-tight bg-blue-50 text-blue-700"
+                  data-testid="joint-visit-badge"
+                >
+                  <Users className="w-3 h-3" />
+                  Joint visit with {jointVisitorName}
                 </span>
               )}
             </div>
