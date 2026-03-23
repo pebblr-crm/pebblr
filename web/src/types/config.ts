@@ -23,6 +23,36 @@ export interface AccountTypeConfig {
   fields: FieldConfig[]
 }
 
+export interface StatusDef {
+  key: string
+  label: string
+  initial?: boolean
+}
+
+export interface ActivityTypeConfig {
+  key: string
+  label: string
+  category: 'field' | 'non_field'
+  fields: FieldConfig[]
+  submit_required?: string[]
+  blocks_field_activities?: boolean
+}
+
+export interface ActivitiesConfig {
+  statuses: StatusDef[]
+  status_transitions: Record<string, string[]>
+  durations: OptionDef[]
+  types: ActivityTypeConfig[]
+  routing_options: OptionDef[]
+}
+
+export interface RulesConfig {
+  frequency: Record<string, number>
+  max_activities_per_day: number
+  default_visit_duration_minutes: Record<string, number>
+  visit_duration_step_minutes: number
+}
+
 export interface TenantConfig {
   tenant: {
     name: string
@@ -31,5 +61,7 @@ export interface TenantConfig {
   accounts: {
     types: AccountTypeConfig[]
   }
+  activities: ActivitiesConfig
   options: Record<string, OptionDef[]>
+  rules: RulesConfig
 }
