@@ -21,7 +21,7 @@ func (r *collectionRepository) Create(ctx context.Context, c *domain.Collection)
 	if err != nil {
 		return nil, fmt.Errorf("beginning transaction: %w", err)
 	}
-	defer tx.Rollback(ctx) //nolint:errcheck
+	defer tx.Rollback(ctx) //nolint:errcheck // rollback after commit is a no-op
 
 	row := tx.QueryRow(ctx,
 		`INSERT INTO target_collections (name, creator_id, team_id)
@@ -124,7 +124,7 @@ func (r *collectionRepository) Update(ctx context.Context, c *domain.Collection)
 	if err != nil {
 		return nil, fmt.Errorf("beginning transaction: %w", err)
 	}
-	defer tx.Rollback(ctx) //nolint:errcheck
+	defer tx.Rollback(ctx) //nolint:errcheck // rollback after commit is a no-op
 
 	row := tx.QueryRow(ctx,
 		`UPDATE target_collections SET name = $1, updated_at = NOW()

@@ -70,7 +70,7 @@ func (s *CollectionService) Get(ctx context.Context, actor *domain.User, id stri
 }
 
 // Update modifies a collection. Only the creator or an admin can update.
-func (s *CollectionService) Update(ctx context.Context, actor *domain.User, id string, name string, targetIDs []string) (*domain.Collection, error) {
+func (s *CollectionService) Update(ctx context.Context, actor *domain.User, id, name string, targetIDs []string) (*domain.Collection, error) {
 	if name == "" {
 		return nil, ErrInvalidInput
 	}
