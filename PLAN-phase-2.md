@@ -5,9 +5,9 @@
 ## Checklist
 
 9. ✅ **Activity domain + store** — `Activity` + `AuditEntry` entities, PostgreSQL repos, migrations 009–011, RBAC enforcer
-10. ❌ **Activity API** — CRUD + status transitions + submit, all validated against config
+10. ✅ **Activity API** — CRUD + status transitions + submit, all validated against config
 11. ✅ **Audit log** — migration 011, `AuditRepository` interface + PostgreSQL impl
-12. ❌ **Business rules enforcement** — max activities/day, blocked days (vacation/holiday), status transitions
+12. 🔧 **Business rules enforcement** — max activities/day ✅, status transitions ✅, submit lock ✅; blocked days (vacation/holiday) still needed
 13. ❌ **Frontend: Activity form** — dynamic form from config, per-type field rendering
 14. ❌ **Frontend: Planner** — weekly/monthly calendar view (replaces old calendar page)
 15. ❌ **Frontend: Activity detail** — view + report/submit flow
@@ -47,76 +47,95 @@ Added to `rbac.Enforcer` interface and `policyEnforcer`:
 
 ---
 
-## 2. Activity API
+## 2. Activity API ✅
 
-### 2.1 Routes
+### 2.1 Routes ✅
+
+All 7 endpoints implemented in `internal/api/activity_handler.go` and wired in `internal/api/router.go`:
 
 ```
-GET    /api/v1/activities                # list (filtered by type, status, date range, creator)
+GET    /api/v1/activities                # list (filtered by type, status, date range, creator, target, team)
 GET    /api/v1/activities/{id}           # detail
 POST   /api/v1/activities                # create (validated against config)
 PUT    /api/v1/activities/{id}           # update (validated, blocked if submitted)
-DELETE /api/v1/activities/{id}           # soft delete (blocked if submitted)
+DELETE /api/v1/activities/{id}           # soft delete (blocked if submitted) → 204
 POST   /api/v1/activities/{id}/submit    # submit report (locks activity, validates submit_required fields)
 PATCH  /api/v1/activities/{id}/status    # status transition (validated against config transitions)
 ```
 
-### 2.2 Validation Flow
+### 2.2 Validation Flow ✅
 
 ```
 Client POST/PUT /activities
-  → Handler: parse JSON body
-  → Handler: call config.ValidateActivity(cfg, activityType, fields, "save")
-    → Check activity_type exists in config
-    → Check status is valid
+  → Handler: parse JSON body, validate activityType + dueDate presence
+  → Service: validateCore — checks type exists in config, status valid, duration valid
+  → Service: config.ValidateActivity(cfg, activityType, fields, "save")
     → Check all required fields for this type are present
     → Check select/multi_select values are within allowed options
-    → Check target_id is present if activity type requires it
     → Return []FieldError (field key + error message)
-  → If errors: return 422 with field-level errors
-  → Service: RBAC check (creator owns target, or is admin/manager)
-  → Service: business rules (max activities/day, blocked days, status transitions)
+  → If errors: return 422 with field-level errors in { error, fields } response
+  → Service: RBAC check (creator owns activity, or is admin/manager)
+  → Service: business rules (max activities/day, status transitions)
   → Store: save to DB
+  → Audit: record mutation
 ```
 
-Submit flow adds `submit_required` field validation and sets `submitted_at`, making the activity read-only.
+Submit flow adds `submit_required` field validation and sets `submitted_at`, locking the activity.
 
-> **Note:** Validation functions are already implemented in `internal/config/validator.go` with full test coverage. Integration into handlers is the remaining work.
+### 2.3 Service Layer ✅
 
-### 2.3 Backend Package Structure ✅
+**`internal/service/activity_service.go`** — `ActivityService` with DI constructor:
 
-All files implemented:
+- `Create` — sets creator/team from actor, validates core + config fields, checks max/day, creates, audits
+- `Get` — fetches + RBAC CanViewActivity check
+- `List` — RBAC-scoped via ScopeActivityQuery + filters
+- `Update` — fetches existing, RBAC check, submit lock check, validates, preserves immutable fields, audits
+- `Delete` — RBAC + submit lock check, soft deletes, audits
+- `Submit` — submit-phase validation (stricter required fields), sets SubmittedAt, audits
+- `PatchStatus` — validates status + transition against config, audits with old/new values
+
+New sentinel errors: `ErrSubmitted`, `ErrMaxActivities`, `ValidationErrors` (wraps `[]config.FieldError`)
+
+### 2.4 Handler Layer ✅
+
+**`internal/api/activity_handler.go`** — `ActivityHandler` backed by `ActivityServicer` interface:
+
+- Date filters parsed as `YYYY-MM-DD`
+- Validation errors return 422 with `{ error, fields }` envelope
+- Submitted conflicts return 409
+- Delete returns 204 No Content
+- All responses use consistent JSON envelopes (`{ activity }`, `{ items, total, page, limit }`)
+
+### 2.5 Backend Package Structure ✅
 
 ```
 internal/
 ├── domain/activity.go               # Activity entity ✅
 ├── domain/audit.go                  # AuditEntry entity ✅
-├── service/activity_service.go      # Activity CRUD + validation + submit (NEXT — item 10)
+├── service/activity_service.go      # Activity CRUD + validation + submit ✅
+├── service/activity_service_test.go # 22 tests ✅
 ├── store/activity_store.go          # ActivityRepository interface ✅
 ├── store/audit_store.go             # AuditRepository interface ✅
 ├── store/postgres/activity_repository.go  # PostgreSQL implementation ✅
 ├── store/postgres/audit_repository.go     # PostgreSQL implementation ✅
-├── api/activity_handler.go          # HTTP handlers (NEXT — item 10)
-└── api/router.go                    # Placeholder activity routes wired ✅
+├── api/activity_handler.go          # HTTP handlers ✅
+├── api/activity_handler_test.go     # 16 tests ✅
+└── api/router.go                    # Activity routes wired ✅
 ```
 
-Removed (replaced by Activity): ✅
-- `internal/domain/calendar_event.go` — deleted
-- `internal/service/calendar_event_service.go` — deleted
-- `internal/store/calendar_event_store.go` + postgres impl — deleted
-- `internal/api/calendar_event_handler.go` + tests — deleted
+Wiring: `cmd/api/main.go` instantiates `ActivityService(db.Activities(), db.Audit(), enforcer, tenantCfg)` → `ActivityHandler` → `RouterConfig.ActivityHandler`.
 
 RBAC: ✅ `CanViewActivity`, `CanUpdateActivity`, `CanDeleteActivity`, `ScopeActivityQuery` added to enforcer with tests.
 
 ---
 
-## 3. Business Rules
+## 3. Business Rules 🔧
 
-- **Max activities per day:** `rules.max_activities_per_day` (default 10)
-- **Blocked days:** Activity types with `blocks_field_activities: true` (vacation, public_holiday) prevent scheduling field activities on that day
-- **Status transitions:** Only allowed transitions from `activities.status_transitions` config
-- **Submit lock:** Once `submitted_at` is set, activity cannot be edited or deleted
-- **Target required:** Visit-type activities require `target_id`
+- ✅ **Max activities per day:** `rules.max_activities_per_day` — enforced in `ActivityService.Create` via `CountByDate`
+- ❌ **Blocked days:** Activity types with `blocks_field_activities: true` (vacation, public_holiday) prevent scheduling field activities on that day — not yet enforced
+- ✅ **Status transitions:** Only allowed transitions from `activities.status_transitions` config — enforced in `PatchStatus`
+- ✅ **Submit lock:** Once `submitted_at` is set, activity cannot be edited or deleted — enforced in Update, Delete, Submit, PatchStatus
+- ❌ **Target required:** Visit-type activities require `target_id` — not yet enforced (needs check in service layer based on activity type category)
 
 ---
 

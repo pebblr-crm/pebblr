@@ -16,13 +16,14 @@ import (
 
 // RouterConfig holds dependencies for the HTTP router.
 type RouterConfig struct {
-	Logger        *slog.Logger
-	Authenticator auth.Authenticator
-	TargetHandler *TargetHandler
-	TeamHandler   *TeamHandler
-	UserHandler   *UserHandler
-	ConfigHandler *ConfigHandler
-	WebDistPath   string
+	Logger          *slog.Logger
+	Authenticator   auth.Authenticator
+	TargetHandler   *TargetHandler
+	ActivityHandler *ActivityHandler
+	TeamHandler     *TeamHandler
+	UserHandler     *UserHandler
+	ConfigHandler   *ConfigHandler
+	WebDistPath     string
 }
 
 // NewRouter constructs and returns the application HTTP router.
@@ -60,15 +61,19 @@ func NewRouter(cfg RouterConfig) http.Handler {
 			}
 		})
 
-		// Activity routes (Phase 2 — handler wiring coming soon)
+		// Activity routes
 		r.Route("/activities", func(r chi.Router) {
-			r.Get("/", notImplementedHandler)
-			r.Post("/", notImplementedHandler)
-			r.Get("/{id}", notImplementedHandler)
-			r.Put("/{id}", notImplementedHandler)
-			r.Delete("/{id}", notImplementedHandler)
-			r.Post("/{id}/submit", notImplementedHandler)
-			r.Patch("/{id}/status", notImplementedHandler)
+			if cfg.ActivityHandler != nil {
+				r.Mount("/", NewActivityRouter(cfg.ActivityHandler))
+			} else {
+				r.Get("/", notImplementedHandler)
+				r.Post("/", notImplementedHandler)
+				r.Get("/{id}", notImplementedHandler)
+				r.Put("/{id}", notImplementedHandler)
+				r.Delete("/{id}", notImplementedHandler)
+				r.Post("/{id}/submit", notImplementedHandler)
+				r.Patch("/{id}/status", notImplementedHandler)
+			}
 		})
 
 		// User routes
