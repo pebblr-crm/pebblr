@@ -10,7 +10,7 @@
 19. ✅ **Frequency tracking** — visits per target vs frequency from config rules
 20. ✅ **Target collections** — user-created saved groups of targets for reuse across planning cycles
 21. ✅ **Activity display name** — auto-generated label: type + target name + date
-22. ❌ **Planner density** — ensure 15+ activities visible per day
+22. ✅ **Planner density** — ensure 15+ activities visible per day
 23. ⏸️ **Clone week** — backend done, UI needs redesign (button removed, revisit UX later)
 
 ---
@@ -161,7 +161,7 @@ Activities currently show the activity type label in planner cards. For quick sc
 
 ---
 
-## 8. Planner Density ❌
+## 8. Planner Density ✅
 
 DrMax reps have up to 15 field activities per day. The week and daily views must accommodate this without scrolling.
 

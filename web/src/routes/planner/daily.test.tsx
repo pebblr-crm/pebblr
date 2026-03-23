@@ -151,12 +151,12 @@ describe('PlannerDailyPage', () => {
     expect(screen.getByText('Planned')).toBeInTheDocument()
   })
 
-  it('shows duration label from config', () => {
-    setupActivities([makeActivity()])
+  it('shows target name in compact layout', () => {
+    setupActivities([makeActivity({ targetName: 'Dr. Popescu' })])
 
     render(<PlannerDailyPage />)
 
-    expect(screen.getByText('Full Day')).toBeInTheDocument()
+    expect(screen.getByText('Visit — Dr. Popescu')).toBeInTheDocument()
   })
 
   it('shows back to planner link', () => {
