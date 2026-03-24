@@ -9,6 +9,11 @@ import (
 	"github.com/pebblr/pebblr/internal/domain"
 )
 
+const (
+	headerContentType = "Content-Type"
+	contentTypeJSON   = "application/json"
+)
+
 // UserLister retrieves the set of users available for demo login.
 type UserLister interface {
 	List(ctx context.Context) ([]*domain.User, error)
@@ -61,7 +66,7 @@ func (h *Handler) ListAccounts(w http.ResponseWriter, r *http.Request) {
 		accounts[i] = userToAccount(u)
 	}
 
-	w.Header().Set("Content-Type", "application/json")
+	w.Header().Set(headerContentType, contentTypeJSON)
 	_ = json.NewEncoder(w).Encode(accounts)
 }
 
@@ -107,7 +112,7 @@ func (h *Handler) IssueToken(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	w.Header().Set("Content-Type", "application/json")
+	w.Header().Set(headerContentType, contentTypeJSON)
 	_ = json.NewEncoder(w).Encode(tokenResponse{
 		Token:   token,
 		Account: userToAccount(user),
@@ -125,7 +130,7 @@ func userToAccount(u *domain.User) Account {
 }
 
 func writeError(w http.ResponseWriter, status int, code, message string) {
-	w.Header().Set("Content-Type", "application/json")
+	w.Header().Set(headerContentType, contentTypeJSON)
 	w.WriteHeader(status)
 	_ = json.NewEncoder(w).Encode(map[string]map[string]string{
 		"error": {"code": code, "message": message},

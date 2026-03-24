@@ -66,6 +66,90 @@ function isWithinCadence(lastVisit: string | undefined, cadenceDays: number, ref
   return last >= cutoff
 }
 
+// ── Marker helpers ────────────────────────────────────────────────────────────
+
+function getFrequencyMarkerColor(compliance: number | undefined, targetType: string): string {
+  if (compliance == null) {
+    return targetType === 'pharmacy'
+      ? 'bg-amber-100 border-amber-400 text-amber-700'
+      : 'bg-blue-100 border-blue-400 text-blue-700'
+  }
+  if (compliance >= 80) return 'bg-emerald-200 border-emerald-500 text-emerald-800'
+  if (compliance >= 50) return 'bg-amber-100 border-amber-400 text-amber-700'
+  return 'bg-red-200 border-red-500 text-red-800'
+}
+
+function getMarkerStateColor(
+  isAssigned: boolean,
+  isSelected: boolean,
+  cadenceLocked: boolean,
+  isCadenced: boolean,
+  frequencyColor: string,
+): string {
+  if (isAssigned) return 'bg-green-500 border-green-700 text-white'
+  if (isSelected) return 'bg-primary border-primary text-white'
+  if (cadenceLocked) return 'bg-slate-200 border-slate-300 text-slate-400 cursor-not-allowed'
+  if (isCadenced) return 'bg-slate-100 border-slate-300 text-slate-500 border-dashed'
+  return frequencyColor
+}
+
+interface TargetMarkerProps {
+  target: Target
+  isSelected: boolean
+  isAssigned: boolean
+  isCadenced: boolean
+  cadenceLocked: boolean
+  isHovered: boolean
+  compliance: number | undefined
+  onToggle: () => void
+  onHoverChange: (hovered: boolean) => void
+}
+
+function TargetMarker({
+  target,
+  isSelected,
+  isAssigned,
+  isCadenced,
+  cadenceLocked,
+  isHovered,
+  compliance,
+  onToggle,
+  onHoverChange,
+}: TargetMarkerProps) {
+  if (cadenceLocked && !isSelected && !isAssigned) return null
+
+  const frequencyColor = getFrequencyMarkerColor(compliance, target.targetType)
+  const stateColor = getMarkerStateColor(isAssigned, isSelected, cadenceLocked, isCadenced, frequencyColor)
+  const lat = target.fields.lat as number
+  const lng = target.fields.lng as number
+
+  const title = `${target.name}${compliance != null ? ` (${Math.round(compliance)}% compliance)` : ''}${isCadenced ? ' (recently visited)' : ''}`
+
+  return (
+    <AdvancedMarker
+      position={{ lat, lng }}
+      onClick={() => {
+        if (!cadenceLocked && !isAssigned) onToggle()
+      }}
+      title={title}
+    >
+      <div
+        onMouseEnter={() => onHoverChange(true)}
+        onMouseLeave={() => onHoverChange(false)}
+        className={`rounded-full flex items-center justify-center border-2 transition-all cursor-pointer ${
+          isHovered ? 'w-9 h-9 shadow-lg ring-2 ring-primary/40' : 'w-7 h-7'
+        } ${stateColor}`}
+      >
+        {isAssigned || isSelected ? (
+          <Check className="w-3.5 h-3.5" />
+        ) : (
+          <MapPin className="w-3.5 h-3.5" />
+        )}
+      </div>
+    </AdvancedMarker>
+  )
+}
+
 // ── Main component ───────────────────────────────────────────────────────────
 
 function MapPlannerPage() {
@@ -374,66 +458,20 @@ function MapPlannerPage() {
               className="w-full h-full"
             >
               {geoTargets.map((target) => {
-                const lat = target.fields.lat as number
-                const lng = target.fields.lng as number
-                const isSelected = selectedIds.has(target.id)
-                const isAssigned = assignedIds.has(target.id)
-                const lastVisit = visitStatusMap.get(target.id)
-                const isCadenced = isWithinCadence(lastVisit, cadenceDays, weekDates[0].date)
-                const isHovered = hoveredTargetId === target.id
-                const compliance = frequencyMap.get(target.id)
-
-                const cadenceLocked = isCadenced && !showCadenced
-
-                if (cadenceLocked && !isSelected && !isAssigned) return null
-
-                // Frequency-based marker color: red = behind, amber = partial, green = on track
-                const frequencyMarkerColor =
-                  compliance == null
-                    ? target.targetType === 'pharmacy'
-                      ? 'bg-amber-100 border-amber-400 text-amber-700'
-                      : 'bg-blue-100 border-blue-400 text-blue-700'
-                    : compliance >= 80
-                      ? 'bg-emerald-200 border-emerald-500 text-emerald-800'
-                      : compliance >= 50
-                        ? 'bg-amber-100 border-amber-400 text-amber-700'
-                        : 'bg-red-200 border-red-500 text-red-800'
-
+                const isCadenced = isWithinCadence(visitStatusMap.get(target.id), cadenceDays, weekDates[0].date)
                 return (
-                  <AdvancedMarker
+                  <TargetMarker
                     key={target.id}
-                    position={{ lat, lng }}
-                    onClick={() => {
-                      if (!cadenceLocked && !isAssigned) toggleTarget(target.id)
-                    }}
-                    title={`${target.name}${compliance != null ? ` (${Math.round(compliance)}% compliance)` : ''}${isCadenced ? ' (recently visited)' : ''}`}
-                  >
-                    <div
-                      onMouseEnter={() => setHoveredTargetId(target.id)}
-                      onMouseLeave={() => setHoveredTargetId(null)}
-                      className={`rounded-full flex items-center justify-center border-2 transition-all cursor-pointer ${
-                        isHovered ? 'w-9 h-9 shadow-lg ring-2 ring-primary/40' : 'w-7 h-7'
-                      } ${
-                        isAssigned
-                          ? 'bg-green-500 border-green-700 text-white'
-                          : isSelected
-                            ? 'bg-primary border-primary text-white'
-                            : cadenceLocked
-                              ? 'bg-slate-200 border-slate-300 text-slate-400 cursor-not-allowed'
-                              : isCadenced
-                                ? 'bg-slate-100 border-slate-300 text-slate-500 border-dashed'
-                                : frequencyMarkerColor
-                      }`}
-                    >
-                      {isAssigned ? (
-                        <Check className="w-3.5 h-3.5" />
-                      ) : isSelected ? (
-                        <Check className="w-3.5 h-3.5" />
-                      ) : (
-                        <MapPin className="w-3.5 h-3.5" />
-                      )}
-                    </div>
-                  </AdvancedMarker>
+                    target={target}
+                    isSelected={selectedIds.has(target.id)}
+                    isAssigned={assignedIds.has(target.id)}
+                    isCadenced={isCadenced}
+                    cadenceLocked={isCadenced && !showCadenced}
+                    isHovered={hoveredTargetId === target.id}
+                    compliance={frequencyMap.get(target.id)}
+                    onToggle={() => toggleTarget(target.id)}
+                    onHoverChange={(h) => setHoveredTargetId(h ? target.id : null)}
+                  />
                 )
               })}
             </GoogleMap>
@@ -621,7 +659,7 @@ function MapPlannerPage() {
             </div>
             {totalAssigned > 0 && (
               <button
-                onClick={() => void handleCreateActivities()}
+                onClick={() => { handleCreateActivities() }}
                 disabled={batchCreate.isPending}
                 className="px-4 py-2 text-sm font-bold text-white bg-primary rounded-xl hover:bg-primary/90 disabled:opacity-50"
               >

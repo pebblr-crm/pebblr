@@ -243,47 +243,66 @@ func (r *targetRepository) Upsert(ctx context.Context, targets []*domain.Target)
 	return result, nil
 }
 
+// targetScopeResult holds the output of building a target RBAC scope clause.
+type targetScopeResult struct {
+	conditions []string
+	args       []any
+	argIdx     int
+	empty      bool // true if the scope excludes all targets
+}
+
+// buildTargetScopeConditions generates SQL conditions and args for a target RBAC scope.
+// The prefix (e.g. "t.") is prepended to column names.
+func buildTargetScopeConditions(scope rbac.TargetScope, prefix string, startArgIdx int) targetScopeResult {
+	result := targetScopeResult{argIdx: startArgIdx}
+
+	if scope.AllTargets {
+		return result
+	}
+
+	if len(scope.AssigneeIDs) > 0 {
+		phs := make([]string, len(scope.AssigneeIDs))
+		for i, id := range scope.AssigneeIDs {
+			phs[i] = fmt.Sprintf("$%d", result.argIdx)
+			result.args = append(result.args, id)
+			result.argIdx++
+		}
+		result.conditions = append(result.conditions, fmt.Sprintf("%sassignee_id::TEXT = ANY(ARRAY[%s])", prefix, strings.Join(phs, ",")))
+	}
+	if len(scope.TeamIDs) > 0 {
+		phs := make([]string, len(scope.TeamIDs))
+		for i, id := range scope.TeamIDs {
+			phs[i] = fmt.Sprintf("$%d", result.argIdx)
+			result.args = append(result.args, id)
+			result.argIdx++
+		}
+		result.conditions = append(result.conditions, fmt.Sprintf("%steam_id::TEXT = ANY(ARRAY[%s])", prefix, strings.Join(phs, ",")))
+	}
+	if len(result.conditions) == 0 {
+		result.empty = true
+	}
+	return result
+}
+
 func (r *targetRepository) VisitStatus(ctx context.Context, scope rbac.TargetScope, fieldTypes []string) ([]store.TargetVisitStatus, error) {
 	if len(fieldTypes) == 0 {
 		return nil, nil
 	}
 
-	args := []any{}
-	argIdx := 1
-	var conditions []string
-
-	// Scope targets.
-	if !scope.AllTargets {
-		if len(scope.AssigneeIDs) > 0 {
-			phs := make([]string, len(scope.AssigneeIDs))
-			for i, id := range scope.AssigneeIDs {
-				phs[i] = fmt.Sprintf("$%d", argIdx)
-				args = append(args, id)
-				argIdx++
-			}
-			conditions = append(conditions, fmt.Sprintf("t.assignee_id::TEXT = ANY(ARRAY[%s])", strings.Join(phs, ",")))
-		}
-		if len(scope.TeamIDs) > 0 {
-			phs := make([]string, len(scope.TeamIDs))
-			for i, id := range scope.TeamIDs {
-				phs[i] = fmt.Sprintf("$%d", argIdx)
-				args = append(args, id)
-				argIdx++
-			}
-			conditions = append(conditions, fmt.Sprintf("t.team_id::TEXT = ANY(ARRAY[%s])", strings.Join(phs, ",")))
-		}
-		if len(conditions) == 0 {
-			return nil, nil
-		}
+	sr := buildTargetScopeConditions(scope, "t.", 1)
+	if sr.empty {
+		return nil, nil
 	}
 
-	// Field activity types filter.
+	args := sr.args
+	argIdx := sr.argIdx
+
 	args = append(args, fieldTypes)
 	typesArg := fmt.Sprintf("$%d", argIdx)
 
 	where := ""
-	if len(conditions) > 0 {
-		where = " AND (" + strings.Join(conditions, " OR ") + ")"
+	if len(sr.conditions) > 0 {
+		where = " AND (" + strings.Join(sr.conditions, " OR ") + ")"
 	}
 
 	query := `SELECT t.id::TEXT, MAX(a.due_date)
@@ -314,34 +333,14 @@ func (r *targetRepository) FrequencyStatus(ctx context.Context, scope rbac.Targe
 		return nil, nil
 	}
 
-	args := []any{}
-	argIdx := 1
-	var conditions []string
-
-	// Scope targets.
-	if !scope.AllTargets {
-		if len(scope.AssigneeIDs) > 0 {
-			phs := make([]string, len(scope.AssigneeIDs))
-			for i, id := range scope.AssigneeIDs {
-				phs[i] = fmt.Sprintf("$%d", argIdx)
-				args = append(args, id)
-				argIdx++
-			}
-			conditions = append(conditions, fmt.Sprintf("t.assignee_id::TEXT = ANY(ARRAY[%s])", strings.Join(phs, ",")))
-		}
-		if len(scope.TeamIDs) > 0 {
-			phs := make([]string, len(scope.TeamIDs))
-			for i, id := range scope.TeamIDs {
-				phs[i] = fmt.Sprintf("$%d", argIdx)
-				args = append(args, id)
-				argIdx++
-			}
-			conditions = append(conditions, fmt.Sprintf("t.team_id::TEXT = ANY(ARRAY[%s])", strings.Join(phs, ",")))
-		}
-		if len(conditions) == 0 {
-			return nil, nil
-		}
+	sr := buildTargetScopeConditions(scope, "t.", 1)
+	if sr.empty {
+		return nil, nil
 	}
+
+	conditions := sr.conditions
+	args := sr.args
+	argIdx := sr.argIdx
 
 	// Only targets with a classification.
 	conditions = append(conditions, "t.fields->>'potential' IS NOT NULL", "t.fields->>'potential' != ''")

@@ -43,121 +43,118 @@ func NewRouter(cfg RouterConfig) http.Handler {
 	r.Get("/healthz", healthHandler)
 	r.Get("/readyz", healthHandler)
 
-	// Demo auth endpoints — outside auth middleware so prospects can obtain tokens.
-	if cfg.DemoHandler != nil {
-		r.Route("/demo", func(r chi.Router) {
-			r.Get("/accounts", cfg.DemoHandler.ListAccounts)
-			r.Post("/token", cfg.DemoHandler.IssueToken)
-		})
-	}
+	mountDemoRoutes(r, cfg)
 
 	r.Route("/api/v1", func(r chi.Router) {
 		r.Use(auth.Middleware(cfg.Authenticator))
 		r.Use(auth.ClaimsBridge)
 
 		r.Get("/health", healthHandler)
-
-		// Current user endpoint
 		r.Get("/me", meHandler)
 
-		// Target routes
-		r.Route("/targets", func(r chi.Router) {
-			if cfg.TargetHandler != nil {
-				r.Mount("/", NewTargetRouter(cfg.TargetHandler))
-			} else {
-				r.Get("/", notImplementedHandler)
-				r.Post("/", notImplementedHandler)
-				r.Get("/{id}", notImplementedHandler)
-				r.Put("/{id}", notImplementedHandler)
-			}
-		})
-
-		// Activity routes
-		r.Route("/activities", func(r chi.Router) {
-			if cfg.ActivityHandler != nil {
-				r.Mount("/", NewActivityRouter(cfg.ActivityHandler))
-			} else {
-				r.Get("/", notImplementedHandler)
-				r.Post("/", notImplementedHandler)
-				r.Get("/{id}", notImplementedHandler)
-				r.Put("/{id}", notImplementedHandler)
-				r.Delete("/{id}", notImplementedHandler)
-				r.Post("/{id}/submit", notImplementedHandler)
-				r.Patch("/{id}/status", notImplementedHandler)
-			}
-		})
-
-		// Dashboard routes
-		r.Route("/dashboard", func(r chi.Router) {
-			if cfg.DashboardHandler != nil {
-				r.Mount("/", NewDashboardRouter(cfg.DashboardHandler))
-			} else {
-				r.Get("/activities", notImplementedHandler)
-				r.Get("/coverage", notImplementedHandler)
-				r.Get("/frequency", notImplementedHandler)
-			}
-		})
-
-		// User routes
-		r.Route("/users", func(r chi.Router) {
-			if cfg.UserHandler != nil {
-				r.Mount("/", NewUserRouter(cfg.UserHandler))
-			} else {
-				r.Get("/", notImplementedHandler)
-				r.Get("/{id}", notImplementedHandler)
-			}
-		})
-
-		// Team routes
-		r.Route("/teams", func(r chi.Router) {
-			if cfg.TeamHandler != nil {
-				r.Mount("/", NewTeamRouter(cfg.TeamHandler))
-			} else {
-				r.Get("/", notImplementedHandler)
-				r.Get("/{id}", notImplementedHandler)
-			}
-		})
-
-		// Collection routes
-		r.Route("/collections", func(r chi.Router) {
-			if cfg.CollectionHandler != nil {
-				r.Mount("/", NewCollectionRouter(cfg.CollectionHandler))
-			} else {
-				r.Get("/", notImplementedHandler)
-				r.Post("/", notImplementedHandler)
-				r.Get("/{id}", notImplementedHandler)
-				r.Put("/{id}", notImplementedHandler)
-				r.Delete("/{id}", notImplementedHandler)
-			}
-		})
-
-		// Config route
-		if cfg.ConfigHandler != nil {
-			r.Get("/config", cfg.ConfigHandler.Get)
-		} else {
-			r.Get("/config", notImplementedHandler)
-		}
-
+		mountAPIRoutes(r, cfg)
 	})
 
-	// Serve frontend SPA from WebDistPath if configured.
-	if cfg.WebDistPath != "" {
-		staticFS := http.Dir(cfg.WebDistPath)
-		fileServer := http.FileServer(staticFS)
-		r.NotFound(func(w http.ResponseWriter, r *http.Request) {
-			// Try to serve the requested file. If it doesn't exist,
-			// fall back to index.html for client-side routing.
-			path := filepath.Clean(r.URL.Path)
-			if _, err := fs.Stat(os.DirFS(cfg.WebDistPath), path[1:]); err == nil {
-				fileServer.ServeHTTP(w, r)
-				return
-			}
-			r.URL.Path = "/"
-			fileServer.ServeHTTP(w, r)
-		})
-	}
+	mountSPA(r, cfg.WebDistPath)
 
 	return r
+}
+
+// mountDemoRoutes registers demo auth endpoints outside the auth middleware.
+func mountDemoRoutes(r chi.Router, cfg RouterConfig) {
+	if cfg.DemoHandler == nil {
+		return
+	}
+	r.Route("/demo", func(r chi.Router) {
+		r.Get("/accounts", cfg.DemoHandler.ListAccounts)
+		r.Post("/token", cfg.DemoHandler.IssueToken)
+	})
+}
+
+// mountOrStub mounts a real router when the handler is non-nil, or registers
+// not-implemented stubs for each path.
+func mountOrStub(r chi.Router, pattern string, router http.Handler, stubs []string) {
+	r.Route(pattern, func(r chi.Router) {
+		if router != nil {
+			r.Mount("/", router)
+		} else {
+			for _, s := range stubs {
+				r.HandleFunc(s, notImplementedHandler)
+			}
+		}
+	})
+}
+
+// mountAPIRoutes registers all /api/v1 resource routes.
+func mountAPIRoutes(r chi.Router, cfg RouterConfig) {
+	// Target routes
+	var targetRouter http.Handler
+	if cfg.TargetHandler != nil {
+		targetRouter = NewTargetRouter(cfg.TargetHandler)
+	}
+	mountOrStub(r, "/targets", targetRouter, []string{"/", "/{id}"})
+
+	// Activity routes
+	var activityRouter http.Handler
+	if cfg.ActivityHandler != nil {
+		activityRouter = NewActivityRouter(cfg.ActivityHandler)
+	}
+	mountOrStub(r, "/activities", activityRouter, []string{"/", "/{id}", "/{id}/submit", "/{id}/status"})
+
+	// Dashboard routes
+	var dashboardRouter http.Handler
+	if cfg.DashboardHandler != nil {
+		dashboardRouter = NewDashboardRouter(cfg.DashboardHandler)
+	}
+	mountOrStub(r, "/dashboard", dashboardRouter, []string{"/activities", "/coverage", "/frequency"})
+
+	// User routes
+	var userRouter http.Handler
+	if cfg.UserHandler != nil {
+		userRouter = NewUserRouter(cfg.UserHandler)
+	}
+	mountOrStub(r, "/users", userRouter, []string{"/", "/{id}"})
+
+	// Team routes
+	var teamRouter http.Handler
+	if cfg.TeamHandler != nil {
+		teamRouter = NewTeamRouter(cfg.TeamHandler)
+	}
+	mountOrStub(r, "/teams", teamRouter, []string{"/", "/{id}"})
+
+	// Collection routes
+	var collectionRouter http.Handler
+	if cfg.CollectionHandler != nil {
+		collectionRouter = NewCollectionRouter(cfg.CollectionHandler)
+	}
+	mountOrStub(r, "/collections", collectionRouter, []string{"/", "/{id}"})
+
+	// Config route
+	if cfg.ConfigHandler != nil {
+		r.Get("/config", cfg.ConfigHandler.Get)
+	} else {
+		r.Get("/config", notImplementedHandler)
+	}
+}
+
+// mountSPA serves the frontend SPA from the given directory if configured.
+func mountSPA(r *chi.Mux, webDistPath string) {
+	if webDistPath == "" {
+		return
+	}
+	staticFS := http.Dir(webDistPath)
+	fileServer := http.FileServer(staticFS)
+	r.NotFound(func(w http.ResponseWriter, r *http.Request) {
+		// Try to serve the requested file. If it doesn't exist,
+		// fall back to index.html for client-side routing.
+		path := filepath.Clean(r.URL.Path)
+		if _, err := fs.Stat(os.DirFS(webDistPath), path[1:]); err == nil {
+			fileServer.ServeHTTP(w, r)
+			return
+		}
+		r.URL.Path = "/"
+		fileServer.ServeHTTP(w, r)
+	})
 }
 
 func healthHandler(w http.ResponseWriter, _ *http.Request) {

@@ -79,7 +79,7 @@ func mapTargetServiceError(w http.ResponseWriter, err error) {
 	case errors.Is(err, service.ErrInvalidInput):
 		writeError(w, http.StatusBadRequest, "BAD_REQUEST", "invalid input")
 	default:
-		writeError(w, http.StatusInternalServerError, "INTERNAL_ERROR", "an unexpected error occurred")
+		writeError(w, http.StatusInternalServerError, "INTERNAL_ERROR", errUnexpected)
 	}
 }
 
@@ -87,7 +87,7 @@ func mapTargetServiceError(w http.ResponseWriter, err error) {
 func (h *TargetHandler) List(w http.ResponseWriter, r *http.Request) {
 	actor, err := rbac.UserFromContext(r.Context())
 	if err != nil {
-		writeError(w, http.StatusUnauthorized, "UNAUTHORIZED", "missing authenticated user")
+		writeError(w, http.StatusUnauthorized, "UNAUTHORIZED", errMissingUser)
 		return
 	}
 
@@ -122,7 +122,7 @@ func (h *TargetHandler) List(w http.ResponseWriter, r *http.Request) {
 		targets = []*domain.Target{}
 	}
 
-	w.Header().Set("Content-Type", "application/json")
+	w.Header().Set(headerContentType, contentTypeJSON)
 	w.WriteHeader(http.StatusOK)
 	writeJSON(w, r, targetListResponse{
 		Items: targets,
@@ -136,13 +136,13 @@ func (h *TargetHandler) List(w http.ResponseWriter, r *http.Request) {
 func (h *TargetHandler) Create(w http.ResponseWriter, r *http.Request) {
 	actor, err := rbac.UserFromContext(r.Context())
 	if err != nil {
-		writeError(w, http.StatusUnauthorized, "UNAUTHORIZED", "missing authenticated user")
+		writeError(w, http.StatusUnauthorized, "UNAUTHORIZED", errMissingUser)
 		return
 	}
 
 	var req targetRequest
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-		writeError(w, http.StatusBadRequest, "BAD_REQUEST", "invalid request body")
+		writeError(w, http.StatusBadRequest, "BAD_REQUEST", errInvalidRequestBody)
 		return
 	}
 
@@ -170,7 +170,7 @@ func (h *TargetHandler) Create(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	w.Header().Set("Content-Type", "application/json")
+	w.Header().Set(headerContentType, contentTypeJSON)
 	w.WriteHeader(http.StatusCreated)
 	writeJSON(w, r, targetResponse{Target: created})
 }
@@ -179,7 +179,7 @@ func (h *TargetHandler) Create(w http.ResponseWriter, r *http.Request) {
 func (h *TargetHandler) Get(w http.ResponseWriter, r *http.Request) {
 	actor, err := rbac.UserFromContext(r.Context())
 	if err != nil {
-		writeError(w, http.StatusUnauthorized, "UNAUTHORIZED", "missing authenticated user")
+		writeError(w, http.StatusUnauthorized, "UNAUTHORIZED", errMissingUser)
 		return
 	}
 
@@ -190,7 +190,7 @@ func (h *TargetHandler) Get(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	w.Header().Set("Content-Type", "application/json")
+	w.Header().Set(headerContentType, contentTypeJSON)
 	w.WriteHeader(http.StatusOK)
 	writeJSON(w, r, targetResponse{Target: target})
 }
@@ -199,7 +199,7 @@ func (h *TargetHandler) Get(w http.ResponseWriter, r *http.Request) {
 func (h *TargetHandler) Update(w http.ResponseWriter, r *http.Request) {
 	actor, err := rbac.UserFromContext(r.Context())
 	if err != nil {
-		writeError(w, http.StatusUnauthorized, "UNAUTHORIZED", "missing authenticated user")
+		writeError(w, http.StatusUnauthorized, "UNAUTHORIZED", errMissingUser)
 		return
 	}
 
@@ -207,7 +207,7 @@ func (h *TargetHandler) Update(w http.ResponseWriter, r *http.Request) {
 
 	var req targetRequest
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-		writeError(w, http.StatusBadRequest, "BAD_REQUEST", "invalid request body")
+		writeError(w, http.StatusBadRequest, "BAD_REQUEST", errInvalidRequestBody)
 		return
 	}
 
@@ -236,7 +236,7 @@ func (h *TargetHandler) Update(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	w.Header().Set("Content-Type", "application/json")
+	w.Header().Set(headerContentType, contentTypeJSON)
 	w.WriteHeader(http.StatusOK)
 	writeJSON(w, r, targetResponse{Target: updated})
 }
@@ -250,7 +250,7 @@ type assignRequest struct {
 func (h *TargetHandler) Assign(w http.ResponseWriter, r *http.Request) {
 	actor, err := rbac.UserFromContext(r.Context())
 	if err != nil {
-		writeError(w, http.StatusUnauthorized, "UNAUTHORIZED", "missing authenticated user")
+		writeError(w, http.StatusUnauthorized, "UNAUTHORIZED", errMissingUser)
 		return
 	}
 
@@ -258,7 +258,7 @@ func (h *TargetHandler) Assign(w http.ResponseWriter, r *http.Request) {
 
 	var req assignRequest
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-		writeError(w, http.StatusBadRequest, "BAD_REQUEST", "invalid request body")
+		writeError(w, http.StatusBadRequest, "BAD_REQUEST", errInvalidRequestBody)
 		return
 	}
 
@@ -273,7 +273,7 @@ func (h *TargetHandler) Assign(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	w.Header().Set("Content-Type", "application/json")
+	w.Header().Set(headerContentType, contentTypeJSON)
 	w.WriteHeader(http.StatusOK)
 	writeJSON(w, r, targetResponse{Target: updated})
 }
@@ -301,13 +301,13 @@ type importResponse struct {
 func (h *TargetHandler) Import(w http.ResponseWriter, r *http.Request) {
 	actor, err := rbac.UserFromContext(r.Context())
 	if err != nil {
-		writeError(w, http.StatusUnauthorized, "UNAUTHORIZED", "missing authenticated user")
+		writeError(w, http.StatusUnauthorized, "UNAUTHORIZED", errMissingUser)
 		return
 	}
 
 	var req importRequest
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-		writeError(w, http.StatusBadRequest, "BAD_REQUEST", "invalid request body")
+		writeError(w, http.StatusBadRequest, "BAD_REQUEST", errInvalidRequestBody)
 		return
 	}
 
@@ -343,7 +343,7 @@ func (h *TargetHandler) Import(w http.ResponseWriter, r *http.Request) {
 		imported = []*domain.Target{}
 	}
 
-	w.Header().Set("Content-Type", "application/json")
+	w.Header().Set(headerContentType, contentTypeJSON)
 	w.WriteHeader(http.StatusOK)
 	writeJSON(w, r, importResponse{
 		Created: result.Created,
@@ -356,13 +356,13 @@ func (h *TargetHandler) Import(w http.ResponseWriter, r *http.Request) {
 func (h *TargetHandler) FrequencyStatus(w http.ResponseWriter, r *http.Request) {
 	actor, err := rbac.UserFromContext(r.Context())
 	if err != nil {
-		writeError(w, http.StatusUnauthorized, "UNAUTHORIZED", "missing authenticated user")
+		writeError(w, http.StatusUnauthorized, "UNAUTHORIZED", errMissingUser)
 		return
 	}
 
 	filter, err := parseDashboardFilter(r)
 	if err != nil {
-		writeError(w, http.StatusBadRequest, "BAD_REQUEST", "invalid period or date format")
+		writeError(w, http.StatusBadRequest, "BAD_REQUEST", errInvalidPeriod)
 		return
 	}
 
@@ -375,7 +375,7 @@ func (h *TargetHandler) FrequencyStatus(w http.ResponseWriter, r *http.Request) 
 		result = []service.TargetFrequencyItem{}
 	}
 
-	w.Header().Set("Content-Type", "application/json")
+	w.Header().Set(headerContentType, contentTypeJSON)
 	_ = json.NewEncoder(w).Encode(map[string]any{"items": result})
 }
 
@@ -383,7 +383,7 @@ func (h *TargetHandler) FrequencyStatus(w http.ResponseWriter, r *http.Request) 
 func (h *TargetHandler) VisitStatus(w http.ResponseWriter, r *http.Request) {
 	actor, err := rbac.UserFromContext(r.Context())
 	if err != nil {
-		writeError(w, http.StatusUnauthorized, "UNAUTHORIZED", "missing authenticated user")
+		writeError(w, http.StatusUnauthorized, "UNAUTHORIZED", errMissingUser)
 		return
 	}
 
@@ -396,6 +396,6 @@ func (h *TargetHandler) VisitStatus(w http.ResponseWriter, r *http.Request) {
 		result = []store.TargetVisitStatus{}
 	}
 
-	w.Header().Set("Content-Type", "application/json")
+	w.Header().Set(headerContentType, contentTypeJSON)
 	writeJSON(w, r, map[string]any{"items": result})
 }

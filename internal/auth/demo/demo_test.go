@@ -8,6 +8,11 @@ import (
 	"github.com/pebblr/pebblr/internal/domain"
 )
 
+const (
+	testUserID    = "user-1"
+	testUserEmail = "user@demo.pebblr.com"
+)
+
 func TestIssueAndValidate(t *testing.T) {
 	t.Parallel()
 
@@ -48,7 +53,7 @@ func TestIssueAndValidate(t *testing.T) {
 func TestIssueAndValidate_AllRoles(t *testing.T) {
 	t.Parallel()
 
-	a, err := New([]byte("test-key"))
+	a, err := New([]byte(testKey))
 	if err != nil {
 		t.Fatalf("creating authenticator: %v", err)
 	}
@@ -81,8 +86,8 @@ func TestValidateToken_InvalidSignature(t *testing.T) {
 	a2, _ := New([]byte("key-two"))
 
 	token, _ := a1.IssueToken(Persona{
-		ID:   "user-1",
-		Email: "user@demo.pebblr.com",
+		ID:   testUserID,
+		Email: testUserEmail,
 		Name:  "User",
 		Role:  domain.RoleRep,
 	})
@@ -96,13 +101,13 @@ func TestValidateToken_InvalidSignature(t *testing.T) {
 func TestValidateToken_Expired(t *testing.T) {
 	t.Parallel()
 
-	a, _ := New([]byte("test-key"))
+	a, _ := New([]byte(testKey))
 	// Set a very short TTL to create an already-expired token.
 	a.tokenTTL = -1 * time.Hour
 
 	token, _ := a.IssueToken(Persona{
-		ID:    "user-1",
-		Email: "user@demo.pebblr.com",
+		ID:    testUserID,
+		Email: testUserEmail,
 		Name:  "User",
 		Role:  domain.RoleRep,
 	})
@@ -116,7 +121,7 @@ func TestValidateToken_Expired(t *testing.T) {
 func TestValidateToken_Malformed(t *testing.T) {
 	t.Parallel()
 
-	a, _ := New([]byte("test-key"))
+	a, _ := New([]byte(testKey))
 
 	for _, token := range []string{
 		"not-a-jwt",
@@ -134,10 +139,10 @@ func TestValidateToken_Malformed(t *testing.T) {
 func TestIssueToken_InvalidRole(t *testing.T) {
 	t.Parallel()
 
-	a, _ := New([]byte("test-key"))
+	a, _ := New([]byte(testKey))
 	_, err := a.IssueToken(Persona{
-		ID:   "user-1",
-		Email: "user@demo.pebblr.com",
+		ID:   testUserID,
+		Email: testUserEmail,
 		Name:  "User",
 		Role:  domain.Role("invalid"),
 	})
@@ -156,8 +161,8 @@ func TestNew_GeneratesRandomKey(t *testing.T) {
 
 	// Should be able to issue and validate with the generated key.
 	token, err := a.IssueToken(Persona{
-		ID:    "user-1",
-		Email: "user@demo.pebblr.com",
+		ID:    testUserID,
+		Email: testUserEmail,
 		Name:  "User",
 		Role:  domain.RoleRep,
 	})

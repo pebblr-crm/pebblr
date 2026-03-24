@@ -173,7 +173,7 @@ export function useBatchCreateActivities(): UseMutationResult<BatchCreateResult,
   return useMutation({
     mutationFn: batchCreateActivities,
     onSuccess: () => {
-      void queryClient.invalidateQueries({ queryKey: activityKeys.lists() })
+      queryClient.invalidateQueries({ queryKey: activityKeys.lists() }).catch(() => {})
     },
   })
 }
@@ -199,7 +199,7 @@ export function useCloneWeek(): UseMutationResult<CloneWeekResult, Error, CloneW
   return useMutation({
     mutationFn: cloneWeek,
     onSuccess: () => {
-      void queryClient.invalidateQueries({ queryKey: activityKeys.lists() })
+      queryClient.invalidateQueries({ queryKey: activityKeys.lists() }).catch(() => {})
     },
   })
 }

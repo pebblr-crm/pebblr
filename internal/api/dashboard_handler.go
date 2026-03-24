@@ -55,7 +55,7 @@ func parseDashboardFilter(r *http.Request) (store.DashboardFilter, error) {
 		filter.DateTo = t.AddDate(0, 1, -1)
 	} else {
 		if v := r.URL.Query().Get("dateFrom"); v != "" {
-			t, err := time.Parse("2006-01-02", v)
+			t, err := time.Parse(dateFormat, v)
 			if err != nil {
 				return filter, err
 			}
@@ -66,7 +66,7 @@ func parseDashboardFilter(r *http.Request) (store.DashboardFilter, error) {
 			filter.DateFrom = time.Date(now.Year(), now.Month(), 1, 0, 0, 0, 0, time.UTC)
 		}
 		if v := r.URL.Query().Get("dateTo"); v != "" {
-			t, err := time.Parse("2006-01-02", v)
+			t, err := time.Parse(dateFormat, v)
 			if err != nil {
 				return filter, err
 			}
@@ -90,23 +90,23 @@ func parseDashboardFilter(r *http.Request) (store.DashboardFilter, error) {
 func (h *DashboardHandler) ActivityStats(w http.ResponseWriter, r *http.Request) {
 	actor, err := rbac.UserFromContext(r.Context())
 	if err != nil {
-		writeError(w, http.StatusUnauthorized, "UNAUTHORIZED", "missing authenticated user")
+		writeError(w, http.StatusUnauthorized, "UNAUTHORIZED", errMissingUser)
 		return
 	}
 
 	filter, err := parseDashboardFilter(r)
 	if err != nil {
-		writeError(w, http.StatusBadRequest, "BAD_REQUEST", "invalid period or date format")
+		writeError(w, http.StatusBadRequest, "BAD_REQUEST", errInvalidPeriod)
 		return
 	}
 
 	stats, err := h.svc.ActivityStats(r.Context(), actor, filter)
 	if err != nil {
-		writeError(w, http.StatusInternalServerError, "INTERNAL_ERROR", "an unexpected error occurred")
+		writeError(w, http.StatusInternalServerError, "INTERNAL_ERROR", errUnexpected)
 		return
 	}
 
-	w.Header().Set("Content-Type", "application/json")
+	w.Header().Set(headerContentType, contentTypeJSON)
 	w.WriteHeader(http.StatusOK)
 	writeJSON(w, r, stats)
 }
@@ -115,23 +115,23 @@ func (h *DashboardHandler) ActivityStats(w http.ResponseWriter, r *http.Request)
 func (h *DashboardHandler) Coverage(w http.ResponseWriter, r *http.Request) {
 	actor, err := rbac.UserFromContext(r.Context())
 	if err != nil {
-		writeError(w, http.StatusUnauthorized, "UNAUTHORIZED", "missing authenticated user")
+		writeError(w, http.StatusUnauthorized, "UNAUTHORIZED", errMissingUser)
 		return
 	}
 
 	filter, err := parseDashboardFilter(r)
 	if err != nil {
-		writeError(w, http.StatusBadRequest, "BAD_REQUEST", "invalid period or date format")
+		writeError(w, http.StatusBadRequest, "BAD_REQUEST", errInvalidPeriod)
 		return
 	}
 
 	stats, err := h.svc.Coverage(r.Context(), actor, filter)
 	if err != nil {
-		writeError(w, http.StatusInternalServerError, "INTERNAL_ERROR", "an unexpected error occurred")
+		writeError(w, http.StatusInternalServerError, "INTERNAL_ERROR", errUnexpected)
 		return
 	}
 
-	w.Header().Set("Content-Type", "application/json")
+	w.Header().Set(headerContentType, contentTypeJSON)
 	w.WriteHeader(http.StatusOK)
 	writeJSON(w, r, stats)
 }
@@ -140,23 +140,23 @@ func (h *DashboardHandler) Coverage(w http.ResponseWriter, r *http.Request) {
 func (h *DashboardHandler) RecoveryBalance(w http.ResponseWriter, r *http.Request) {
 	actor, err := rbac.UserFromContext(r.Context())
 	if err != nil {
-		writeError(w, http.StatusUnauthorized, "UNAUTHORIZED", "missing authenticated user")
+		writeError(w, http.StatusUnauthorized, "UNAUTHORIZED", errMissingUser)
 		return
 	}
 
 	filter, err := parseDashboardFilter(r)
 	if err != nil {
-		writeError(w, http.StatusBadRequest, "BAD_REQUEST", "invalid period or date format")
+		writeError(w, http.StatusBadRequest, "BAD_REQUEST", errInvalidPeriod)
 		return
 	}
 
 	result, err := h.svc.RecoveryBalance(r.Context(), actor, filter)
 	if err != nil {
-		writeError(w, http.StatusInternalServerError, "INTERNAL_ERROR", "an unexpected error occurred")
+		writeError(w, http.StatusInternalServerError, "INTERNAL_ERROR", errUnexpected)
 		return
 	}
 
-	w.Header().Set("Content-Type", "application/json")
+	w.Header().Set(headerContentType, contentTypeJSON)
 	w.WriteHeader(http.StatusOK)
 	writeJSON(w, r, result)
 }
@@ -165,23 +165,23 @@ func (h *DashboardHandler) RecoveryBalance(w http.ResponseWriter, r *http.Reques
 func (h *DashboardHandler) Frequency(w http.ResponseWriter, r *http.Request) {
 	actor, err := rbac.UserFromContext(r.Context())
 	if err != nil {
-		writeError(w, http.StatusUnauthorized, "UNAUTHORIZED", "missing authenticated user")
+		writeError(w, http.StatusUnauthorized, "UNAUTHORIZED", errMissingUser)
 		return
 	}
 
 	filter, err := parseDashboardFilter(r)
 	if err != nil {
-		writeError(w, http.StatusBadRequest, "BAD_REQUEST", "invalid period or date format")
+		writeError(w, http.StatusBadRequest, "BAD_REQUEST", errInvalidPeriod)
 		return
 	}
 
 	stats, err := h.svc.Frequency(r.Context(), actor, filter)
 	if err != nil {
-		writeError(w, http.StatusInternalServerError, "INTERNAL_ERROR", "an unexpected error occurred")
+		writeError(w, http.StatusInternalServerError, "INTERNAL_ERROR", errUnexpected)
 		return
 	}
 
-	w.Header().Set("Content-Type", "application/json")
+	w.Header().Set(headerContentType, contentTypeJSON)
 	w.WriteHeader(http.StatusOK)
 	writeJSON(w, r, stats)
 }

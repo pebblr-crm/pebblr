@@ -47,7 +47,7 @@ export function NewActivityPage() {
     : '/' as const
 
   function navigateBack() {
-    void navigate({ to: backPath })
+    navigate({ to: backPath })
   }
 
   return (

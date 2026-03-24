@@ -34,7 +34,7 @@ export function Sidebar({ open, onClose }: SidebarProps) {
   function cycleLang() {
     const idx = supportedLanguages.indexOf(currentLang)
     const next = supportedLanguages[(idx + 1) % supportedLanguages.length]
-    void i18n.changeLanguage(next)
+    i18n.changeLanguage(next).catch(() => {})
   }
 
   // Close popover on outside click

@@ -15,6 +15,14 @@ import (
 	"github.com/pebblr/pebblr/internal/store"
 )
 
+const (
+	testTargetID1              = "target-1"
+	testErrUnexpected          = "unexpected error: %v"
+	testErrExpectedForbidden   = "expected ErrForbidden, got %v"
+	testErrExpectedInvalidInput = "expected ErrInvalidInput, got %v"
+	testDrTest                 = "Dr. Test"
+)
+
 // --- stub target repo ---
 
 type stubTargetRepo struct {
@@ -45,7 +53,7 @@ func (r *stubTargetRepo) Create(_ context.Context, target *domain.Target) (*doma
 	if r.saveErr != nil {
 		return nil, r.saveErr
 	}
-	target.ID = "target-1"
+	target.ID = testTargetID1
 	target.CreatedAt = time.Now().UTC()
 	r.created = target
 	return target, nil
@@ -105,7 +113,7 @@ func testConfig() *config.TenantConfig {
 
 func sampleTarget() *domain.Target {
 	return &domain.Target{
-		ID:         "target-1",
+		ID:         testTargetID1,
 		TargetType: "doctor",
 		Name:       "Dr. Smith",
 		Fields:     map[string]any{},
@@ -128,7 +136,7 @@ func TestTargetCreate_AdminSucceeds(t *testing.T) {
 	target := &domain.Target{TargetType: "doctor", Name: "Dr. Jones", Fields: map[string]any{}}
 	created, err := svc.Create(context.Background(), adminUser(), target)
 	if err != nil {
-		t.Fatalf("unexpected error: %v", err)
+		t.Fatalf(testErrUnexpected, err)
 	}
 	if created.ID == "" {
 		t.Error("expected ID to be set")
@@ -143,7 +151,7 @@ func TestTargetCreate_ManagerSucceeds(t *testing.T) {
 	target := &domain.Target{TargetType: "pharmacy", Name: "Central Pharmacy", Fields: map[string]any{}}
 	_, err := svc.Create(context.Background(), managerUser(), target)
 	if err != nil {
-		t.Fatalf("unexpected error: %v", err)
+		t.Fatalf(testErrUnexpected, err)
 	}
 }
 
@@ -155,7 +163,7 @@ func TestTargetCreate_RepForbidden(t *testing.T) {
 	target := &domain.Target{TargetType: "doctor", Name: "Dr. Jones", Fields: map[string]any{}}
 	_, err := svc.Create(context.Background(), repUser(), target)
 	if !errors.Is(err, service.ErrForbidden) {
-		t.Errorf("expected ErrForbidden, got %v", err)
+		t.Errorf(testErrExpectedForbidden, err)
 	}
 }
 
@@ -167,7 +175,7 @@ func TestTargetCreate_InvalidType(t *testing.T) {
 	target := &domain.Target{TargetType: "unknown", Name: "Test", Fields: map[string]any{}}
 	_, err := svc.Create(context.Background(), adminUser(), target)
 	if !errors.Is(err, service.ErrInvalidInput) {
-		t.Errorf("expected ErrInvalidInput, got %v", err)
+		t.Errorf(testErrExpectedInvalidInput, err)
 	}
 }
 
@@ -179,7 +187,7 @@ func TestTargetCreate_EmptyName(t *testing.T) {
 	target := &domain.Target{TargetType: "doctor", Name: "", Fields: map[string]any{}}
 	_, err := svc.Create(context.Background(), adminUser(), target)
 	if !errors.Is(err, service.ErrInvalidInput) {
-		t.Errorf("expected ErrInvalidInput, got %v", err)
+		t.Errorf(testErrExpectedInvalidInput, err)
 	}
 }
 
@@ -190,11 +198,11 @@ func TestTargetGet_RepOwnsTarget(t *testing.T) {
 	repo := &stubTargetRepo{target: sampleTarget()}
 	svc := newTargetSvc(repo)
 
-	target, err := svc.Get(context.Background(), repUser(), "target-1")
+	target, err := svc.Get(context.Background(), repUser(), testTargetID1)
 	if err != nil {
-		t.Fatalf("unexpected error: %v", err)
+		t.Fatalf(testErrUnexpected, err)
 	}
-	if target.ID != "target-1" {
+	if target.ID != testTargetID1 {
 		t.Errorf("expected target-1, got %s", target.ID)
 	}
 }
@@ -207,7 +215,7 @@ func TestTargetGet_RepForbiddenOtherTarget(t *testing.T) {
 
 	_, err := svc.Get(context.Background(), repUser(), "target-2")
 	if !errors.Is(err, service.ErrForbidden) {
-		t.Errorf("expected ErrForbidden, got %v", err)
+		t.Errorf(testErrExpectedForbidden, err)
 	}
 }
 
@@ -231,7 +239,7 @@ func TestTargetList_RepScopedToOwnTargets(t *testing.T) {
 
 	page, err := svc.List(context.Background(), repUser(), store.TargetFilter{}, 1, 20)
 	if err != nil {
-		t.Fatalf("unexpected error: %v", err)
+		t.Fatalf(testErrUnexpected, err)
 	}
 	if page.Total != 1 {
 		t.Errorf("expected 1 target, got %d", page.Total)
@@ -250,7 +258,7 @@ func TestTargetUpdate_RepCanUpdateOwnTarget(t *testing.T) {
 
 	result, err := svc.Update(context.Background(), repUser(), &updated)
 	if err != nil {
-		t.Fatalf("unexpected error: %v", err)
+		t.Fatalf(testErrUnexpected, err)
 	}
 	if result.Name != "Dr. Smith Jr." {
 		t.Errorf("expected updated name, got %s", result.Name)
@@ -266,7 +274,7 @@ func TestTargetUpdate_RepForbiddenOnOtherTarget(t *testing.T) {
 	updated := *otherTarget
 	_, err := svc.Update(context.Background(), repUser(), &updated)
 	if !errors.Is(err, service.ErrForbidden) {
-		t.Errorf("expected ErrForbidden, got %v", err)
+		t.Errorf(testErrExpectedForbidden, err)
 	}
 }
 
@@ -283,7 +291,7 @@ func TestTargetImport_AdminSucceeds(t *testing.T) {
 	}
 	result, err := svc.Import(context.Background(), adminUser(), targets)
 	if err != nil {
-		t.Fatalf("unexpected error: %v", err)
+		t.Fatalf(testErrUnexpected, err)
 	}
 	if result.Created != 2 {
 		t.Errorf("expected 2 created, got %d", result.Created)
@@ -303,7 +311,7 @@ func TestTargetImport_RepForbidden(t *testing.T) {
 	}
 	_, err := svc.Import(context.Background(), repUser(), targets)
 	if !errors.Is(err, service.ErrForbidden) {
-		t.Errorf("expected ErrForbidden, got %v", err)
+		t.Errorf(testErrExpectedForbidden, err)
 	}
 }
 
@@ -317,7 +325,7 @@ func TestTargetImport_ManagerForbidden(t *testing.T) {
 	}
 	_, err := svc.Import(context.Background(), managerUser(), targets)
 	if !errors.Is(err, service.ErrForbidden) {
-		t.Errorf("expected ErrForbidden, got %v", err)
+		t.Errorf(testErrExpectedForbidden, err)
 	}
 }
 
@@ -331,7 +339,7 @@ func TestTargetImport_MissingExternalID(t *testing.T) {
 	}
 	_, err := svc.Import(context.Background(), adminUser(), targets)
 	if !errors.Is(err, service.ErrInvalidInput) {
-		t.Errorf("expected ErrInvalidInput, got %v", err)
+		t.Errorf(testErrExpectedInvalidInput, err)
 	}
 }
 
@@ -345,7 +353,7 @@ func TestTargetImport_InvalidType(t *testing.T) {
 	}
 	_, err := svc.Import(context.Background(), adminUser(), targets)
 	if !errors.Is(err, service.ErrInvalidInput) {
-		t.Errorf("expected ErrInvalidInput, got %v", err)
+		t.Errorf(testErrExpectedInvalidInput, err)
 	}
 }
 
@@ -359,7 +367,7 @@ func TestTargetImport_EmptyName(t *testing.T) {
 	}
 	_, err := svc.Import(context.Background(), adminUser(), targets)
 	if !errors.Is(err, service.ErrInvalidInput) {
-		t.Errorf("expected ErrInvalidInput, got %v", err)
+		t.Errorf(testErrExpectedInvalidInput, err)
 	}
 }
 
@@ -383,13 +391,13 @@ func TestTargetImport_GeocodesAddresses(t *testing.T) {
 	svc := service.NewTargetService(repo, rbac.NewEnforcer(), testConfig(), service.WithGeocoder(gc))
 
 	targets := []*domain.Target{
-		{ExternalID: "ext-1", TargetType: "doctor", Name: "Dr. Test", Fields: map[string]any{
+		{ExternalID: "ext-1", TargetType: "doctor", Name: testDrTest, Fields: map[string]any{
 			"address": "Str. Exemplu 1", "city": "București",
 		}},
 	}
 	_, err := svc.Import(context.Background(), adminUser(), targets)
 	if err != nil {
-		t.Fatalf("unexpected error: %v", err)
+		t.Fatalf(testErrUnexpected, err)
 	}
 	if gc.calls != 1 {
 		t.Errorf("expected 1 geocode call, got %d", gc.calls)
@@ -409,13 +417,13 @@ func TestTargetImport_SkipsAlreadyGeocoded(t *testing.T) {
 	svc := service.NewTargetService(repo, rbac.NewEnforcer(), testConfig(), service.WithGeocoder(gc))
 
 	targets := []*domain.Target{
-		{ExternalID: "ext-1", TargetType: "doctor", Name: "Dr. Test", Fields: map[string]any{
+		{ExternalID: "ext-1", TargetType: "doctor", Name: testDrTest, Fields: map[string]any{
 			"address": "Str. Exemplu 1", "city": "București", "lat": 44.0, "lng": 26.0,
 		}},
 	}
 	_, err := svc.Import(context.Background(), adminUser(), targets)
 	if err != nil {
-		t.Fatalf("unexpected error: %v", err)
+		t.Fatalf(testErrUnexpected, err)
 	}
 	if gc.calls != 0 {
 		t.Errorf("expected 0 geocode calls for already-geocoded target, got %d", gc.calls)
@@ -429,7 +437,7 @@ func TestTargetImport_GeocodingFailureDoesNotBlock(t *testing.T) {
 	svc := service.NewTargetService(repo, rbac.NewEnforcer(), testConfig(), service.WithGeocoder(gc))
 
 	targets := []*domain.Target{
-		{ExternalID: "ext-1", TargetType: "doctor", Name: "Dr. Test", Fields: map[string]any{
+		{ExternalID: "ext-1", TargetType: "doctor", Name: testDrTest, Fields: map[string]any{
 			"address": "Nonexistent Address", "city": "Nowhere",
 		}},
 	}
@@ -459,7 +467,7 @@ func TestFrequencyStatus_CalculatesCompliance(t *testing.T) {
 	to := time.Date(2026, 3, 31, 0, 0, 0, 0, time.UTC)
 	items, err := svc.FrequencyStatus(context.Background(), adminUser(), from, to)
 	if err != nil {
-		t.Fatalf("unexpected error: %v", err)
+		t.Fatalf(testErrUnexpected, err)
 	}
 	if len(items) != 3 {
 		t.Fatalf("expected 3 items, got %d", len(items))
@@ -493,7 +501,7 @@ func TestFrequencyStatus_MultiMonth(t *testing.T) {
 	to := time.Date(2026, 3, 31, 0, 0, 0, 0, time.UTC)
 	items, err := svc.FrequencyStatus(context.Background(), adminUser(), from, to)
 	if err != nil {
-		t.Fatalf("unexpected error: %v", err)
+		t.Fatalf(testErrUnexpected, err)
 	}
 
 	// 6 / 12 = 50%
@@ -515,7 +523,7 @@ func TestFrequencyStatus_NoConfigRule(t *testing.T) {
 	to := time.Date(2026, 3, 31, 0, 0, 0, 0, time.UTC)
 	items, err := svc.FrequencyStatus(context.Background(), adminUser(), from, to)
 	if err != nil {
-		t.Fatalf("unexpected error: %v", err)
+		t.Fatalf(testErrUnexpected, err)
 	}
 
 	if items[0].Required != 0 {
@@ -539,7 +547,7 @@ func TestFrequencyStatus_CapsAt100Percent(t *testing.T) {
 	to := time.Date(2026, 3, 31, 0, 0, 0, 0, time.UTC)
 	items, err := svc.FrequencyStatus(context.Background(), adminUser(), from, to)
 	if err != nil {
-		t.Fatalf("unexpected error: %v", err)
+		t.Fatalf(testErrUnexpected, err)
 	}
 
 	// "c" requires 1/month, 10 visits → capped at 100%
@@ -559,7 +567,7 @@ func TestFrequencyStatus_EmptyResult(t *testing.T) {
 	to := time.Date(2026, 3, 31, 0, 0, 0, 0, time.UTC)
 	items, err := svc.FrequencyStatus(context.Background(), adminUser(), from, to)
 	if err != nil {
-		t.Fatalf("unexpected error: %v", err)
+		t.Fatalf(testErrUnexpected, err)
 	}
 	if len(items) != 0 {
 		t.Errorf("expected 0 items, got %d", len(items))
@@ -597,9 +605,9 @@ func TestTargetAssign_AdminSucceeds(t *testing.T) {
 	auditRepo := &stubAuditRepo{}
 	svc := service.NewTargetService(repo, rbac.NewEnforcer(), testConfig(), service.WithUsers(userRepo), service.WithAudit(auditRepo))
 
-	updated, err := svc.Assign(context.Background(), adminUser(), "target-1", "rep-2", "")
+	updated, err := svc.Assign(context.Background(), adminUser(), testTargetID1, "rep-2", "")
 	if err != nil {
-		t.Fatalf("unexpected error: %v", err)
+		t.Fatalf(testErrUnexpected, err)
 	}
 	if updated.AssigneeID != "rep-2" {
 		t.Errorf("expected assignee rep-2, got %s", updated.AssigneeID)
@@ -621,9 +629,9 @@ func TestTargetAssign_ManagerTeamSucceeds(t *testing.T) {
 	}}
 	svc := service.NewTargetService(repo, rbac.NewEnforcer(), testConfig(), service.WithUsers(userRepo))
 
-	_, err := svc.Assign(context.Background(), managerUser(), "target-1", "rep-2", "")
+	_, err := svc.Assign(context.Background(), managerUser(), testTargetID1, "rep-2", "")
 	if err != nil {
-		t.Fatalf("unexpected error: %v", err)
+		t.Fatalf(testErrUnexpected, err)
 	}
 }
 
@@ -638,7 +646,7 @@ func TestTargetAssign_ManagerOtherTeamForbidden(t *testing.T) {
 
 	_, err := svc.Assign(context.Background(), managerUser(), "t-3", "rep-2", "")
 	if !errors.Is(err, service.ErrForbidden) {
-		t.Errorf("expected ErrForbidden, got %v", err)
+		t.Errorf(testErrExpectedForbidden, err)
 	}
 }
 
@@ -647,9 +655,9 @@ func TestTargetAssign_RepForbidden(t *testing.T) {
 	repo := &stubTargetRepo{target: sampleTarget()}
 	svc := newTargetSvc(repo)
 
-	_, err := svc.Assign(context.Background(), repUser(), "target-1", "rep-2", "")
+	_, err := svc.Assign(context.Background(), repUser(), testTargetID1, "rep-2", "")
 	if !errors.Is(err, service.ErrForbidden) {
-		t.Errorf("expected ErrForbidden, got %v", err)
+		t.Errorf(testErrExpectedForbidden, err)
 	}
 }
 
@@ -658,9 +666,9 @@ func TestTargetAssign_EmptyAssigneeFails(t *testing.T) {
 	repo := &stubTargetRepo{target: sampleTarget()}
 	svc := newTargetSvc(repo)
 
-	_, err := svc.Assign(context.Background(), adminUser(), "target-1", "", "")
+	_, err := svc.Assign(context.Background(), adminUser(), testTargetID1, "", "")
 	if !errors.Is(err, service.ErrInvalidInput) {
-		t.Errorf("expected ErrInvalidInput, got %v", err)
+		t.Errorf(testErrExpectedInvalidInput, err)
 	}
 }
 
@@ -670,7 +678,7 @@ func TestTargetAssign_NonExistentAssigneeFails(t *testing.T) {
 	userRepo := &stubAssignUserRepo{users: map[string]*domain.User{}} // empty — no users
 	svc := service.NewTargetService(repo, rbac.NewEnforcer(), testConfig(), service.WithUsers(userRepo))
 
-	_, err := svc.Assign(context.Background(), adminUser(), "target-1", "nonexistent", "")
+	_, err := svc.Assign(context.Background(), adminUser(), testTargetID1, "nonexistent", "")
 	if !errors.Is(err, store.ErrNotFound) {
 		t.Errorf("expected ErrNotFound, got %v", err)
 	}
@@ -685,9 +693,9 @@ func TestTargetAssign_UpdatesTeamWhenProvided(t *testing.T) {
 	}}
 	svc := service.NewTargetService(repo, rbac.NewEnforcer(), testConfig(), service.WithUsers(userRepo))
 
-	updated, err := svc.Assign(context.Background(), adminUser(), "target-1", "rep-2", "team-2")
+	updated, err := svc.Assign(context.Background(), adminUser(), testTargetID1, "rep-2", "team-2")
 	if err != nil {
-		t.Fatalf("unexpected error: %v", err)
+		t.Fatalf(testErrUnexpected, err)
 	}
 	if updated.TeamID != "team-2" {
 		t.Errorf("expected team team-2, got %s", updated.TeamID)

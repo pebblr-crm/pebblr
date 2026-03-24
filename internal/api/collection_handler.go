@@ -57,7 +57,7 @@ func mapCollectionServiceError(w http.ResponseWriter, err error) {
 	case errors.Is(err, service.ErrInvalidInput):
 		writeError(w, http.StatusBadRequest, "BAD_REQUEST", "invalid input")
 	default:
-		writeError(w, http.StatusInternalServerError, "INTERNAL_ERROR", "an unexpected error occurred")
+		writeError(w, http.StatusInternalServerError, "INTERNAL_ERROR", errUnexpected)
 	}
 }
 
@@ -65,13 +65,13 @@ func mapCollectionServiceError(w http.ResponseWriter, err error) {
 func (h *CollectionHandler) Create(w http.ResponseWriter, r *http.Request) {
 	actor, err := rbac.UserFromContext(r.Context())
 	if err != nil {
-		writeError(w, http.StatusUnauthorized, "UNAUTHORIZED", "missing authenticated user")
+		writeError(w, http.StatusUnauthorized, "UNAUTHORIZED", errMissingUser)
 		return
 	}
 
 	var req collectionRequest
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-		writeError(w, http.StatusBadRequest, "BAD_REQUEST", "invalid request body")
+		writeError(w, http.StatusBadRequest, "BAD_REQUEST", errInvalidRequestBody)
 		return
 	}
 
@@ -81,7 +81,7 @@ func (h *CollectionHandler) Create(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	w.Header().Set("Content-Type", "application/json")
+	w.Header().Set(headerContentType, contentTypeJSON)
 	w.WriteHeader(http.StatusCreated)
 	_ = json.NewEncoder(w).Encode(c)
 }
@@ -90,7 +90,7 @@ func (h *CollectionHandler) Create(w http.ResponseWriter, r *http.Request) {
 func (h *CollectionHandler) List(w http.ResponseWriter, r *http.Request) {
 	actor, err := rbac.UserFromContext(r.Context())
 	if err != nil {
-		writeError(w, http.StatusUnauthorized, "UNAUTHORIZED", "missing authenticated user")
+		writeError(w, http.StatusUnauthorized, "UNAUTHORIZED", errMissingUser)
 		return
 	}
 
@@ -100,7 +100,7 @@ func (h *CollectionHandler) List(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	w.Header().Set("Content-Type", "application/json")
+	w.Header().Set(headerContentType, contentTypeJSON)
 	_ = json.NewEncoder(w).Encode(map[string]any{"items": result})
 }
 
@@ -108,7 +108,7 @@ func (h *CollectionHandler) List(w http.ResponseWriter, r *http.Request) {
 func (h *CollectionHandler) Get(w http.ResponseWriter, r *http.Request) {
 	actor, err := rbac.UserFromContext(r.Context())
 	if err != nil {
-		writeError(w, http.StatusUnauthorized, "UNAUTHORIZED", "missing authenticated user")
+		writeError(w, http.StatusUnauthorized, "UNAUTHORIZED", errMissingUser)
 		return
 	}
 
@@ -119,7 +119,7 @@ func (h *CollectionHandler) Get(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	w.Header().Set("Content-Type", "application/json")
+	w.Header().Set(headerContentType, contentTypeJSON)
 	_ = json.NewEncoder(w).Encode(c)
 }
 
@@ -127,7 +127,7 @@ func (h *CollectionHandler) Get(w http.ResponseWriter, r *http.Request) {
 func (h *CollectionHandler) Update(w http.ResponseWriter, r *http.Request) {
 	actor, err := rbac.UserFromContext(r.Context())
 	if err != nil {
-		writeError(w, http.StatusUnauthorized, "UNAUTHORIZED", "missing authenticated user")
+		writeError(w, http.StatusUnauthorized, "UNAUTHORIZED", errMissingUser)
 		return
 	}
 
@@ -135,7 +135,7 @@ func (h *CollectionHandler) Update(w http.ResponseWriter, r *http.Request) {
 
 	var req collectionRequest
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-		writeError(w, http.StatusBadRequest, "BAD_REQUEST", "invalid request body")
+		writeError(w, http.StatusBadRequest, "BAD_REQUEST", errInvalidRequestBody)
 		return
 	}
 
@@ -145,7 +145,7 @@ func (h *CollectionHandler) Update(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	w.Header().Set("Content-Type", "application/json")
+	w.Header().Set(headerContentType, contentTypeJSON)
 	_ = json.NewEncoder(w).Encode(c)
 }
 
@@ -153,7 +153,7 @@ func (h *CollectionHandler) Update(w http.ResponseWriter, r *http.Request) {
 func (h *CollectionHandler) Delete(w http.ResponseWriter, r *http.Request) {
 	actor, err := rbac.UserFromContext(r.Context())
 	if err != nil {
-		writeError(w, http.StatusUnauthorized, "UNAUTHORIZED", "missing authenticated user")
+		writeError(w, http.StatusUnauthorized, "UNAUTHORIZED", errMissingUser)
 		return
 	}
 

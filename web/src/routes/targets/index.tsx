@@ -25,6 +25,15 @@ const INITIALS_COLORS = [
   'bg-rose-50 text-rose-600',
 ]
 
+function computeVisiblePages(current: number, total: number, maxVisible: number): number[] {
+  let start = Math.max(1, current - Math.floor(maxVisible / 2))
+  const end = Math.min(total, start + maxVisible - 1)
+  start = Math.max(1, end - maxVisible + 1)
+  const pages: number[] = []
+  for (let i = start; i <= end; i++) pages.push(i)
+  return pages
+}
+
 function colorForInitials(s: string): string {
   let hash = 0
   for (let i = 0; i < s.length; i++) hash = s.charCodeAt(i) + ((hash << 5) - hash)
@@ -45,24 +54,39 @@ function TypeBadge({ targetType, label }: { targetType: string; label?: string }
   )
 }
 
+function getFrequencyBadgeColor(pct: number): string {
+  if (pct >= 80) return 'bg-emerald-100 text-emerald-700'
+  if (pct >= 50) return 'bg-amber-100 text-amber-700'
+  return 'bg-red-100 text-red-700'
+}
+
 function FrequencyBadge({ freq }: { freq?: { compliance: number; visitCount: number; required: number } }) {
   if (!freq || freq.required === 0) {
     return <span className="text-sm text-slate-300">—</span>
   }
   const pct = Math.round(freq.compliance)
-  const color =
-    pct >= 80
-      ? 'bg-emerald-100 text-emerald-700'
-      : pct >= 50
-        ? 'bg-amber-100 text-amber-700'
-        : 'bg-red-100 text-red-700'
   return (
     <div className="flex items-center gap-2">
-      <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold ${color}`}>
+      <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold ${getFrequencyBadgeColor(pct)}`}>
         {pct}%
       </span>
       <span className="text-[10px] text-slate-400">
         {freq.visitCount}/{freq.required}
+      </span>
+    </div>
+  )
+}
+
+function LocationCell({ fields }: { fields: Record<string, unknown> }) {
+  if (!fields['city']) {
+    return <span className="text-sm text-slate-300">—</span>
+  }
+  return (
+    <div className="flex items-center gap-2">
+      <MapPin className="w-4 h-4 text-slate-300" />
+      <span className="text-sm text-slate-600">
+        {String(fields['city'])}
+        {fields['county'] ? `, ${String(fields['county'])}` : ''}
       </span>
     </div>
   )
@@ -106,19 +130,11 @@ export function TargetsPage() {
   const hasPrev = page > 1
   const hasNext = page < totalPages
 
-  const accountTypes = config?.accounts.types ?? []
+  const accountTypes = useMemo(() => config?.accounts.types ?? [], [config?.accounts.types])
   const typeOptions: { value: string; label: string }[] = [
     { value: '', label: t('targets.allTypes') },
     ...accountTypes.map((t) => ({ value: t.key, label: t.label })),
   ]
-
-  // Resolve field label from config
-  function resolveFieldLabel(targetType: string, fieldKey: string): string {
-    const acct = accountTypes.find((a) => a.key === targetType)
-    const field = acct?.fields.find((f) => f.key === fieldKey)
-    if (field) return field.key.replace(/_/g, ' ')
-    return fieldKey.replace(/_/g, ' ')
-  }
 
   // Resolve option label from config
   function resolveOptionLabel(ref: string, value: string): string {
@@ -140,24 +156,21 @@ export function TargetsPage() {
   }
 
   // Determine which dynamic columns to show based on active type filter
-  const dynamicColumns: { key: string; label: string }[] = []
-  if (typeFilter) {
+  const dynamicColumns = useMemo(() => {
+    if (!typeFilter) return []
     const acct = accountTypes.find((a) => a.key === typeFilter)
-    if (acct) {
-      for (const f of acct.fields) {
-        if (f.key === 'name') continue // name is already the main column
-        dynamicColumns.push({ key: f.key, label: resolveFieldLabel(typeFilter, f.key) })
-      }
-    }
-  }
+    if (!acct) return []
+    return acct.fields
+      .filter((f) => f.key !== 'name')
+      .map((f) => {
+        const field = acct.fields.find((af) => af.key === f.key)
+        const label = field ? field.key.replace(/_/g, ' ') : f.key.replace(/_/g, ' ')
+        return { key: f.key, label }
+      })
+  }, [typeFilter, accountTypes])
 
   // Visible page numbers
-  const visiblePages: number[] = []
-  const maxVisible = 3
-  let startPage = Math.max(1, page - Math.floor(maxVisible / 2))
-  const endPage = Math.min(totalPages, startPage + maxVisible - 1)
-  startPage = Math.max(1, endPage - maxVisible + 1)
-  for (let i = startPage; i <= endPage; i++) visiblePages.push(i)
+  const visiblePages = useMemo(() => computeVisiblePages(page, totalPages, 3), [page, totalPages])
 
   return (
     <motion.div
@@ -229,155 +242,232 @@ export function TargetsPage() {
       </div>
 
       {/* Main Content */}
-      {isLoading ? (
-        <div className="flex items-center justify-center h-64">
-          <LoadingSpinner size="lg" label={t('targets.loading')} />
-        </div>
-      ) : isError ? (
-        <div data-testid="error-state" className="p-8 text-center text-error">
-          {error instanceof Error ? error.message : t('error.failedToLoadTargets')}
-        </div>
-      ) : (
-        <>
-          {/* Data Table */}
-          <div className="bg-surface-container-low rounded-xl p-1 overflow-x-auto">
-            <div className="bg-surface-container-lowest rounded-lg shadow-[0px_24px_48px_rgba(25,28,30,0.06)] overflow-hidden min-w-[600px]">
-              <table className="w-full text-left border-separate border-spacing-0">
-                <thead>
-                  <tr className="bg-surface-container-low/50">
-                    <th className="px-6 py-4 text-[11px] font-bold uppercase tracking-widest text-slate-400">
-                      {t('targets.name')}
-                    </th>
-                    <th className="px-6 py-4 text-[11px] font-bold uppercase tracking-widest text-slate-400">
-                      {t('targets.type')}
-                    </th>
-                    {dynamicColumns.map((col) => (
-                      <th key={col.key} className="px-6 py-4 text-[11px] font-bold uppercase tracking-widest text-slate-400">
-                        {col.label}
-                      </th>
-                    ))}
-                    {!typeFilter && (
-                      <th className="px-6 py-4 text-[11px] font-bold uppercase tracking-widest text-slate-400">
-                        {t('targets.location')}
-                      </th>
-                    )}
-                    <th className="px-6 py-4 text-[11px] font-bold uppercase tracking-widest text-slate-400">
-                      {t('targets.frequency')}
-                    </th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-slate-50">
-                  {targets.map((target) => (
-                    <tr key={target.id} className="hover:bg-slate-50/50 transition-colors">
-                      <td className="px-6 py-5">
-                        <Link
-                          to="/targets/$targetId"
-                          params={{ targetId: target.id }}
-                          className="flex items-center gap-3 no-underline"
-                        >
-                          <div
-                            className={`w-10 h-10 rounded-lg flex items-center justify-center font-bold text-sm ${colorForInitials(target.name)}`}
-                          >
-                            {target.name.slice(0, 2).toUpperCase()}
-                          </div>
-                          <div>
-                            <div className="text-sm font-bold text-primary">{target.name}</div>
-                          </div>
-                        </Link>
-                      </td>
-                      <td className="px-6 py-5">
-                        <TypeBadge
-                          targetType={target.targetType}
-                          label={accountTypes.find((a) => a.key === target.targetType)?.label}
-                        />
-                      </td>
-                      {dynamicColumns.map((col) => (
-                        <td key={col.key} className="px-6 py-5">
-                          <span className="text-sm text-slate-600">
-                            {getFieldDisplay(target.targetType, col.key, target.fields[col.key])}
-                          </span>
-                        </td>
-                      ))}
-                      {!typeFilter && (
-                        <td className="px-6 py-5">
-                          {target.fields['city'] ? (
-                            <div className="flex items-center gap-2">
-                              <MapPin className="w-4 h-4 text-slate-300" />
-                              <span className="text-sm text-slate-600">
-                                {String(target.fields['city'])}
-                                {target.fields['county'] ? `, ${String(target.fields['county'])}` : ''}
-                              </span>
-                            </div>
-                          ) : (
-                            <span className="text-sm text-slate-300">—</span>
-                          )}
-                        </td>
-                      )}
-                      <td className="px-6 py-5">
-                        <FrequencyBadge freq={frequencyMap.get(target.id)} />
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-
-              {targets.length === 0 && (
-                <div data-testid="empty-state" className="px-6 py-12 text-center text-on-surface-variant">
-                  {typeFilter
-                    ? t('targets.noTargetsOfType', { type: typeFilter })
-                    : t('targets.noTargets')}
-                </div>
-              )}
-
-              {/* Pagination */}
-              <div
-                data-testid="pagination"
-                className="px-6 py-4 bg-surface-container-lowest border-t border-slate-50 flex items-center justify-between"
-              >
-                <span data-testid="result-count" className="text-xs font-medium text-slate-400">
-                  {total > 0
-                    ? `${(page - 1) * PAGE_SIZE + 1}–${Math.min(page * PAGE_SIZE, total)} ${t('common.of')} ${total}`
-                    : t('common.noResults')}
-                </span>
-                <div className="flex gap-2">
-                  <button
-                    data-testid="prev-page"
-                    onClick={() => setPage((p) => p - 1)}
-                    disabled={!hasPrev}
-                    className="w-8 h-8 flex items-center justify-center border border-slate-100 rounded-lg text-slate-400 hover:bg-slate-50 transition-colors disabled:opacity-40"
-                  >
-                    <ChevronLeft className="w-4 h-4" />
-                  </button>
-                  {visiblePages.map((p) => (
-                    <button
-                      key={p}
-                      onClick={() => setPage(p)}
-                      className={`w-8 h-8 flex items-center justify-center rounded-lg text-xs font-bold transition-colors ${
-                        p === page
-                          ? 'bg-primary text-white'
-                          : 'border border-slate-100 text-slate-600 hover:bg-slate-50'
-                      }`}
-                    >
-                      {p}
-                    </button>
-                  ))}
-                  <button
-                    data-testid="next-page"
-                    onClick={() => setPage((p) => p + 1)}
-                    disabled={!hasNext}
-                    className="w-8 h-8 flex items-center justify-center border border-slate-100 rounded-lg text-slate-400 hover:bg-slate-50 transition-colors disabled:opacity-40"
-                  >
-                    <ChevronRight className="w-4 h-4" />
-                  </button>
-                </div>
-                <span data-testid="page-indicator" className="text-xs font-medium text-slate-400">
-                  {t('common.page')} {page} {t('common.of')} {totalPages}
-                </span>
-              </div>
-            </div>
-          </div>
-        </>
-      )}
+      <TargetsMainContent
+        isLoading={isLoading}
+        isError={isError}
+        error={error}
+        targets={targets}
+        total={total}
+        typeFilter={typeFilter}
+        dynamicColumns={dynamicColumns}
+        accountTypes={accountTypes}
+        frequencyMap={frequencyMap}
+        getFieldDisplay={getFieldDisplay}
+        page={page}
+        totalPages={totalPages}
+        hasPrev={hasPrev}
+        hasNext={hasNext}
+        visiblePages={visiblePages}
+        setPage={setPage}
+      />
     </motion.div>
+  )
+}
+
+interface TargetsMainContentProps {
+  isLoading: boolean
+  isError: boolean
+  error: Error | null
+  targets: Array<{ id: string; name: string; targetType: string; fields: Record<string, unknown> }>
+  total: number
+  typeFilter: string
+  dynamicColumns: Array<{ key: string; label: string }>
+  accountTypes: Array<{ key: string; label: string }>
+  frequencyMap: Map<string, { compliance: number; visitCount: number; required: number }>
+  getFieldDisplay: (targetType: string, fieldKey: string, value: unknown) => string
+  page: number
+  totalPages: number
+  hasPrev: boolean
+  hasNext: boolean
+  visiblePages: number[]
+  setPage: (page: number | ((p: number) => number)) => void
+}
+
+function TargetsMainContent({
+  isLoading,
+  isError,
+  error,
+  targets,
+  total,
+  typeFilter,
+  dynamicColumns,
+  accountTypes,
+  frequencyMap,
+  getFieldDisplay,
+  page,
+  totalPages,
+  hasPrev,
+  hasNext,
+  visiblePages,
+  setPage,
+}: TargetsMainContentProps) {
+  const { t } = useTranslation()
+
+  if (isLoading) {
+    return (
+      <div className="flex items-center justify-center h-64">
+        <LoadingSpinner size="lg" label={t('targets.loading')} />
+      </div>
+    )
+  }
+
+  if (isError) {
+    return (
+      <div data-testid="error-state" className="p-8 text-center text-error">
+        {error instanceof Error ? error.message : t('error.failedToLoadTargets')}
+      </div>
+    )
+  }
+
+  return (
+    <div className="bg-surface-container-low rounded-xl p-1 overflow-x-auto">
+      <div className="bg-surface-container-lowest rounded-lg shadow-[0px_24px_48px_rgba(25,28,30,0.06)] overflow-hidden min-w-[600px]">
+        <table className="w-full text-left border-separate border-spacing-0">
+          <thead>
+            <tr className="bg-surface-container-low/50">
+              <th className="px-6 py-4 text-[11px] font-bold uppercase tracking-widest text-slate-400">
+                {t('targets.name')}
+              </th>
+              <th className="px-6 py-4 text-[11px] font-bold uppercase tracking-widest text-slate-400">
+                {t('targets.type')}
+              </th>
+              {dynamicColumns.map((col) => (
+                <th key={col.key} className="px-6 py-4 text-[11px] font-bold uppercase tracking-widest text-slate-400">
+                  {col.label}
+                </th>
+              ))}
+              {!typeFilter && (
+                <th className="px-6 py-4 text-[11px] font-bold uppercase tracking-widest text-slate-400">
+                  {t('targets.location')}
+                </th>
+              )}
+              <th className="px-6 py-4 text-[11px] font-bold uppercase tracking-widest text-slate-400">
+                {t('targets.frequency')}
+              </th>
+            </tr>
+          </thead>
+          <tbody className="divide-y divide-slate-50">
+            {targets.map((target) => (
+              <TargetRow
+                key={target.id}
+                target={target}
+                typeFilter={typeFilter}
+                dynamicColumns={dynamicColumns}
+                accountTypes={accountTypes}
+                frequencyMap={frequencyMap}
+                getFieldDisplay={getFieldDisplay}
+              />
+            ))}
+          </tbody>
+        </table>
+
+        {targets.length === 0 && (
+          <div data-testid="empty-state" className="px-6 py-12 text-center text-on-surface-variant">
+            {typeFilter
+              ? t('targets.noTargetsOfType', { type: typeFilter })
+              : t('targets.noTargets')}
+          </div>
+        )}
+
+        {/* Pagination */}
+        <div
+          data-testid="pagination"
+          className="px-6 py-4 bg-surface-container-lowest border-t border-slate-50 flex items-center justify-between"
+        >
+          <span data-testid="result-count" className="text-xs font-medium text-slate-400">
+            {total > 0
+              ? `${(page - 1) * PAGE_SIZE + 1}–${Math.min(page * PAGE_SIZE, total)} ${t('common.of')} ${total}`
+              : t('common.noResults')}
+          </span>
+          <div className="flex gap-2">
+            <button
+              data-testid="prev-page"
+              onClick={() => setPage((p: number) => p - 1)}
+              disabled={!hasPrev}
+              className="w-8 h-8 flex items-center justify-center border border-slate-100 rounded-lg text-slate-400 hover:bg-slate-50 transition-colors disabled:opacity-40"
+            >
+              <ChevronLeft className="w-4 h-4" />
+            </button>
+            {visiblePages.map((p) => (
+              <button
+                key={p}
+                onClick={() => setPage(p)}
+                className={`w-8 h-8 flex items-center justify-center rounded-lg text-xs font-bold transition-colors ${
+                  p === page
+                    ? 'bg-primary text-white'
+                    : 'border border-slate-100 text-slate-600 hover:bg-slate-50'
+                }`}
+              >
+                {p}
+              </button>
+            ))}
+            <button
+              data-testid="next-page"
+              onClick={() => setPage((p: number) => p + 1)}
+              disabled={!hasNext}
+              className="w-8 h-8 flex items-center justify-center border border-slate-100 rounded-lg text-slate-400 hover:bg-slate-50 transition-colors disabled:opacity-40"
+            >
+              <ChevronRight className="w-4 h-4" />
+            </button>
+          </div>
+          <span data-testid="page-indicator" className="text-xs font-medium text-slate-400">
+            {t('common.page')} {page} {t('common.of')} {totalPages}
+          </span>
+        </div>
+      </div>
+    </div>
+  )
+}
+
+interface TargetRowProps {
+  target: { id: string; name: string; targetType: string; fields: Record<string, unknown> }
+  typeFilter: string
+  dynamicColumns: Array<{ key: string; label: string }>
+  accountTypes: Array<{ key: string; label: string }>
+  frequencyMap: Map<string, { compliance: number; visitCount: number; required: number }>
+  getFieldDisplay: (targetType: string, fieldKey: string, value: unknown) => string
+}
+
+function TargetRow({ target, typeFilter, dynamicColumns, accountTypes, frequencyMap, getFieldDisplay }: TargetRowProps) {
+  return (
+    <tr className="hover:bg-slate-50/50 transition-colors">
+      <td className="px-6 py-5">
+        <Link
+          to="/targets/$targetId"
+          params={{ targetId: target.id }}
+          className="flex items-center gap-3 no-underline"
+        >
+          <div
+            className={`w-10 h-10 rounded-lg flex items-center justify-center font-bold text-sm ${colorForInitials(target.name)}`}
+          >
+            {target.name.slice(0, 2).toUpperCase()}
+          </div>
+          <div>
+            <div className="text-sm font-bold text-primary">{target.name}</div>
+          </div>
+        </Link>
+      </td>
+      <td className="px-6 py-5">
+        <TypeBadge
+          targetType={target.targetType}
+          label={accountTypes.find((a) => a.key === target.targetType)?.label}
+        />
+      </td>
+      {dynamicColumns.map((col) => (
+        <td key={col.key} className="px-6 py-5">
+          <span className="text-sm text-slate-600">
+            {getFieldDisplay(target.targetType, col.key, target.fields[col.key])}
+          </span>
+        </td>
+      ))}
+      {!typeFilter && (
+        <td className="px-6 py-5">
+          <LocationCell fields={target.fields} />
+        </td>
+      )}
+      <td className="px-6 py-5">
+        <FrequencyBadge freq={frequencyMap.get(target.id)} />
+      </td>
+    </tr>
   )
 }

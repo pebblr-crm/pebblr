@@ -17,6 +17,8 @@ import (
 	"github.com/pebblr/pebblr/internal/store"
 )
 
+const testDrName = "Dr. Test"
+
 // --- stub TargetService ---
 
 type stubTargetSvc struct{}
@@ -36,7 +38,7 @@ func (s *stubTargetSvc) Get(_ context.Context, actor *domain.User, id string) (*
 	return &domain.Target{
 		ID:         id,
 		TargetType: "doctor",
-		Name:       "Dr. Test",
+		Name:       testDrName,
 		Fields:     map[string]any{},
 		AssigneeID: actor.ID,
 		TeamID:     "team-1",
@@ -68,7 +70,7 @@ func (s *stubTargetSvc) Assign(_ context.Context, actor *domain.User, targetID, 
 	return &domain.Target{
 		ID:         targetID,
 		TargetType: "doctor",
-		Name:       "Dr. Test",
+		Name:       testDrName,
 		Fields:     map[string]any{},
 		AssigneeID: assigneeID,
 		TeamID:     teamID,

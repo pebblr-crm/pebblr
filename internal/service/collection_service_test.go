@@ -9,6 +9,14 @@ import (
 	"github.com/pebblr/pebblr/internal/store"
 )
 
+const (
+	testCollBucharestMon      = "Bucharest Mon"
+	testCollTeamID1           = "team-1"
+	testCollErrUnexpected     = "unexpected error: %v"
+	testCollWantCol1          = "id = %s, want col-1"
+	testCollErrExpectedForbid = "expected forbidden error"
+)
+
 // --- stub collection repo ---
 
 type stubCollectionRepo struct {
@@ -59,9 +67,9 @@ func newCollectionSvc(repo *stubCollectionRepo) *service.CollectionService {
 func sampleCollection() *domain.Collection {
 	return &domain.Collection{
 		ID:        "col-1",
-		Name:      "Bucharest Mon",
+		Name:      testCollBucharestMon,
 		CreatorID: "rep-1",
-		TeamID:    "team-1",
+		TeamID:    testCollTeamID1,
 		TargetIDs: []string{"t1", "t2", "t3"},
 	}
 }
@@ -73,11 +81,11 @@ func TestCollection_Create_Success(t *testing.T) {
 	repo := &stubCollectionRepo{}
 	svc := newCollectionSvc(repo)
 
-	c, err := svc.Create(context.Background(), repUser(), "Bucharest Mon", []string{"t1", "t2"})
+	c, err := svc.Create(context.Background(), repUser(), testCollBucharestMon, []string{"t1", "t2"})
 	if err != nil {
-		t.Fatalf("unexpected error: %v", err)
+		t.Fatalf(testCollErrUnexpected, err)
 	}
-	if c.Name != "Bucharest Mon" {
+	if c.Name != testCollBucharestMon {
 		t.Errorf("name = %s, want Bucharest Mon", c.Name)
 	}
 	if c.CreatorID != "rep-1" {
@@ -106,7 +114,7 @@ func TestCollection_Create_NilTargetIDs(t *testing.T) {
 
 	c, err := svc.Create(context.Background(), repUser(), "Empty", nil)
 	if err != nil {
-		t.Fatalf("unexpected error: %v", err)
+		t.Fatalf(testCollErrUnexpected, err)
 	}
 	if c.TargetIDs == nil {
 		t.Error("targetIds should be empty slice, not nil")
@@ -124,7 +132,7 @@ func TestCollection_List_RepSeesOwn(t *testing.T) {
 
 	result, err := svc.List(context.Background(), repUser())
 	if err != nil {
-		t.Fatalf("unexpected error: %v", err)
+		t.Fatalf(testCollErrUnexpected, err)
 	}
 	if len(result) != 1 {
 		t.Errorf("expected 1 collection, got %d", len(result))
@@ -140,10 +148,10 @@ func TestCollection_Get_OwnerCanView(t *testing.T) {
 
 	c, err := svc.Get(context.Background(), repUser(), "col-1")
 	if err != nil {
-		t.Fatalf("unexpected error: %v", err)
+		t.Fatalf(testCollErrUnexpected, err)
 	}
 	if c.ID != "col-1" {
-		t.Errorf("id = %s, want col-1", c.ID)
+		t.Errorf(testCollWantCol1, c.ID)
 	}
 }
 
@@ -152,10 +160,10 @@ func TestCollection_Get_OtherRepForbidden(t *testing.T) {
 	repo := &stubCollectionRepo{collection: sampleCollection()}
 	svc := newCollectionSvc(repo)
 
-	otherRep := &domain.User{ID: "rep-2", Role: domain.RoleRep, TeamIDs: []string{"team-1"}}
+	otherRep := &domain.User{ID: "rep-2", Role: domain.RoleRep, TeamIDs: []string{testCollTeamID1}}
 	_, err := svc.Get(context.Background(), otherRep, "col-1")
 	if err == nil {
-		t.Fatal("expected forbidden error")
+		t.Fatal(testCollErrExpectedForbid)
 	}
 }
 
@@ -166,10 +174,10 @@ func TestCollection_Get_AdminCanView(t *testing.T) {
 
 	c, err := svc.Get(context.Background(), adminUser(), "col-1")
 	if err != nil {
-		t.Fatalf("unexpected error: %v", err)
+		t.Fatalf(testCollErrUnexpected, err)
 	}
 	if c.ID != "col-1" {
-		t.Errorf("id = %s, want col-1", c.ID)
+		t.Errorf(testCollWantCol1, c.ID)
 	}
 }
 
@@ -180,10 +188,10 @@ func TestCollection_Get_ManagerCanViewTeam(t *testing.T) {
 
 	c, err := svc.Get(context.Background(), managerUser(), "col-1")
 	if err != nil {
-		t.Fatalf("unexpected error: %v", err)
+		t.Fatalf(testCollErrUnexpected, err)
 	}
 	if c.ID != "col-1" {
-		t.Errorf("id = %s, want col-1", c.ID)
+		t.Errorf(testCollWantCol1, c.ID)
 	}
 }
 
@@ -196,7 +204,7 @@ func TestCollection_Update_OwnerCanUpdate(t *testing.T) {
 
 	c, err := svc.Update(context.Background(), repUser(), "col-1", "Renamed", []string{"t1"})
 	if err != nil {
-		t.Fatalf("unexpected error: %v", err)
+		t.Fatalf(testCollErrUnexpected, err)
 	}
 	if c.Name != "Renamed" {
 		t.Errorf("name = %s, want Renamed", c.Name)
@@ -208,10 +216,10 @@ func TestCollection_Update_OtherRepForbidden(t *testing.T) {
 	repo := &stubCollectionRepo{collection: sampleCollection()}
 	svc := newCollectionSvc(repo)
 
-	otherRep := &domain.User{ID: "rep-2", Role: domain.RoleRep, TeamIDs: []string{"team-1"}}
+	otherRep := &domain.User{ID: "rep-2", Role: domain.RoleRep, TeamIDs: []string{testCollTeamID1}}
 	_, err := svc.Update(context.Background(), otherRep, "col-1", "Hijack", []string{})
 	if err == nil {
-		t.Fatal("expected forbidden error")
+		t.Fatal(testCollErrExpectedForbid)
 	}
 }
 
@@ -235,7 +243,7 @@ func TestCollection_Delete_OwnerCanDelete(t *testing.T) {
 
 	err := svc.Delete(context.Background(), repUser(), "col-1")
 	if err != nil {
-		t.Fatalf("unexpected error: %v", err)
+		t.Fatalf(testCollErrUnexpected, err)
 	}
 	if !repo.deleted {
 		t.Error("expected collection to be deleted")
@@ -247,10 +255,10 @@ func TestCollection_Delete_OtherRepForbidden(t *testing.T) {
 	repo := &stubCollectionRepo{collection: sampleCollection()}
 	svc := newCollectionSvc(repo)
 
-	otherRep := &domain.User{ID: "rep-2", Role: domain.RoleRep, TeamIDs: []string{"team-1"}}
+	otherRep := &domain.User{ID: "rep-2", Role: domain.RoleRep, TeamIDs: []string{testCollTeamID1}}
 	err := svc.Delete(context.Background(), otherRep, "col-1")
 	if err == nil {
-		t.Fatal("expected forbidden error")
+		t.Fatal(testCollErrExpectedForbid)
 	}
 }
 
@@ -261,7 +269,7 @@ func TestCollection_Delete_AdminCanDelete(t *testing.T) {
 
 	err := svc.Delete(context.Background(), adminUser(), "col-1")
 	if err != nil {
-		t.Fatalf("unexpected error: %v", err)
+		t.Fatalf(testCollErrUnexpected, err)
 	}
 	if !repo.deleted {
 		t.Error("expected collection to be deleted")

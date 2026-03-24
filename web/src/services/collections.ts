@@ -65,7 +65,7 @@ export function useCreateCollection(): UseMutationResult<Collection, Error, Crea
   return useMutation({
     mutationFn: createCollection,
     onSuccess: () => {
-      void queryClient.invalidateQueries({ queryKey: collectionKeys.lists() })
+      queryClient.invalidateQueries({ queryKey: collectionKeys.lists() }).catch(() => {})
     },
   })
 }
@@ -76,7 +76,7 @@ export function useUpdateCollection(): UseMutationResult<Collection, Error, Upda
     mutationFn: updateCollection,
     onSuccess: (updated) => {
       queryClient.setQueryData(collectionKeys.detail(updated.id), updated)
-      void queryClient.invalidateQueries({ queryKey: collectionKeys.lists() })
+      queryClient.invalidateQueries({ queryKey: collectionKeys.lists() }).catch(() => {})
     },
   })
 }
@@ -86,7 +86,7 @@ export function useDeleteCollection(): UseMutationResult<void, Error, string> {
   return useMutation({
     mutationFn: deleteCollection,
     onSuccess: () => {
-      void queryClient.invalidateQueries({ queryKey: collectionKeys.lists() })
+      queryClient.invalidateQueries({ queryKey: collectionKeys.lists() }).catch(() => {})
     },
   })
 }

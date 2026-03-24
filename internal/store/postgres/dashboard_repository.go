@@ -11,6 +11,11 @@ import (
 	"github.com/pebblr/pebblr/internal/store"
 )
 
+const (
+	whereDeletedAtIsNull = "deleted_at IS NULL"
+	sqlWhere             = "WHERE "
+)
+
 type dashboardRepository struct {
 	pool *pgxpool.Pool
 }
@@ -19,7 +24,7 @@ type dashboardRepository struct {
 func (r *dashboardRepository) ActivityStats(ctx context.Context, scope rbac.ActivityScope, filter store.DashboardFilter) (*store.ActivityStats, error) {
 	args := []any{}
 	argIdx := 1
-	conditions := []string{"deleted_at IS NULL"}
+	conditions := []string{whereDeletedAtIsNull}
 
 	scopeSQL, args, argIdx := activityScopeConditions(scope, args, argIdx)
 	if scopeSQL != "" {
@@ -30,7 +35,7 @@ func (r *dashboardRepository) ActivityStats(ctx context.Context, scope rbac.Acti
 
 	conditions, args, _ = appendDashboardFilter(conditions, args, argIdx, filter)
 
-	where := "WHERE " + strings.Join(conditions, " AND ")
+	where := sqlWhere + strings.Join(conditions, " AND ")
 
 	// By status
 	byStatus := map[string]int{}
@@ -106,7 +111,7 @@ func (r *dashboardRepository) CoverageStats(ctx context.Context, scope rbac.Acti
 
 	tWhere := ""
 	if len(tConds) > 0 {
-		tWhere = "WHERE " + strings.Join(tConds, " AND ")
+		tWhere = sqlWhere + strings.Join(tConds, " AND ")
 	}
 
 	var totalTargets int
@@ -117,7 +122,7 @@ func (r *dashboardRepository) CoverageStats(ctx context.Context, scope rbac.Acti
 	// Count distinct targets visited (field activities with a target in the period).
 	aArgs := []any{}
 	aIdx := 1
-	aConds := []string{"a.deleted_at IS NULL", "a.target_id IS NOT NULL"}
+	aConds := []string{"a." + whereDeletedAtIsNull, "a.target_id IS NOT NULL"}
 
 	aScopeSQL, aArgs, aIdx := activityScopeConditions(scope, aArgs, aIdx)
 	if aScopeSQL != "" {
@@ -144,7 +149,7 @@ func (r *dashboardRepository) CoverageStats(ctx context.Context, scope rbac.Acti
 		// aIdx++ not needed — last use
 	}
 
-	aWhere := "WHERE " + strings.Join(aConds, " AND ")
+	aWhere := sqlWhere + strings.Join(aConds, " AND ")
 
 	var visitedTargets int
 	if err := r.pool.QueryRow(ctx,
@@ -188,11 +193,11 @@ func (r *dashboardRepository) FrequencyStats(ctx context.Context, scope rbac.Act
 
 	tWhere := ""
 	if len(tConds) > 0 {
-		tWhere = "WHERE " + strings.Join(tConds, " AND ")
+		tWhere = sqlWhere + strings.Join(tConds, " AND ")
 	}
 
 	// Activity conditions for the LEFT JOIN.
-	aConds := []string{"a.deleted_at IS NULL", "a.target_id = t.id"}
+	aConds := []string{"a." + whereDeletedAtIsNull, "a.target_id = t.id"}
 
 	aScopeSQL, args, argIdx := activityScopeConditionsAliased("a", scope, args, argIdx)
 	if aScopeSQL != "" {
@@ -244,7 +249,7 @@ func (r *dashboardRepository) FrequencyStats(ctx context.Context, scope rbac.Act
 func (r *dashboardRepository) WeekendFieldActivities(ctx context.Context, scope rbac.ActivityScope, fieldTypes []string, filter store.DashboardFilter) ([]store.WeekendActivity, error) {
 	args := []any{}
 	argIdx := 1
-	conditions := []string{"deleted_at IS NULL"}
+	conditions := []string{whereDeletedAtIsNull}
 
 	// Weekend: extract DOW (0=Sun, 6=Sat)
 	conditions = append(conditions, "EXTRACT(DOW FROM due_date) IN (0, 6)")
@@ -263,7 +268,7 @@ func (r *dashboardRepository) WeekendFieldActivities(ctx context.Context, scope 
 
 	conditions, args, _ = appendDashboardFilter(conditions, args, argIdx, filter)
 
-	where := "WHERE " + strings.Join(conditions, " AND ")
+	where := sqlWhere + strings.Join(conditions, " AND ")
 	query := `SELECT DISTINCT due_date FROM activities ` + where + ` ORDER BY due_date`
 
 	rows, err := r.pool.Query(ctx, query, args...)
@@ -287,7 +292,7 @@ func (r *dashboardRepository) WeekendFieldActivities(ctx context.Context, scope 
 func (r *dashboardRepository) RecoveryActivities(ctx context.Context, scope rbac.ActivityScope, recoveryType string, filter store.DashboardFilter) ([]time.Time, error) {
 	args := []any{}
 	argIdx := 1
-	conditions := []string{"deleted_at IS NULL"}
+	conditions := []string{whereDeletedAtIsNull}
 
 	args = append(args, recoveryType)
 	conditions = append(conditions, fmt.Sprintf("activity_type = $%d", argIdx))
@@ -302,7 +307,7 @@ func (r *dashboardRepository) RecoveryActivities(ctx context.Context, scope rbac
 
 	conditions, args, _ = appendDashboardFilter(conditions, args, argIdx, filter)
 
-	where := "WHERE " + strings.Join(conditions, " AND ")
+	where := sqlWhere + strings.Join(conditions, " AND ")
 	query := `SELECT due_date FROM activities ` + where + ` ORDER BY due_date`
 
 	rows, err := r.pool.Query(ctx, query, args...)

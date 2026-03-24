@@ -6,7 +6,7 @@ ENV_FILE="web/.env.development"
 
 # Read VITE_GOOGLE_MAPS_API_KEY from the env file (empty string if missing).
 MAPS_KEY=""
-if [ -f "$ENV_FILE" ]; then
+if [[ -f "$ENV_FILE" ]]; then
   MAPS_KEY=$(grep -s '^VITE_GOOGLE_MAPS_API_KEY=' "$ENV_FILE" | cut -d= -f2- || true)
 fi
 

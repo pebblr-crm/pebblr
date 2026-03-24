@@ -18,6 +18,15 @@ import (
 	"github.com/pebblr/pebblr/internal/domain"
 )
 
+const (
+	testKid             = "test-kid-1"
+	testTenantID        = "tenant-1"
+	testClientID        = "app-client-id"
+	testIssuerPath      = "/tenant-1/v2.0"
+	testCreatingAuthFmt = "creating authenticator: %v"
+	testUserSub         = "user-sub-1"
+)
+
 // testKeyPair generates an RSA key pair and matching JWK for tests.
 func testKeyPair(t *testing.T) (*rsa.PrivateKey, jwkKey) {
 	t.Helper()
@@ -29,7 +38,7 @@ func testKeyPair(t *testing.T) (*rsa.PrivateKey, jwkKey) {
 	jwk := jwkKey{
 		Kty: "RSA",
 		Use: "sig",
-		Kid: "test-kid-1",
+		Kid: testKid,
 		N:   base64.RawURLEncoding.EncodeToString(key.N.Bytes()),
 		E:   base64.RawURLEncoding.EncodeToString(big.NewInt(int64(key.E)).Bytes()),
 	}
@@ -89,19 +98,19 @@ func TestValidateToken_Valid(t *testing.T) {
 	srv := newTestServer(t, jwk)
 
 	a, err := New(context.Background(), Config{
-		TenantID:  "tenant-1",
-		ClientID:  "app-client-id",
-		IssuerURL: srv.URL + "/tenant-1/v2.0",
+		TenantID:  testTenantID,
+		ClientID:  testClientID,
+		IssuerURL: srv.URL + testIssuerPath,
 	})
 	if err != nil {
-		t.Fatalf("creating authenticator: %v", err)
+		t.Fatalf(testCreatingAuthFmt, err)
 	}
 
 	now := time.Now().Unix()
-	token := signJWT(t, privKey, "test-kid-1", tokenClaims{
-		Iss:    srv.URL + "/tenant-1/v2.0",
-		Sub:    "user-sub-1",
-		Aud:    "app-client-id",
+	token := signJWT(t, privKey, testKid, tokenClaims{
+		Iss:    srv.URL + testIssuerPath,
+		Sub:    testUserSub,
+		Aud:    testClientID,
 		Exp:    now + 3600,
 		Nbf:    now - 60,
 		Iat:    now,
@@ -137,19 +146,19 @@ func TestValidateToken_Expired(t *testing.T) {
 	srv := newTestServer(t, jwk)
 
 	a, err := New(context.Background(), Config{
-		TenantID:  "tenant-1",
-		ClientID:  "app-client-id",
-		IssuerURL: srv.URL + "/tenant-1/v2.0",
+		TenantID:  testTenantID,
+		ClientID:  testClientID,
+		IssuerURL: srv.URL + testIssuerPath,
 	})
 	if err != nil {
-		t.Fatalf("creating authenticator: %v", err)
+		t.Fatalf(testCreatingAuthFmt, err)
 	}
 
 	now := time.Now().Unix()
-	token := signJWT(t, privKey, "test-kid-1", tokenClaims{
-		Iss: srv.URL + "/tenant-1/v2.0",
-		Sub: "user-sub-1",
-		Aud: "app-client-id",
+	token := signJWT(t, privKey, testKid, tokenClaims{
+		Iss: srv.URL + testIssuerPath,
+		Sub: testUserSub,
+		Aud: testClientID,
 		Exp: now - 60, // expired
 		Nbf: now - 3600,
 		Iat: now - 3600,
@@ -168,18 +177,18 @@ func TestValidateToken_WrongAudience(t *testing.T) {
 	srv := newTestServer(t, jwk)
 
 	a, err := New(context.Background(), Config{
-		TenantID:  "tenant-1",
-		ClientID:  "app-client-id",
-		IssuerURL: srv.URL + "/tenant-1/v2.0",
+		TenantID:  testTenantID,
+		ClientID:  testClientID,
+		IssuerURL: srv.URL + testIssuerPath,
 	})
 	if err != nil {
-		t.Fatalf("creating authenticator: %v", err)
+		t.Fatalf(testCreatingAuthFmt, err)
 	}
 
 	now := time.Now().Unix()
-	token := signJWT(t, privKey, "test-kid-1", tokenClaims{
-		Iss: srv.URL + "/tenant-1/v2.0",
-		Sub: "user-sub-1",
+	token := signJWT(t, privKey, testKid, tokenClaims{
+		Iss: srv.URL + testIssuerPath,
+		Sub: testUserSub,
 		Aud: "wrong-audience",
 		Exp: now + 3600,
 		Nbf: now - 60,
@@ -199,19 +208,19 @@ func TestValidateToken_WrongIssuer(t *testing.T) {
 	srv := newTestServer(t, jwk)
 
 	a, err := New(context.Background(), Config{
-		TenantID:  "tenant-1",
-		ClientID:  "app-client-id",
-		IssuerURL: srv.URL + "/tenant-1/v2.0",
+		TenantID:  testTenantID,
+		ClientID:  testClientID,
+		IssuerURL: srv.URL + testIssuerPath,
 	})
 	if err != nil {
-		t.Fatalf("creating authenticator: %v", err)
+		t.Fatalf(testCreatingAuthFmt, err)
 	}
 
 	now := time.Now().Unix()
-	token := signJWT(t, privKey, "test-kid-1", tokenClaims{
+	token := signJWT(t, privKey, testKid, tokenClaims{
 		Iss: "https://evil.example.com",
-		Sub: "user-sub-1",
-		Aud: "app-client-id",
+		Sub: testUserSub,
+		Aud: testClientID,
 		Exp: now + 3600,
 		Nbf: now - 60,
 		Iat: now,
@@ -230,12 +239,12 @@ func TestValidateToken_MalformedToken(t *testing.T) {
 	srv := newTestServer(t, jwk)
 
 	a, err := New(context.Background(), Config{
-		TenantID:  "tenant-1",
-		ClientID:  "app-client-id",
-		IssuerURL: srv.URL + "/tenant-1/v2.0",
+		TenantID:  testTenantID,
+		ClientID:  testClientID,
+		IssuerURL: srv.URL + testIssuerPath,
 	})
 	if err != nil {
-		t.Fatalf("creating authenticator: %v", err)
+		t.Fatalf(testCreatingAuthFmt, err)
 	}
 
 	_, err = a.ValidateToken(context.Background(), "not-a-jwt")
