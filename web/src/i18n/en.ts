@@ -112,6 +112,7 @@ const en = {
       recoveryAvailable: '{{count}} available',
       recoveryEarnedTaken: '{{earned}} earned, {{taken}} taken',
       claimBy: 'Claim by',
+      byDate: 'by {{date}}',
     },
 
     // Daily view
@@ -231,6 +232,62 @@ const en = {
       nextDay: 'Next day',
       previousPage: 'Previous page',
       nextPage: 'Next page',
+    },
+
+    // Months
+    months: {
+      january: 'January',
+      february: 'February',
+      march: 'March',
+      april: 'April',
+      may: 'May',
+      june: 'June',
+      july: 'July',
+      august: 'August',
+      september: 'September',
+      october: 'October',
+      november: 'November',
+      december: 'December',
+    },
+
+    // Field labels
+    fieldLabels: {
+      activityType: 'Activity Type',
+      date: 'Date',
+      duration: 'Duration',
+      status: 'Status',
+      target: 'Target',
+      routing: 'Routing',
+      validationFailed: 'Validation failed',
+      requiredFieldsMissing: 'Required fields missing: {{labels}}',
+    },
+
+    // Map planner
+    mapPlanner: {
+      loading: 'Loading map planner...',
+      collections: 'Collections',
+      selected: 'Selected ({{count}})',
+      save: 'Save',
+      collectionPlaceholder: 'Collection name...',
+      nearby: 'Nearby',
+      available: 'Available',
+      recentlyVisited: 'Recently visited ({{count}})',
+      allowScheduling: 'Allow scheduling',
+      prev: 'Prev',
+      thisWeek: 'This week',
+      next: 'Next',
+      creating: 'Creating...',
+      createActivities: 'Create {{count}} activities',
+      activityRescheduled: 'Activity rescheduled.',
+      failedToReschedule: 'Failed to reschedule activity.',
+      createdActivities: 'Created {{created}} activities.',
+      createdWithErrors: 'Created {{created}} activities, {{errors}} failed.',
+      failedToCreate: 'Failed to create activities.',
+      collectionSaved: 'Collection "{{name}}" saved.',
+      failedToSaveCollection: 'Failed to save collection.',
+      collectionDeleted: 'Collection "{{name}}" deleted.',
+      failedToDeleteCollection: 'Failed to delete collection.',
+      lastVisit: '— last: {{date}}',
     },
 
     // Errors

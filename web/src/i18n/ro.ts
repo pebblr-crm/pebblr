@@ -112,6 +112,7 @@ const ro = {
       recoveryAvailable: '{{count}} disponibile',
       recoveryEarnedTaken: '{{earned}} acumulate, {{taken}} luate',
       claimBy: 'Revendică până la',
+      byDate: 'până la {{date}}',
     },
 
     // Daily view
@@ -231,6 +232,62 @@ const ro = {
       nextDay: 'Ziua următoare',
       previousPage: 'Pagina anterioară',
       nextPage: 'Pagina următoare',
+    },
+
+    // Months
+    months: {
+      january: 'Ianuarie',
+      february: 'Februarie',
+      march: 'Martie',
+      april: 'Aprilie',
+      may: 'Mai',
+      june: 'Iunie',
+      july: 'Iulie',
+      august: 'August',
+      september: 'Septembrie',
+      october: 'Octombrie',
+      november: 'Noiembrie',
+      december: 'Decembrie',
+    },
+
+    // Field labels
+    fieldLabels: {
+      activityType: 'Tip activitate',
+      date: 'Dată',
+      duration: 'Durată',
+      status: 'Status',
+      target: 'Cont',
+      routing: 'Rutare',
+      validationFailed: 'Validarea a eșuat',
+      requiredFieldsMissing: 'Câmpuri obligatorii lipsă: {{labels}}',
+    },
+
+    // Map planner
+    mapPlanner: {
+      loading: 'Se încarcă planificatorul hartă...',
+      collections: 'Colecții',
+      selected: 'Selectate ({{count}})',
+      save: 'Salvează',
+      collectionPlaceholder: 'Numele colecției...',
+      nearby: 'În apropiere',
+      available: 'Disponibile',
+      recentlyVisited: 'Vizitate recent ({{count}})',
+      allowScheduling: 'Permite programarea',
+      prev: 'Ant.',
+      thisWeek: 'Săptămâna aceasta',
+      next: 'Urm.',
+      creating: 'Se creează...',
+      createActivities: 'Creează {{count}} activități',
+      activityRescheduled: 'Activitate reprogramată.',
+      failedToReschedule: 'Nu s-a putut reprograma activitatea.',
+      createdActivities: '{{created}} activități create.',
+      createdWithErrors: '{{created}} activități create, {{errors}} eșuate.',
+      failedToCreate: 'Nu s-au putut crea activitățile.',
+      collectionSaved: 'Colecția „{{name}}" a fost salvată.',
+      failedToSaveCollection: 'Nu s-a putut salva colecția.',
+      collectionDeleted: 'Colecția „{{name}}" a fost ștearsă.',
+      failedToDeleteCollection: 'Nu s-a putut șterge colecția.',
+      lastVisit: '— ultima: {{date}}',
     },
 
     // Errors

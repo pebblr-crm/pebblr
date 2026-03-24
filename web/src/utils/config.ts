@@ -1,3 +1,4 @@
+import i18n from '@/i18n'
 import type { ActivitiesConfig, ActivityTypeConfig, TenantConfig } from '@/types/config'
 import type { Activity } from '@/types/activity'
 
@@ -113,7 +114,7 @@ export function getActivityTitle(config: TenantConfig | undefined, activity: Act
 export function getActivityDisplayName(config: TenantConfig | undefined, activity: Activity): string {
   const title = getActivityTitle(config, activity)
   const date = new Date(activity.dueDate)
-  const dateStr = date.toLocaleDateString('en-GB', { day: 'numeric', month: 'short' })
+  const dateStr = date.toLocaleDateString(getDateLocale(), { day: 'numeric', month: 'short' })
   return `${title} — ${dateStr}`
 }
 
@@ -143,18 +144,30 @@ function resolveOptionLabel(
   return value
 }
 
-/** Month names indexed 0–11. */
+/** Returns the BCP 47 locale tag matching the current i18n language. */
+export function getDateLocale(): string {
+  const lang = i18n.language
+  if (lang === 'ro') return 'ro-RO'
+  return 'en-GB'
+}
+
+const MONTH_KEYS = [
+  'months.january', 'months.february', 'months.march',
+  'months.april', 'months.may', 'months.june',
+  'months.july', 'months.august', 'months.september',
+  'months.october', 'months.november', 'months.december',
+] as const
+
+/** Returns the translated month name for the given 0-based index. */
+export function getMonthName(index: number): string {
+  return i18n.t(MONTH_KEYS[index])
+}
+
+/**
+ * @deprecated Use getMonthName(index) instead for i18n support.
+ * Kept temporarily for backwards compat in tests.
+ */
 export const MONTH_NAMES = [
-  'January',
-  'February',
-  'March',
-  'April',
-  'May',
-  'June',
-  'July',
-  'August',
-  'September',
-  'October',
-  'November',
-  'December',
+  'January', 'February', 'March', 'April', 'May', 'June',
+  'July', 'August', 'September', 'October', 'November', 'December',
 ]

@@ -1,16 +1,17 @@
+import i18n from '@/i18n'
 import type { TenantConfig } from '@/types/config'
 
 /** Well-known top-level activity fields that aren't in the config's fields array. */
-const TOP_LEVEL_LABELS: Record<string, string> = {
-  activityType: 'Activity Type',
-  activity_type: 'Activity Type',
-  dueDate: 'Date',
-  due_date: 'Date',
-  duration: 'Duration',
-  status: 'Status',
-  targetId: 'Target',
-  target_id: 'Target',
-  routing: 'Routing',
+const TOP_LEVEL_LABEL_KEYS: Record<string, string> = {
+  activityType: 'fieldLabels.activityType',
+  activity_type: 'fieldLabels.activityType',
+  dueDate: 'fieldLabels.date',
+  due_date: 'fieldLabels.date',
+  duration: 'fieldLabels.duration',
+  status: 'fieldLabels.status',
+  targetId: 'fieldLabels.target',
+  target_id: 'fieldLabels.target',
+  routing: 'fieldLabels.routing',
 }
 
 /**
@@ -22,7 +23,8 @@ export function getFieldLabel(
   activityType: string | undefined,
   fieldKey: string,
 ): string {
-  if (TOP_LEVEL_LABELS[fieldKey]) return TOP_LEVEL_LABELS[fieldKey]
+  const i18nKey = TOP_LEVEL_LABEL_KEYS[fieldKey]
+  if (i18nKey) return i18n.t(i18nKey)
 
   if (config && activityType) {
     const typeConfig = config.activities.types.find((t) => t.key === activityType)
@@ -41,7 +43,7 @@ export function formatValidationToast(
   activityType: string | undefined,
   errors: Array<{ field: string; message: string }>,
 ): string {
-  if (errors.length === 0) return 'Validation failed'
+  if (errors.length === 0) return i18n.t('fieldLabels.validationFailed')
   const labels = errors.map((e) => getFieldLabel(config, activityType, e.field))
-  return `Required fields missing: ${labels.join(', ')}`
+  return i18n.t('fieldLabels.requiredFieldsMissing', { labels: labels.join(', ') })
 }
