@@ -73,11 +73,11 @@
     "frequency": { "gold": 4, "silver": 2 },
     "max_activities_per_day": 8,
     "default_visit_duration_minutes": { "hospital": 45 },
-    "visit_duration_step_minutes": 15,
-    "recovery": {
-      "weekend_activity_flag": false,
-      "recovery_window_days": 7,
-      "recovery_type": "full_day"
-    }
+    "visit_duration_step_minutes": 15
+  },
+  "recovery": {
+    "weekend_activity_flag": false,
+    "recovery_window_days": 7,
+    "recovery_type": "recovery"
   }
 }

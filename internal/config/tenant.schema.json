@@ -104,11 +104,11 @@
           "type": "integer",
           "minimum": 1,
           "description": "Granularity for visit duration adjustments."
-        },
-        "recovery": {
-          "$ref": "#/$defs/recoveryRule"
         }
       }
+    },
+    "recovery": {
+      "$ref": "#/$defs/recoveryRule"
     }
   },
   "$defs": {

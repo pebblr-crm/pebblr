@@ -9,6 +9,7 @@ type TenantConfig struct {
 	Activities ActivitiesConfig        `json:"activities"`
 	Options    map[string][]OptionDef  `json:"options"`
 	Rules      RulesConfig             `json:"rules"`
+	Recovery   *RecoveryRule           `json:"recovery,omitempty"`
 }
 
 // TenantInfo holds basic tenant metadata.
@@ -85,7 +86,6 @@ type RulesConfig struct {
 	VisitCadenceDays             int            `json:"visit_cadence_days"` // min days between visits to the same target
 	DefaultVisitDurationMinutes  map[string]int `json:"default_visit_duration_minutes"`
 	VisitDurationStepMinutes     int            `json:"visit_duration_step_minutes"`
-	Recovery                     *RecoveryRule  `json:"recovery,omitempty"`
 }
 
 // RecoveryRule defines weekend/recovery day rules.

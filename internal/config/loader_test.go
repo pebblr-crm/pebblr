@@ -204,8 +204,8 @@ func TestLoad_SampleConfig(t *testing.T) {
 	if cfg.Tenant.Name != "Pillzilla Pharmaceuticals" {
 		t.Fatalf("expected %q, got %q", "Pillzilla Pharmaceuticals", cfg.Tenant.Name)
 	}
-	if len(cfg.Activities.Types) != 10 {
-		t.Fatalf("expected 10 activity types, got %d", len(cfg.Activities.Types))
+	if len(cfg.Activities.Types) != 11 {
+		t.Fatalf("expected 11 activity types, got %d", len(cfg.Activities.Types))
 	}
 }
 

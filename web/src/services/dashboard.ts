@@ -78,9 +78,11 @@ export function fetchRecoveryBalance(filter: DashboardFilter): Promise<RecoveryB
 
 export function useRecoveryBalance(
   filter: DashboardFilter,
+  enabled = true,
 ): UseQueryResult<RecoveryBalanceResponse> {
   return useQuery({
     queryKey: dashboardKeys.recovery(filter),
     queryFn: () => fetchRecoveryBalance(filter),
+    enabled,
   })
 }

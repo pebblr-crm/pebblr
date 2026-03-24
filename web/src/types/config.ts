@@ -59,6 +59,12 @@ export interface RulesConfig {
   visit_duration_step_minutes: number
 }
 
+export interface RecoveryConfig {
+  weekend_activity_flag: boolean
+  recovery_window_days: number
+  recovery_type: string
+}
+
 export interface TenantConfig {
   tenant: {
     name: string
@@ -70,4 +76,5 @@ export interface TenantConfig {
   activities: ActivitiesConfig
   options: Record<string, OptionDef[]>
   rules: RulesConfig
+  recovery?: RecoveryConfig
 }
