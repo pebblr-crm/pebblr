@@ -161,15 +161,15 @@ export function TargetsPage() {
     <motion.div
       initial={{ opacity: 0, y: 20 }}
       animate={{ opacity: 1, y: 0 }}
-      className="p-8 max-w-7xl mx-auto w-full space-y-8"
+      className="p-4 sm:p-8 max-w-7xl mx-auto w-full space-y-6 sm:space-y-8"
     >
       {/* Page Header */}
-      <div className="flex justify-between items-end">
+      <div className="flex flex-col sm:flex-row sm:justify-between sm:items-end gap-4">
         <div>
-          <h1 className="text-4xl font-extrabold tracking-tight text-primary leading-tight font-headline">
+          <h1 className="text-2xl sm:text-4xl font-extrabold tracking-tight text-primary leading-tight font-headline">
             Targets
           </h1>
-          <p className="text-on-surface-variant mt-1 font-medium">
+          <p className="text-on-surface-variant mt-1 font-medium text-sm sm:text-base">
             Managing {total.toLocaleString()} targets across all regions.
           </p>
         </div>
@@ -238,8 +238,8 @@ export function TargetsPage() {
       ) : (
         <>
           {/* Data Table */}
-          <div className="bg-surface-container-low rounded-xl p-1 overflow-hidden">
-            <div className="bg-surface-container-lowest rounded-lg shadow-[0px_24px_48px_rgba(25,28,30,0.06)] overflow-hidden">
+          <div className="bg-surface-container-low rounded-xl p-1 overflow-x-auto">
+            <div className="bg-surface-container-lowest rounded-lg shadow-[0px_24px_48px_rgba(25,28,30,0.06)] overflow-hidden min-w-[600px]">
               <table className="w-full text-left border-separate border-spacing-0">
                 <thead>
                   <tr className="bg-surface-container-low/50">

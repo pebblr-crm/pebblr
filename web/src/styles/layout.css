@@ -4,7 +4,7 @@
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 0 2rem;
+  padding: 0 1rem;
   min-height: 3.25rem;
   background-color: var(--color-surface-container-lowest, #fff);
   border-bottom: 1px solid var(--color-surface-container-high, #e6e8ea);
@@ -12,6 +12,12 @@
   position: sticky;
   top: 0;
   z-index: 10;
+}
+
+@media (min-width: 640px) {
+  .page-header {
+    padding: 0 2rem;
+  }
 }
 
 .page-title {
@@ -25,5 +31,11 @@
   flex: 1;
   overflow-y: auto;
   overflow-x: hidden;
-  padding: 1.5rem 2rem;
+  padding: 1rem;
+}
+
+@media (min-width: 640px) {
+  .page-body {
+    padding: 1.5rem 2rem;
+  }
 }

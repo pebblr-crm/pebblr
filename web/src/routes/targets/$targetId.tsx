@@ -71,7 +71,7 @@ export function TargetDetailPage() {
     <motion.div
       initial={{ opacity: 0, y: 20 }}
       animate={{ opacity: 1, y: 0 }}
-      className="p-8 max-w-4xl mx-auto w-full space-y-8"
+      className="p-4 sm:p-8 max-w-4xl mx-auto w-full space-y-6 sm:space-y-8"
     >
       {/* Back link */}
       <Link
@@ -83,13 +83,13 @@ export function TargetDetailPage() {
       </Link>
 
       {/* Header */}
-      <div className="bg-surface-container-lowest p-8 rounded-xl shadow-[0px_24px_48px_rgba(25,28,30,0.06)]">
-        <div className="flex items-start gap-6">
+      <div className="bg-surface-container-lowest p-4 sm:p-8 rounded-xl shadow-[0px_24px_48px_rgba(25,28,30,0.06)]">
+        <div className="flex items-start gap-4 sm:gap-6">
           <div className="w-16 h-16 rounded-xl bg-primary/5 text-primary flex items-center justify-center font-bold text-xl">
             {target.name.slice(0, 2).toUpperCase()}
           </div>
           <div className="flex-1">
-            <h1 className="text-3xl font-extrabold tracking-tight text-primary font-headline">
+            <h1 className="text-xl sm:text-3xl font-extrabold tracking-tight text-primary font-headline">
               {target.name}
             </h1>
             <div className="flex items-center gap-3 mt-2">

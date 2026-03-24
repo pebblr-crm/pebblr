@@ -61,15 +61,15 @@ export function DashboardPage() {
     <motion.div
       initial={{ opacity: 0, y: 20 }}
       animate={{ opacity: 1, y: 0 }}
-      className="p-8 space-y-8"
+      className="p-4 sm:p-8 space-y-6 sm:space-y-8"
     >
       <section>
-        <div className="flex justify-between items-end mb-6">
+        <div className="flex flex-col sm:flex-row sm:justify-between sm:items-end gap-4 mb-6">
           <div>
-            <h1 className="text-3xl font-extrabold text-primary tracking-tight font-headline">
+            <h1 className="text-2xl sm:text-3xl font-extrabold text-primary tracking-tight font-headline">
               Command Center
             </h1>
-            <p className="text-on-surface-variant">
+            <p className="text-on-surface-variant text-sm sm:text-base">
               Activity-based KPIs for your team
             </p>
           </div>

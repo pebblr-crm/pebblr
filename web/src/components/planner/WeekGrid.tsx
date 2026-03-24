@@ -17,8 +17,8 @@ export function WeekGrid({ activities, weekStart, config }: WeekGridProps) {
   const days = Array.from({ length: 7 }, (_, i) => addDays(weekStart, i))
 
   return (
-    <div className="bg-surface-container-lowest rounded-xl shadow-sm border border-slate-100 overflow-hidden" data-testid="week-grid">
-      <div className="grid grid-cols-7 divide-x divide-slate-100 h-[calc(100vh-220px)] min-h-[400px]">
+    <div className="bg-surface-container-lowest rounded-xl shadow-sm border border-slate-100 overflow-x-auto" data-testid="week-grid">
+      <div className="grid grid-cols-7 divide-x divide-slate-100 h-[calc(100vh-220px)] min-h-[400px] min-w-[560px]">
         {days.map((day, i) => {
           const dateStr = formatDate(day)
           const isToday = dateStr === today

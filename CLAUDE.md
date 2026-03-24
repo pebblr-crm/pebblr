@@ -30,6 +30,7 @@ Pebblr is a self-hosted CRM for field sales lead management. Customers deploy it
 - **Language:** TypeScript (strict mode)
 - **Framework:** React + TypeScript (.tsx)
 - **Bundler:** Vite
+- **Package manager:** Bun — use `bun install`, `bun run`, etc. Never use npm or yarn.
 - **Server state:** TanStack Query
 - **Data grids:** TanStack Table
 - **UI inspiration:** [Twenty CRM](https://github.com/twentyhq/twenty) — clean, dense, data-forward
@@ -108,6 +109,7 @@ make typecheck  # no TypeScript errors (tsc --noEmit)
 
 - **Framework:** React with functional components and hooks only — no class components
 - **Bundler:** Vite
+- **Package manager:** Bun (`bun install`, `bun run`). Do not use npm or yarn.
 - **Strict TypeScript:** `"strict": true` in tsconfig; no implicit `any`
 - **Server state:** TanStack Query (`@tanstack/react-query`) for all API data fetching and caching
 - **Data grids:** TanStack Table (`@tanstack/react-table`) for tabular data

@@ -52,7 +52,7 @@ export function NewActivityPage() {
     <motion.div
       initial={{ opacity: 0, y: 20 }}
       animate={{ opacity: 1, y: 0 }}
-      className="p-8 max-w-4xl mx-auto w-full space-y-6"
+      className="p-4 sm:p-8 max-w-4xl mx-auto w-full space-y-6"
     >
       <Link
         to={backPath}
