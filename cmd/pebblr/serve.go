@@ -18,6 +18,8 @@ import (
 
 	"github.com/pebblr/pebblr/internal/api"
 	"github.com/pebblr/pebblr/internal/auth"
+	"github.com/pebblr/pebblr/internal/auth/azuread"
+	"github.com/pebblr/pebblr/internal/auth/demo"
 	"github.com/pebblr/pebblr/internal/config"
 	"github.com/pebblr/pebblr/internal/geo"
 	"github.com/pebblr/pebblr/internal/rbac"
@@ -35,18 +37,19 @@ const (
 func runServe(args []string) int {
 	fs := flag.NewFlagSet("serve", flag.ContinueOnError)
 	configPath := fs.String("config", defaultConfigPath, "path to tenant config JSON")
+	authProvider := fs.String("auth-provider", "static", "authentication provider: static, azuread, demo")
 	if err := fs.Parse(args); err != nil {
 		return 2
 	}
 
-	if err := serve(*configPath); err != nil {
+	if err := serve(*configPath, *authProvider); err != nil {
 		slog.Error("server error", "err", err)
 		return 1
 	}
 	return 0
 }
 
-func serve(configPath string) error {
+func serve(configPath, authProvider string) error {
 	logger := slog.New(slog.NewJSONHandler(os.Stdout, nil))
 
 	// Validate config using the same pipeline as `pebblr config validate`.
@@ -105,12 +108,11 @@ func serve(configPath string) error {
 	if secretPath == "" {
 		secretPath = "/run/secrets"
 	}
-	jwtSecret, err := readSecretFile(secretPath + "/jwt-secret")
+
+	authenticator, demoHandler, err := buildAuthenticator(ctx, logger, authProvider, secretPath)
 	if err != nil {
-		return fmt.Errorf("reading jwt secret: %w", err)
+		return fmt.Errorf("setting up auth provider: %w", err)
 	}
-	authenticator := auth.NewStaticAuthenticator(jwtSecret)
-	logger.Info("using static token authenticator")
 
 	router := api.NewRouter(api.RouterConfig{
 		Logger:           logger,
@@ -122,6 +124,7 @@ func serve(configPath string) error {
 		UserHandler:      userHandler,
 		ConfigHandler:      configHandler,
 		CollectionHandler:  collectionHandler,
+		DemoHandler:        demoHandler,
 		WebDistPath:        webDistPath,
 	})
 
@@ -203,4 +206,53 @@ func readOptionalSecret(path string) (string, error) {
 		return "", err
 	}
 	return strings.TrimSpace(string(data)), nil
+}
+
+// buildAuthenticator creates the appropriate Authenticator based on the provider name.
+// Returns the authenticator and an optional demo handler (non-nil only for "demo" provider).
+func buildAuthenticator(ctx context.Context, logger *slog.Logger, provider, secretPath string) (auth.Authenticator, *demo.Handler, error) {
+	switch provider {
+	case "static":
+		jwtSecret, err := readSecretFile(secretPath + "/jwt-secret")
+		if err != nil {
+			return nil, nil, fmt.Errorf("reading jwt secret: %w", err)
+		}
+		logger.Info("using static token authenticator")
+		return auth.NewStaticAuthenticator(jwtSecret), nil, nil
+
+	case "azuread":
+		tenantID, err := readSecretFile(secretPath + "/azuread-tenant-id")
+		if err != nil {
+			return nil, nil, fmt.Errorf("reading Azure AD tenant ID: %w", err)
+		}
+		clientID, err := readSecretFile(secretPath + "/azuread-client-id")
+		if err != nil {
+			return nil, nil, fmt.Errorf("reading Azure AD client ID: %w", err)
+		}
+		issuer, _ := readOptionalSecret(secretPath + "/azuread-issuer")
+
+		a, err := azuread.New(ctx, azuread.Config{
+			TenantID:  tenantID,
+			ClientID:  clientID,
+			IssuerURL: issuer,
+		})
+		if err != nil {
+			return nil, nil, fmt.Errorf("creating Azure AD authenticator: %w", err)
+		}
+		logger.Info("using Azure AD OIDC authenticator", "tenant_id", tenantID)
+		return a, nil, nil
+
+	case "demo":
+		signingKey, _ := readOptionalSecret(secretPath + "/demo-signing-key")
+		a, err := demo.New([]byte(signingKey))
+		if err != nil {
+			return nil, nil, fmt.Errorf("creating demo authenticator: %w", err)
+		}
+		h := demo.NewHandler(a, demo.DefaultPersonas())
+		logger.Info("using demo authenticator — NOT FOR PRODUCTION")
+		return a, h, nil
+
+	default:
+		return nil, nil, fmt.Errorf("unknown auth provider %q (expected static, azuread, or demo)", provider)
+	}
 }
