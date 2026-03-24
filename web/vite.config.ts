@@ -18,6 +18,10 @@ export default defineConfig({
         target: 'http://localhost:9090',
         changeOrigin: true,
       },
+      '/demo': {
+        target: 'http://localhost:9090',
+        changeOrigin: true,
+      },
     },
   },
   build: {

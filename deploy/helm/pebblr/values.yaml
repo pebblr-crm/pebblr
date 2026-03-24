@@ -64,6 +64,8 @@ secrets:
   dbPasswordKey: db-password
   dbUrlKey: db-url
   jwtSecretKey: jwt-secret
+  # Only needed when auth.provider=demo
+  demoSigningKeyKey: ""
 
 # Database connection (non-secret parts)
 database:
@@ -79,8 +81,10 @@ externalSecrets:
   secretStoreName: pebblr-keyvault
   vaultUrl: ""  # Set to your Azure KeyVault URL
 
-# Azure AD / OIDC
+# Authentication
 auth:
+  # provider: static | azuread | demo
+  provider: "static"
   tenantId: ""
   clientId: ""
   audience: "api://pebblr"

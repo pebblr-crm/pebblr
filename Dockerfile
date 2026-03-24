@@ -27,6 +27,8 @@ ARG VITE_STATIC_TOKEN=""
 ENV VITE_STATIC_TOKEN=${VITE_STATIC_TOKEN}
 ARG VITE_GOOGLE_MAPS_API_KEY=""
 ENV VITE_GOOGLE_MAPS_API_KEY=${VITE_GOOGLE_MAPS_API_KEY}
+ARG VITE_DEMO_MODE=""
+ENV VITE_DEMO_MODE=${VITE_DEMO_MODE}
 RUN bun run build
 
 # ── Stage 3: Runtime ──────────────────────────────────────────────────────────

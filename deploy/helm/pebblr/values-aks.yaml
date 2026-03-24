@@ -1,4 +1,8 @@
 # AKS cluster values — Istio ingress, External Secrets from Azure KeyVault.
+# Runs in demo mode so prospects can explore the app without Azure AD.
+
+auth:
+  provider: "demo"
 
 gateway:
   enabled: false
@@ -20,6 +24,9 @@ tls:
 
 externalSecrets:
   enabled: false
+
+secrets:
+  demoSigningKeyKey: demo-signing-key
 
 database:
   host: postgres.pebblr-db.svc.cluster.local
