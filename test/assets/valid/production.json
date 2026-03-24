@@ -147,7 +147,6 @@
         "key": "recovery",
         "label": "Recovery Day",
         "category": "non_field",
-        "has_duration": true,
         "blocks_field_activities": true,
         "fields": [
           { "key": "duration", "label": "Duration", "type": "select", "required": true, "options_ref": "durations" },

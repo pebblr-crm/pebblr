@@ -72,8 +72,9 @@ const testConfig: TenantConfig = {
         key: 'administrative',
         label: 'Administrative',
         category: 'non_field',
-        has_duration: true,
-        fields: [],
+        fields: [
+          { key: 'duration', label: 'Duration', type: 'select', required: true, options_ref: 'durations' },
+        ],
       },
     ],
     routing_options: [],
@@ -139,7 +140,7 @@ describe('ActivityDetailInner', () => {
     })
   })
 
-  it('renders duration select for types with has_duration', async () => {
+  it('renders duration select for types with a duration field', async () => {
     const adminActivity: Activity = {
       ...testActivity,
       id: 'act-admin',
