@@ -10,6 +10,7 @@ import type {
   Target,
   CreateTargetInput,
   UpdateTargetInput,
+  AssignTargetInput,
   TargetListParams,
   TargetFrequencyItem,
 } from '@/types/target'
@@ -60,6 +61,10 @@ export function updateTarget({ id, ...input }: UpdateTargetInput): Promise<Targe
   return api.put<TargetDetailResponse>(`/targets/${id}`, input).then((r) => r.target)
 }
 
+export function assignTarget({ id, ...input }: AssignTargetInput): Promise<Target> {
+  return api.patch<TargetDetailResponse>(`/targets/${id}/assign`, input).then((r) => r.target)
+}
+
 // ── TanStack Query hooks ──────────────────────────────────────────────────────
 
 export function useTargets(
@@ -93,6 +98,17 @@ export function useUpdateTarget(): UseMutationResult<Target, Error, UpdateTarget
   const queryClient = useQueryClient()
   return useMutation({
     mutationFn: updateTarget,
+    onSuccess: (updated) => {
+      queryClient.setQueryData(targetKeys.detail(updated.id), updated)
+      void queryClient.invalidateQueries({ queryKey: targetKeys.lists() })
+    },
+  })
+}
+
+export function useAssignTarget(): UseMutationResult<Target, Error, AssignTargetInput> {
+  const queryClient = useQueryClient()
+  return useMutation({
+    mutationFn: assignTarget,
     onSuccess: (updated) => {
       queryClient.setQueryData(targetKeys.detail(updated.id), updated)
       void queryClient.invalidateQueries({ queryKey: targetKeys.lists() })

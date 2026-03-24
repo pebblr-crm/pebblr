@@ -198,7 +198,11 @@ func defaultUserRepo() *stubUserRepo {
 }
 
 func newActivitySvc(repo *stubActivityRepo, audit *stubAuditRepo) *service.ActivityService {
-	return service.NewActivityService(repo, defaultUserRepo(), audit, rbac.NewEnforcer(), activityTestConfig())
+	return service.NewActivityService(repo, nil, defaultUserRepo(), audit, rbac.NewEnforcer(), activityTestConfig())
+}
+
+func newActivitySvcWithTargets(repo *stubActivityRepo, targets *stubTargetRepo, audit *stubAuditRepo) *service.ActivityService {
+	return service.NewActivityService(repo, targets, defaultUserRepo(), audit, rbac.NewEnforcer(), activityTestConfig())
 }
 
 // --- Create tests ---
@@ -1062,7 +1066,7 @@ func TestCreate_RecoveryWithBalance_Succeeds(t *testing.T) {
 	}
 	actRepo := &stubActivityRepo{}
 	cfg := activityTestConfigWithRecovery()
-	svc := service.NewActivityService(actRepo, defaultUserRepo(), &stubAuditRepo{}, rbac.NewEnforcer(), cfg, service.WithDashboard(dashRepo))
+	svc := service.NewActivityService(actRepo, nil, defaultUserRepo(), &stubAuditRepo{}, rbac.NewEnforcer(), cfg, service.WithDashboard(dashRepo))
 
 	activity := &domain.Activity{
 		ActivityType: "recovery",
@@ -1087,7 +1091,7 @@ func TestCreate_RecoveryWithZeroBalance_Fails(t *testing.T) {
 	}
 	actRepo := &stubActivityRepo{}
 	cfg := activityTestConfigWithRecovery()
-	svc := service.NewActivityService(actRepo, defaultUserRepo(), &stubAuditRepo{}, rbac.NewEnforcer(), cfg, service.WithDashboard(dashRepo))
+	svc := service.NewActivityService(actRepo, nil, defaultUserRepo(), &stubAuditRepo{}, rbac.NewEnforcer(), cfg, service.WithDashboard(dashRepo))
 
 	activity := &domain.Activity{
 		ActivityType: "recovery",
@@ -1114,7 +1118,7 @@ func TestCreate_RecoveryAlreadyClaimed_Fails(t *testing.T) {
 	}
 	actRepo := &stubActivityRepo{}
 	cfg := activityTestConfigWithRecovery()
-	svc := service.NewActivityService(actRepo, defaultUserRepo(), &stubAuditRepo{}, rbac.NewEnforcer(), cfg, service.WithDashboard(dashRepo))
+	svc := service.NewActivityService(actRepo, nil, defaultUserRepo(), &stubAuditRepo{}, rbac.NewEnforcer(), cfg, service.WithDashboard(dashRepo))
 
 	activity := &domain.Activity{
 		ActivityType: "recovery",
@@ -1140,7 +1144,7 @@ func TestCreate_RecoveryOutsideClaimWindow_Fails(t *testing.T) {
 	}
 	actRepo := &stubActivityRepo{}
 	cfg := activityTestConfigWithRecovery()
-	svc := service.NewActivityService(actRepo, defaultUserRepo(), &stubAuditRepo{}, rbac.NewEnforcer(), cfg, service.WithDashboard(dashRepo))
+	svc := service.NewActivityService(actRepo, nil, defaultUserRepo(), &stubAuditRepo{}, rbac.NewEnforcer(), cfg, service.WithDashboard(dashRepo))
 
 	activity := &domain.Activity{
 		ActivityType: "recovery",
@@ -1163,7 +1167,7 @@ func TestCreate_NonRecoveryType_SkipsBalanceCheck(t *testing.T) {
 	}
 	actRepo := &stubActivityRepo{}
 	cfg := activityTestConfigWithRecovery()
-	svc := service.NewActivityService(actRepo, defaultUserRepo(), &stubAuditRepo{}, rbac.NewEnforcer(), cfg, service.WithDashboard(dashRepo))
+	svc := service.NewActivityService(actRepo, nil, defaultUserRepo(), &stubAuditRepo{}, rbac.NewEnforcer(), cfg, service.WithDashboard(dashRepo))
 
 	activity := &domain.Activity{
 		ActivityType: "visit",
@@ -1175,5 +1179,134 @@ func TestCreate_NonRecoveryType_SkipsBalanceCheck(t *testing.T) {
 	_, err := svc.Create(context.Background(), repUser(), activity)
 	if err != nil {
 		t.Fatalf("expected success for non-recovery type, got: %v", err)
+	}
+}
+
+// --- Target access tests ---
+
+func TestActivityCreate_RepOwnTargetSucceeds(t *testing.T) {
+	t.Parallel()
+	actRepo := &stubActivityRepo{}
+	targetRepo := &stubTargetRepo{target: sampleTarget()} // assigned to rep-1
+	audit := &stubAuditRepo{}
+	svc := newActivitySvcWithTargets(actRepo, targetRepo, audit)
+
+	activity := &domain.Activity{
+		ActivityType: "visit",
+		DueDate:      time.Date(2026, 3, 23, 0, 0, 0, 0, time.UTC),
+		Duration:     "full_day",
+		Fields:       map[string]any{},
+		TargetID:     "target-1",
+	}
+	_, err := svc.Create(context.Background(), repUser(), activity)
+	if err != nil {
+		t.Fatalf("expected success for own target, got: %v", err)
+	}
+}
+
+func TestActivityCreate_RepOtherTargetFails(t *testing.T) {
+	t.Parallel()
+	otherTarget := &domain.Target{ID: "target-2", TargetType: "doctor", Name: "Other Dr", AssigneeID: "rep-2", TeamID: "team-1", Fields: map[string]any{}}
+	actRepo := &stubActivityRepo{}
+	targetRepo := &stubTargetRepo{target: otherTarget}
+	audit := &stubAuditRepo{}
+	svc := newActivitySvcWithTargets(actRepo, targetRepo, audit)
+
+	activity := &domain.Activity{
+		ActivityType: "visit",
+		DueDate:      time.Date(2026, 3, 23, 0, 0, 0, 0, time.UTC),
+		Duration:     "full_day",
+		Fields:       map[string]any{},
+		TargetID:     "target-2",
+	}
+	_, err := svc.Create(context.Background(), repUser(), activity)
+	if !errors.Is(err, service.ErrTargetNotAccessible) {
+		t.Errorf("expected ErrTargetNotAccessible, got %v", err)
+	}
+}
+
+func TestActivityCreate_AdminAnyTargetSucceeds(t *testing.T) {
+	t.Parallel()
+	otherTarget := &domain.Target{ID: "target-2", TargetType: "doctor", Name: "Other Dr", AssigneeID: "rep-2", TeamID: "team-2", Fields: map[string]any{}}
+	actRepo := &stubActivityRepo{}
+	targetRepo := &stubTargetRepo{target: otherTarget}
+	audit := &stubAuditRepo{}
+	svc := newActivitySvcWithTargets(actRepo, targetRepo, audit)
+
+	activity := &domain.Activity{
+		ActivityType: "visit",
+		DueDate:      time.Date(2026, 3, 23, 0, 0, 0, 0, time.UTC),
+		Duration:     "full_day",
+		Fields:       map[string]any{},
+		TargetID:     "target-2",
+	}
+	_, err := svc.Create(context.Background(), adminUser(), activity)
+	if err != nil {
+		t.Fatalf("expected admin to create activity with any target, got: %v", err)
+	}
+}
+
+func TestActivityCreate_ManagerTeamTargetSucceeds(t *testing.T) {
+	t.Parallel()
+	teamTarget := &domain.Target{ID: "target-1", TargetType: "doctor", Name: "Dr. Smith", AssigneeID: "rep-1", TeamID: "team-1", Fields: map[string]any{}}
+	actRepo := &stubActivityRepo{}
+	targetRepo := &stubTargetRepo{target: teamTarget}
+	audit := &stubAuditRepo{}
+	svc := newActivitySvcWithTargets(actRepo, targetRepo, audit)
+
+	activity := &domain.Activity{
+		ActivityType: "visit",
+		DueDate:      time.Date(2026, 3, 23, 0, 0, 0, 0, time.UTC),
+		Duration:     "full_day",
+		Fields:       map[string]any{},
+		TargetID:     "target-1",
+	}
+	_, err := svc.Create(context.Background(), managerUser(), activity)
+	if err != nil {
+		t.Fatalf("expected manager to create activity with team target, got: %v", err)
+	}
+}
+
+func TestActivityCreate_ManagerOtherTeamTargetFails(t *testing.T) {
+	t.Parallel()
+	otherTeamTarget := &domain.Target{ID: "target-3", TargetType: "doctor", Name: "Dr. Far", AssigneeID: "rep-9", TeamID: "team-9", Fields: map[string]any{}}
+	actRepo := &stubActivityRepo{}
+	targetRepo := &stubTargetRepo{target: otherTeamTarget}
+	audit := &stubAuditRepo{}
+	svc := newActivitySvcWithTargets(actRepo, targetRepo, audit)
+
+	activity := &domain.Activity{
+		ActivityType: "visit",
+		DueDate:      time.Date(2026, 3, 23, 0, 0, 0, 0, time.UTC),
+		Duration:     "full_day",
+		Fields:       map[string]any{},
+		TargetID:     "target-3",
+	}
+	_, err := svc.Create(context.Background(), managerUser(), activity)
+	if !errors.Is(err, service.ErrTargetNotAccessible) {
+		t.Errorf("expected ErrTargetNotAccessible, got %v", err)
+	}
+}
+
+func TestActivityUpdate_TargetChangedToInaccessibleFails(t *testing.T) {
+	t.Parallel()
+	existing := sampleActivity()
+	existing.TargetID = "target-1"
+	otherTarget := &domain.Target{ID: "target-2", TargetType: "doctor", Name: "Other Dr", AssigneeID: "rep-2", TeamID: "team-1", Fields: map[string]any{}}
+	actRepo := &stubActivityRepo{activity: existing}
+	targetRepo := &stubTargetRepo{target: otherTarget}
+	audit := &stubAuditRepo{}
+	svc := newActivitySvcWithTargets(actRepo, targetRepo, audit)
+
+	updated := *existing
+	updated.ActivityType = "visit"
+	updated.DueDate = existing.DueDate
+	updated.Duration = "full_day"
+	updated.Fields = map[string]any{}
+	updated.TargetID = "target-2"
+
+	_, err := svc.Update(context.Background(), repUser(), "activity-1", &updated)
+	if !errors.Is(err, service.ErrTargetNotAccessible) {
+		t.Errorf("expected ErrTargetNotAccessible, got %v", err)
 	}
 }

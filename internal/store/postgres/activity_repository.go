@@ -24,19 +24,23 @@ const activityColumns = `
 	COALESCE(a.routing, ''), a.fields,
 	COALESCE(a.target_id::TEXT, ''), COALESCE(t.name, ''), a.creator_id::TEXT,
 	COALESCE(a.joint_visit_user_id::TEXT, ''), COALESCE(a.team_id::TEXT, ''),
-	a.submitted_at, a.created_at, a.updated_at, a.deleted_at`
+	a.submitted_at, a.created_at, a.updated_at, a.deleted_at,
+	COALESCE(t.target_type, ''), COALESCE(t.fields, '{}'::JSONB)`
 
 const activityFrom = ` FROM activities a LEFT JOIN targets t ON a.target_id = t.id`
 
 func scanActivity(row pgx.Row) (*domain.Activity, error) {
 	var a domain.Activity
 	var fieldsJSON []byte
+	var targetType string
+	var targetFieldsJSON []byte
 	err := row.Scan(
 		&a.ID, &a.ActivityType, &a.Label, &a.Status, &a.DueDate, &a.Duration,
 		&a.Routing, &fieldsJSON,
 		&a.TargetID, &a.TargetName, &a.CreatorID,
 		&a.JointVisitUID, &a.TeamID,
 		&a.SubmittedAt, &a.CreatedAt, &a.UpdatedAt, &a.DeletedAt,
+		&targetType, &targetFieldsJSON,
 	)
 	if err != nil {
 		if errors.Is(err, pgx.ErrNoRows) {
@@ -49,6 +53,21 @@ func scanActivity(row pgx.Row) (*domain.Activity, error) {
 		if err := json.Unmarshal(fieldsJSON, &a.Fields); err != nil {
 			return nil, fmt.Errorf("unmarshalling activity fields: %w", err)
 		}
+	}
+	// Build embedded TargetSummary when the activity has a linked target.
+	if a.TargetID != "" {
+		ts := &domain.TargetSummary{
+			ID:         a.TargetID,
+			TargetType: targetType,
+			Name:       a.TargetName,
+			Fields:     make(map[string]any),
+		}
+		if len(targetFieldsJSON) > 0 {
+			if err := json.Unmarshal(targetFieldsJSON, &ts.Fields); err != nil {
+				return nil, fmt.Errorf("unmarshalling target fields: %w", err)
+			}
+		}
+		a.TargetSummary = ts
 	}
 	return &a, nil
 }

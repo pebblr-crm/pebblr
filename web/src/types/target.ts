@@ -40,6 +40,12 @@ export interface TargetListParams {
   q?: string
 }
 
+export interface AssignTargetInput {
+  id: string
+  assigneeId: string
+  teamId?: string
+}
+
 export interface TargetFrequencyItem {
   targetId: string
   classification: string

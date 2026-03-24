@@ -21,6 +21,7 @@ type TargetServicer interface {
 	Get(ctx context.Context, actor *domain.User, id string) (*domain.Target, error)
 	List(ctx context.Context, actor *domain.User, filter store.TargetFilter, page, limit int) (*store.TargetPage, error)
 	Update(ctx context.Context, actor *domain.User, target *domain.Target) (*domain.Target, error)
+	Assign(ctx context.Context, actor *domain.User, targetID, assigneeID, teamID string) (*domain.Target, error)
 	Import(ctx context.Context, actor *domain.User, targets []*domain.Target) (*store.ImportResult, error)
 	VisitStatus(ctx context.Context, actor *domain.User) ([]store.TargetVisitStatus, error)
 	FrequencyStatus(ctx context.Context, actor *domain.User, dateFrom, dateTo time.Time) ([]service.TargetFrequencyItem, error)
@@ -46,6 +47,7 @@ func NewTargetRouter(h *TargetHandler) http.Handler {
 	r.Post("/import", h.Import)
 	r.Get("/{id}", h.Get)
 	r.Put("/{id}", h.Update)
+	r.Patch("/{id}/assign", h.Assign)
 	return r
 }
 
@@ -229,6 +231,43 @@ func (h *TargetHandler) Update(w http.ResponseWriter, r *http.Request) {
 	}
 
 	updated, err := h.svc.Update(r.Context(), actor, target)
+	if err != nil {
+		mapTargetServiceError(w, err)
+		return
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(http.StatusOK)
+	writeJSON(w, r, targetResponse{Target: updated})
+}
+
+type assignRequest struct {
+	AssigneeID string `json:"assigneeId"`
+	TeamID     string `json:"teamId"`
+}
+
+// Assign handles PATCH /api/v1/targets/{id}/assign
+func (h *TargetHandler) Assign(w http.ResponseWriter, r *http.Request) {
+	actor, err := rbac.UserFromContext(r.Context())
+	if err != nil {
+		writeError(w, http.StatusUnauthorized, "UNAUTHORIZED", "missing authenticated user")
+		return
+	}
+
+	id := chi.URLParam(r, "id")
+
+	var req assignRequest
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		writeError(w, http.StatusBadRequest, "BAD_REQUEST", "invalid request body")
+		return
+	}
+
+	if req.AssigneeID == "" {
+		writeError(w, http.StatusBadRequest, "BAD_REQUEST", "assigneeId is required")
+		return
+	}
+
+	updated, err := h.svc.Assign(r.Context(), actor, id, req.AssigneeID, req.TeamID)
 	if err != nil {
 		mapTargetServiceError(w, err)
 		return
