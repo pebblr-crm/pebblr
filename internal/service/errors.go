@@ -9,4 +9,7 @@ var (
 
 	// ErrInvalidInput indicates the request contains invalid data.
 	ErrInvalidInput = errors.New("invalid input")
+
+	// ErrTargetNotAccessible indicates the referenced target is outside the actor's visible scope.
+	ErrTargetNotAccessible = errors.New("target not accessible")
 )

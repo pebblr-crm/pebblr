@@ -2,6 +2,14 @@
  * Activity types — mirror the Go backend domain model.
  */
 
+/** Read-only snapshot of a target embedded in an activity response. */
+export interface TargetSummary {
+  id: string
+  targetType: string
+  name: string
+  fields: Record<string, unknown>
+}
+
 export interface Activity {
   id: string
   activityType: string
@@ -13,6 +21,7 @@ export interface Activity {
   fields: Record<string, unknown>
   targetId?: string
   targetName?: string
+  targetSummary?: TargetSummary
   creatorId: string
   jointVisitUserId?: string
   teamId?: string

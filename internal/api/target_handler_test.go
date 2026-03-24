@@ -61,6 +61,20 @@ func (s *stubTargetSvc) Update(_ context.Context, actor *domain.User, target *do
 	return target, nil
 }
 
+func (s *stubTargetSvc) Assign(_ context.Context, actor *domain.User, targetID, assigneeID, teamID string) (*domain.Target, error) {
+	if actor.Role == domain.RoleRep {
+		return nil, service.ErrForbidden
+	}
+	return &domain.Target{
+		ID:         targetID,
+		TargetType: "doctor",
+		Name:       "Dr. Test",
+		Fields:     map[string]any{},
+		AssigneeID: assigneeID,
+		TeamID:     teamID,
+	}, nil
+}
+
 func (s *stubTargetSvc) Import(_ context.Context, actor *domain.User, targets []*domain.Target) (*store.ImportResult, error) {
 	if actor.Role != domain.RoleAdmin {
 		return nil, service.ErrForbidden

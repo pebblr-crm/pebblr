@@ -16,6 +16,8 @@ import (
 // TargetService handles target business logic with RBAC enforcement.
 type TargetService struct {
 	targets  store.TargetRepository
+	users    store.UserRepository
+	audit    store.AuditRepository
 	enforcer rbac.Enforcer
 	cfg      *config.TenantConfig
 	geocoder geo.Geocoder // optional; nil skips geocoding
@@ -36,6 +38,16 @@ type TargetServiceOption func(*TargetService)
 // WithGeocoder sets the geocoder used to enrich targets during import.
 func WithGeocoder(g geo.Geocoder) TargetServiceOption {
 	return func(s *TargetService) { s.geocoder = g }
+}
+
+// WithUsers sets the user repository for assignment validation.
+func WithUsers(u store.UserRepository) TargetServiceOption {
+	return func(s *TargetService) { s.users = u }
+}
+
+// WithAudit sets the audit repository for recording assignment changes.
+func WithAudit(a store.AuditRepository) TargetServiceOption {
+	return func(s *TargetService) { s.audit = a }
 }
 
 // Create persists a new target. Only managers and admins may create targets.
@@ -94,6 +106,56 @@ func (s *TargetService) Update(ctx context.Context, actor *domain.User, target *
 	if err != nil {
 		return nil, fmt.Errorf("updating target: %w", err)
 	}
+	return updated, nil
+}
+
+// Assign updates the assignee (and optionally team) of a target.
+// Only managers (for their teams) and admins may assign targets.
+func (s *TargetService) Assign(ctx context.Context, actor *domain.User, targetID, assigneeID, teamID string) (*domain.Target, error) {
+	if actor.Role == domain.RoleRep {
+		return nil, ErrForbidden
+	}
+	if assigneeID == "" {
+		return nil, ErrInvalidInput
+	}
+
+	existing, err := s.targets.Get(ctx, targetID)
+	if err != nil {
+		return nil, fmt.Errorf("getting target: %w", err)
+	}
+	if !s.enforcer.CanUpdateTarget(ctx, actor, existing) {
+		return nil, ErrForbidden
+	}
+
+	// Validate that the assignee user exists.
+	if s.users != nil {
+		if _, err := s.users.GetByID(ctx, assigneeID); err != nil {
+			return nil, fmt.Errorf("validating assignee: %w", err)
+		}
+	}
+
+	oldAssignee := existing.AssigneeID
+	existing.AssigneeID = assigneeID
+	if teamID != "" {
+		existing.TeamID = teamID
+	}
+
+	updated, err := s.targets.Update(ctx, existing)
+	if err != nil {
+		return nil, fmt.Errorf("assigning target: %w", err)
+	}
+
+	if s.audit != nil {
+		_ = s.audit.Record(ctx, &domain.AuditEntry{
+			EntityType: "target",
+			EntityID:   targetID,
+			EventType:  "assigned",
+			ActorID:    actor.ID,
+			OldValue:   map[string]any{"assigneeId": oldAssignee},
+			NewValue:   map[string]any{"assigneeId": assigneeID},
+		})
+	}
+
 	return updated, nil
 }
 

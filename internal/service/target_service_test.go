@@ -565,3 +565,131 @@ func TestFrequencyStatus_EmptyResult(t *testing.T) {
 		t.Errorf("expected 0 items, got %d", len(items))
 	}
 }
+
+// --- Assign tests ---
+
+// stubAssignUserRepo provides user lookup for assignment validation.
+type stubAssignUserRepo struct {
+	users map[string]*domain.User
+}
+
+func (r *stubAssignUserRepo) GetByID(_ context.Context, id string) (*domain.User, error) {
+	if u, ok := r.users[id]; ok {
+		return u, nil
+	}
+	return nil, store.ErrNotFound
+}
+func (r *stubAssignUserRepo) GetByExternalID(_ context.Context, _ string) (*domain.User, error) {
+	return nil, store.ErrNotFound
+}
+func (r *stubAssignUserRepo) List(_ context.Context) ([]*domain.User, error) { return nil, nil }
+func (r *stubAssignUserRepo) Upsert(_ context.Context, u *domain.User) (*domain.User, error) {
+	return u, nil
+}
+
+func TestTargetAssign_AdminSucceeds(t *testing.T) {
+	t.Parallel()
+	existing := sampleTarget()
+	repo := &stubTargetRepo{target: existing}
+	userRepo := &stubAssignUserRepo{users: map[string]*domain.User{
+		"rep-2": {ID: "rep-2", Name: "Rep Two", Role: domain.RoleRep},
+	}}
+	auditRepo := &stubAuditRepo{}
+	svc := service.NewTargetService(repo, rbac.NewEnforcer(), testConfig(), service.WithUsers(userRepo), service.WithAudit(auditRepo))
+
+	updated, err := svc.Assign(context.Background(), adminUser(), "target-1", "rep-2", "")
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if updated.AssigneeID != "rep-2" {
+		t.Errorf("expected assignee rep-2, got %s", updated.AssigneeID)
+	}
+	if len(auditRepo.entries) != 1 {
+		t.Errorf("expected 1 audit entry, got %d", len(auditRepo.entries))
+	}
+	if auditRepo.entries[0].EventType != "assigned" {
+		t.Errorf("expected event type assigned, got %s", auditRepo.entries[0].EventType)
+	}
+}
+
+func TestTargetAssign_ManagerTeamSucceeds(t *testing.T) {
+	t.Parallel()
+	existing := sampleTarget()
+	repo := &stubTargetRepo{target: existing}
+	userRepo := &stubAssignUserRepo{users: map[string]*domain.User{
+		"rep-2": {ID: "rep-2", Name: "Rep Two", Role: domain.RoleRep},
+	}}
+	svc := service.NewTargetService(repo, rbac.NewEnforcer(), testConfig(), service.WithUsers(userRepo))
+
+	_, err := svc.Assign(context.Background(), managerUser(), "target-1", "rep-2", "")
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+}
+
+func TestTargetAssign_ManagerOtherTeamForbidden(t *testing.T) {
+	t.Parallel()
+	otherTeamTarget := &domain.Target{ID: "t-3", TargetType: "doctor", Name: "Dr. Other", AssigneeID: "rep-3", TeamID: "team-9", Fields: map[string]any{}}
+	repo := &stubTargetRepo{target: otherTeamTarget}
+	userRepo := &stubAssignUserRepo{users: map[string]*domain.User{
+		"rep-2": {ID: "rep-2"},
+	}}
+	svc := service.NewTargetService(repo, rbac.NewEnforcer(), testConfig(), service.WithUsers(userRepo))
+
+	_, err := svc.Assign(context.Background(), managerUser(), "t-3", "rep-2", "")
+	if !errors.Is(err, service.ErrForbidden) {
+		t.Errorf("expected ErrForbidden, got %v", err)
+	}
+}
+
+func TestTargetAssign_RepForbidden(t *testing.T) {
+	t.Parallel()
+	repo := &stubTargetRepo{target: sampleTarget()}
+	svc := newTargetSvc(repo)
+
+	_, err := svc.Assign(context.Background(), repUser(), "target-1", "rep-2", "")
+	if !errors.Is(err, service.ErrForbidden) {
+		t.Errorf("expected ErrForbidden, got %v", err)
+	}
+}
+
+func TestTargetAssign_EmptyAssigneeFails(t *testing.T) {
+	t.Parallel()
+	repo := &stubTargetRepo{target: sampleTarget()}
+	svc := newTargetSvc(repo)
+
+	_, err := svc.Assign(context.Background(), adminUser(), "target-1", "", "")
+	if !errors.Is(err, service.ErrInvalidInput) {
+		t.Errorf("expected ErrInvalidInput, got %v", err)
+	}
+}
+
+func TestTargetAssign_NonExistentAssigneeFails(t *testing.T) {
+	t.Parallel()
+	repo := &stubTargetRepo{target: sampleTarget()}
+	userRepo := &stubAssignUserRepo{users: map[string]*domain.User{}} // empty — no users
+	svc := service.NewTargetService(repo, rbac.NewEnforcer(), testConfig(), service.WithUsers(userRepo))
+
+	_, err := svc.Assign(context.Background(), adminUser(), "target-1", "nonexistent", "")
+	if !errors.Is(err, store.ErrNotFound) {
+		t.Errorf("expected ErrNotFound, got %v", err)
+	}
+}
+
+func TestTargetAssign_UpdatesTeamWhenProvided(t *testing.T) {
+	t.Parallel()
+	existing := sampleTarget()
+	repo := &stubTargetRepo{target: existing}
+	userRepo := &stubAssignUserRepo{users: map[string]*domain.User{
+		"rep-2": {ID: "rep-2"},
+	}}
+	svc := service.NewTargetService(repo, rbac.NewEnforcer(), testConfig(), service.WithUsers(userRepo))
+
+	updated, err := svc.Assign(context.Background(), adminUser(), "target-1", "rep-2", "team-2")
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if updated.TeamID != "team-2" {
+		t.Errorf("expected team team-2, got %s", updated.TeamID)
+	}
+}

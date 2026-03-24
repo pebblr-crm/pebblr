@@ -2,6 +2,16 @@ package domain
 
 import "time"
 
+// TargetSummary holds a read-only snapshot of the linked target, embedded in
+// activity responses so that joint-visit users can see target details without
+// needing direct target-list access.
+type TargetSummary struct {
+	ID         string         `json:"id"`
+	TargetType string         `json:"targetType"`
+	Name       string         `json:"name"`
+	Fields     map[string]any `json:"fields"`
+}
+
 // Activity represents a scheduled or completed field action — e.g. a visit,
 // administrative task, or time-off. Activity types and their fields are
 // driven by the tenant configuration.
@@ -16,6 +26,7 @@ type Activity struct {
 	Fields         map[string]any `json:"fields"`                 // dynamic fields defined in tenant config
 	TargetID       string         `json:"targetId,omitempty"`     // linked target (required for visits, empty for time-off)
 	TargetName     string         `json:"targetName,omitempty"`   // denormalized from targets table for display
+	TargetSummary  *TargetSummary `json:"targetSummary,omitempty"` // embedded target details for joint-visit users
 	CreatorID      string         `json:"creatorId"`              // the rep who created it
 	JointVisitUID  string         `json:"jointVisitUserId,omitempty"` // optional co-visitor
 	TeamID         string         `json:"teamId,omitempty"`

@@ -48,6 +48,7 @@ func (e *ValidationErrors) Error() string {
 // ActivityService handles activity business logic with RBAC enforcement and config validation.
 type ActivityService struct {
 	activities store.ActivityRepository
+	targets    store.TargetRepository
 	users      store.UserRepository
 	audit      store.AuditRepository
 	dashboard  store.DashboardRepository
@@ -58,6 +59,7 @@ type ActivityService struct {
 // NewActivityService constructs an ActivityService with the given dependencies.
 func NewActivityService(
 	activities store.ActivityRepository,
+	targets store.TargetRepository,
 	users store.UserRepository,
 	audit store.AuditRepository,
 	enforcer rbac.Enforcer,
@@ -66,6 +68,7 @@ func NewActivityService(
 ) *ActivityService {
 	s := &ActivityService{
 		activities: activities,
+		targets:    targets,
 		users:      users,
 		audit:      audit,
 		enforcer:   enforcer,
@@ -111,6 +114,11 @@ func (s *ActivityService) Create(ctx context.Context, actor *domain.User, activi
 
 	// Business rule: target required for field activities.
 	if err := s.checkTargetRequired(activity); err != nil {
+		return nil, err
+	}
+
+	// Business rule: non-admin users may only target their accessible targets.
+	if err := s.checkTargetAccess(ctx, actor, activity.TargetID); err != nil {
 		return nil, err
 	}
 
@@ -193,6 +201,13 @@ func (s *ActivityService) Update(ctx context.Context, actor *domain.User, id str
 	// Business rule: validate joint visit user.
 	if err := s.checkJointVisitUser(ctx, existing.CreatorID, activity.JointVisitUID); err != nil {
 		return nil, err
+	}
+
+	// Business rule: non-admin users may only target their accessible targets.
+	if activity.TargetID != existing.TargetID {
+		if err := s.checkTargetAccess(ctx, actor, activity.TargetID); err != nil {
+			return nil, err
+		}
 	}
 
 	// Preserve immutable fields from the existing record.
@@ -303,6 +318,13 @@ func (s *ActivityService) PartialUpdate(ctx context.Context, actor *domain.User,
 	}
 	if existing.IsSubmitted() {
 		return nil, ErrSubmitted
+	}
+
+	// Business rule: non-admin users may only target their accessible targets.
+	if patch.TargetID != nil && *patch.TargetID != existing.TargetID {
+		if err := s.checkTargetAccess(ctx, actor, *patch.TargetID); err != nil {
+			return nil, err
+		}
 	}
 
 	// Merge patch onto a copy of the existing record.
@@ -683,6 +705,28 @@ func (s *ActivityService) checkRecoveryBalance(ctx context.Context, actor *domai
 	}
 
 	return ErrNoRecoveryBalance
+}
+
+// checkTargetAccess verifies that the actor can view the referenced target.
+// Non-admin users may only create/update activities against targets within their visible scope.
+func (s *ActivityService) checkTargetAccess(ctx context.Context, actor *domain.User, targetID string) error {
+	if targetID == "" {
+		return nil // non-field activities have no target
+	}
+	if actor.Role == domain.RoleAdmin {
+		return nil
+	}
+	if s.targets == nil {
+		return nil // no target repo configured (e.g. in tests without targets)
+	}
+	target, err := s.targets.Get(ctx, targetID)
+	if err != nil {
+		return fmt.Errorf("checking target access: %w", err)
+	}
+	if !s.enforcer.CanViewTarget(ctx, actor, target) {
+		return ErrTargetNotAccessible
+	}
+	return nil
 }
 
 // checkJointVisitUser validates the joint visit user ID when set.
