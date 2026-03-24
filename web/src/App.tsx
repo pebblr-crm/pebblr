@@ -1,9 +1,11 @@
 import { useState, useCallback, useEffect } from 'react'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { createRouter, RouterProvider } from '@tanstack/react-router'
+import { DemoAccountPicker } from './components/DemoAccountPicker'
 import { ToastProvider } from './components/Toast'
 import { PlannerContext, type PlannerState } from './contexts/planner'
 import { ThemeContext, type Theme } from './contexts/theme'
+import { isDemoMode, getCurrentUser, demoLogin, onAuthChange } from './services/auth'
 import { Route as rootRoute } from './routes/__root'
 import { Route as indexRoute } from './routes/index'
 import { Route as plannerRoute } from './routes/planner/index'
@@ -66,10 +68,26 @@ export function App() {
   }, [])
   const toggle = useCallback(() => setTheme(theme === 'dark' ? 'light' : 'dark'), [theme, setTheme])
 
+  // Track whether a demo user is selected.
+  const [authed, setAuthed] = useState(() => !isDemoMode() || getCurrentUser() !== null)
+
+  useEffect(() => {
+    onAuthChange(() => {
+      setAuthed(getCurrentUser() !== null)
+      // Clear TanStack Query cache on account switch so data reloads for the new user.
+      queryClient.clear()
+    })
+  }, [])
+
   // Apply theme class on mount
   useEffect(() => {
     document.documentElement.classList.toggle('dark', theme === 'dark')
   }, [theme])
+
+  // Demo mode: show account picker if no user selected.
+  if (isDemoMode() && !authed) {
+    return <DemoAccountPicker onSelect={demoLogin} />
+  }
 
   return (
     <QueryClientProvider client={queryClient}>

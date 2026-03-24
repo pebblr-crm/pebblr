@@ -109,7 +109,7 @@ func serve(configPath, authProvider string) error {
 		secretPath = "/run/secrets"
 	}
 
-	authenticator, demoHandler, err := buildAuthenticator(ctx, logger, authProvider, secretPath)
+	authenticator, demoHandler, err := buildAuthenticator(ctx, logger, authProvider, secretPath, db.Users())
 	if err != nil {
 		return fmt.Errorf("setting up auth provider: %w", err)
 	}
@@ -210,7 +210,7 @@ func readOptionalSecret(path string) (string, error) {
 
 // buildAuthenticator creates the appropriate Authenticator based on the provider name.
 // Returns the authenticator and an optional demo handler (non-nil only for "demo" provider).
-func buildAuthenticator(ctx context.Context, logger *slog.Logger, provider, secretPath string) (auth.Authenticator, *demo.Handler, error) {
+func buildAuthenticator(ctx context.Context, logger *slog.Logger, provider, secretPath string, users demo.UserLister) (auth.Authenticator, *demo.Handler, error) {
 	switch provider {
 	case "static":
 		jwtSecret, err := readSecretFile(secretPath + "/jwt-secret")
@@ -248,7 +248,7 @@ func buildAuthenticator(ctx context.Context, logger *slog.Logger, provider, secr
 		if err != nil {
 			return nil, nil, fmt.Errorf("creating demo authenticator: %w", err)
 		}
-		h := demo.NewHandler(a, demo.DefaultPersonas())
+		h := demo.NewHandler(a, users)
 		logger.Info("using demo authenticator — NOT FOR PRODUCTION")
 		return a, h, nil
 

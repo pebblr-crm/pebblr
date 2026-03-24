@@ -46,7 +46,7 @@ func NewRouter(cfg RouterConfig) http.Handler {
 	// Demo auth endpoints — outside auth middleware so prospects can obtain tokens.
 	if cfg.DemoHandler != nil {
 		r.Route("/demo", func(r chi.Router) {
-			r.Get("/personas", cfg.DemoHandler.ListPersonas)
+			r.Get("/accounts", cfg.DemoHandler.ListAccounts)
 			r.Post("/token", cfg.DemoHandler.IssueToken)
 		})
 	}

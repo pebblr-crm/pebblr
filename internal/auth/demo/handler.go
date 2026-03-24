@@ -1,6 +1,7 @@
 package demo
 
 import (
+	"context"
 	"encoding/json"
 	"fmt"
 	"net/http"
@@ -8,37 +9,63 @@ import (
 	"github.com/pebblr/pebblr/internal/domain"
 )
 
+// UserLister retrieves the set of users available for demo login.
+type UserLister interface {
+	List(ctx context.Context) ([]*domain.User, error)
+}
+
 // Handler serves demo authentication endpoints.
 type Handler struct {
-	auth     *Authenticator
-	personas []Persona
+	auth  *Authenticator
+	users UserLister
 }
 
 // NewHandler creates an HTTP handler for demo token issuance.
-// The provided personas define the available demo identities.
-func NewHandler(auth *Authenticator, personas []Persona) *Handler {
-	return &Handler{auth: auth, personas: personas}
+// The UserLister provides real user accounts from the database so that
+// demo tokens map to actual user rows (and therefore real assignments/RBAC).
+func NewHandler(auth *Authenticator, users UserLister) *Handler {
+	return &Handler{auth: auth, users: users}
+}
+
+// Account is the JSON representation of a demo-selectable user.
+type Account struct {
+	ID     string      `json:"id"`
+	Name   string      `json:"name"`
+	Email  string      `json:"email"`
+	Role   domain.Role `json:"role"`
+	Avatar string      `json:"avatar,omitempty"`
 }
 
 // tokenRequest is the JSON body for POST /demo/token.
 type tokenRequest struct {
-	PersonaID string `json:"persona_id"`
+	UserID string `json:"user_id"`
 }
 
 // tokenResponse is the JSON response for POST /demo/token.
 type tokenResponse struct {
 	Token   string  `json:"token"`
-	Persona Persona `json:"persona"`
+	Account Account `json:"account"`
 }
 
-// ListPersonas returns the available demo personas.
-// GET /demo/personas
-func (h *Handler) ListPersonas(w http.ResponseWriter, _ *http.Request) {
+// ListAccounts returns the real user accounts available for demo login.
+// GET /demo/accounts
+func (h *Handler) ListAccounts(w http.ResponseWriter, r *http.Request) {
+	users, err := h.users.List(r.Context())
+	if err != nil {
+		writeError(w, http.StatusInternalServerError, "LIST_ERROR", "failed to list accounts")
+		return
+	}
+
+	accounts := make([]Account, len(users))
+	for i, u := range users {
+		accounts[i] = userToAccount(u)
+	}
+
 	w.Header().Set("Content-Type", "application/json")
-	_ = json.NewEncoder(w).Encode(h.personas)
+	_ = json.NewEncoder(w).Encode(accounts)
 }
 
-// IssueToken issues a JWT for the requested persona.
+// IssueToken issues a JWT for the requested user account.
 // POST /demo/token
 func (h *Handler) IssueToken(w http.ResponseWriter, r *http.Request) {
 	var req tokenRequest
@@ -46,14 +73,35 @@ func (h *Handler) IssueToken(w http.ResponseWriter, r *http.Request) {
 		writeError(w, http.StatusBadRequest, "INVALID_REQUEST", "invalid JSON body")
 		return
 	}
-
-	persona, ok := h.findPersona(req.PersonaID)
-	if !ok {
-		writeError(w, http.StatusBadRequest, "INVALID_PERSONA", fmt.Sprintf("unknown persona %q", req.PersonaID))
+	if req.UserID == "" {
+		writeError(w, http.StatusBadRequest, "INVALID_REQUEST", "user_id is required")
 		return
 	}
 
-	token, err := h.auth.IssueToken(persona)
+	users, err := h.users.List(r.Context())
+	if err != nil {
+		writeError(w, http.StatusInternalServerError, "LIST_ERROR", "failed to list accounts")
+		return
+	}
+
+	var user *domain.User
+	for _, u := range users {
+		if u.ID == req.UserID {
+			user = u
+			break
+		}
+	}
+	if user == nil {
+		writeError(w, http.StatusBadRequest, "INVALID_USER", fmt.Sprintf("unknown user %q", req.UserID))
+		return
+	}
+
+	token, err := h.auth.IssueToken(Persona{
+		ID:    user.ID,
+		Email: user.Email,
+		Name:  user.Name,
+		Role:  user.Role,
+	})
 	if err != nil {
 		writeError(w, http.StatusInternalServerError, "TOKEN_ERROR", "failed to issue token")
 		return
@@ -62,40 +110,17 @@ func (h *Handler) IssueToken(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "application/json")
 	_ = json.NewEncoder(w).Encode(tokenResponse{
 		Token:   token,
-		Persona: persona,
+		Account: userToAccount(user),
 	})
 }
 
-func (h *Handler) findPersona(id string) (Persona, bool) {
-	for _, p := range h.personas {
-		if p.ID == id {
-			return p, true
-		}
-	}
-	return Persona{}, false
-}
-
-// DefaultPersonas returns a standard set of demo personas.
-func DefaultPersonas() []Persona {
-	return []Persona{
-		{
-			ID:    "demo-rep",
-			Email: "rep@demo.pebblr.com",
-			Name:  "Riley Rep",
-			Role:  domain.RoleRep,
-		},
-		{
-			ID:    "demo-manager",
-			Email: "manager@demo.pebblr.com",
-			Name:  "Morgan Manager",
-			Role:  domain.RoleManager,
-		},
-		{
-			ID:    "demo-admin",
-			Email: "admin@demo.pebblr.com",
-			Name:  "Alex Admin",
-			Role:  domain.RoleAdmin,
-		},
+func userToAccount(u *domain.User) Account {
+	return Account{
+		ID:     u.ID,
+		Name:   u.Name,
+		Email:  u.Email,
+		Role:   u.Role,
+		Avatar: u.Avatar,
 	}
 }
 

@@ -1,7 +1,8 @@
 import { useState, useRef, useEffect } from 'react'
 import { Link, useRouterState } from '@tanstack/react-router'
-import { LayoutDashboard, Users, CalendarDays, Settings, HelpCircle, Target, ClipboardList, MapPin, Moon, Sun, X } from 'lucide-react'
+import { LayoutDashboard, Users, CalendarDays, Settings, HelpCircle, Target, ClipboardList, MapPin, Moon, Sun, X, ArrowLeftRight } from 'lucide-react'
 import { useTheme } from '@/contexts/theme'
+import { isDemoMode, demoLogout, getCurrentUser } from '@/services/auth'
 
 const navItems = [
   { to: '/', label: 'Dashboard', icon: LayoutDashboard },
@@ -132,6 +133,20 @@ export function Sidebar({ open, onClose }: SidebarProps) {
                 </div>
               )}
             </div>
+            {isDemoMode() && (
+              <button
+                onClick={demoLogout}
+                className="w-full flex items-center px-4 py-3 text-slate-500 hover:bg-slate-50 transition-colors rounded-xl group"
+              >
+                <ArrowLeftRight className="mr-3 w-5 h-5 text-slate-400 group-hover:text-primary" />
+                <span className="font-headline text-sm font-medium flex-1 text-left">Switch Account</span>
+                {getCurrentUser() && (
+                  <span className="text-xs text-on-surface-variant truncate max-w-24">
+                    {getCurrentUser()?.displayName}
+                  </span>
+                )}
+              </button>
+            )}
             <button className="w-full flex items-center px-4 py-3 text-slate-500 hover:bg-slate-50 transition-colors rounded-xl group">
               <HelpCircle className="mr-3 w-5 h-5 text-slate-400 group-hover:text-primary" />
               <span className="font-headline text-sm font-medium">Help</span>

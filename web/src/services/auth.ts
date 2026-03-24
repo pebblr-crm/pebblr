@@ -1,13 +1,12 @@
 
 
 /**
- * Azure AD (Entra ID) MSAL authentication placeholder.
+ * Authentication service.
  *
- * In production this will use @azure/msal-browser to acquire tokens via
- * OIDC/OAuth2. The token is then passed to setTokenProvider in api.ts so
- * every API request includes a valid Bearer token.
- *
- * Local dev uses Kind + federated credentials (no static secrets).
+ * Supports three modes:
+ * - Static token (VITE_STATIC_TOKEN) for local dev / E2E
+ * - Demo mode (VITE_DEMO_MODE) for self-service demo environments
+ * - Azure AD MSAL (future) for production
  */
 
 import { setTokenProvider } from './api'
@@ -39,19 +38,44 @@ export interface AuthAccount {
 // ---------------------------------------------------------------------------
 
 let _currentUser: AuthenticatedUser | null = null
+let _isDemoMode = false
+let _onAuthChange: (() => void) | null = null
 
 // ---------------------------------------------------------------------------
 // Public API
 // ---------------------------------------------------------------------------
 
 /**
+ * Returns true if the app is running in demo mode.
+ */
+export function isDemoMode(): boolean {
+  return _isDemoMode
+}
+
+/**
+ * Register a callback invoked when the auth state changes (login/logout).
+ */
+export function onAuthChange(cb: () => void): void {
+  _onAuthChange = cb
+}
+
+/**
  * Initialise the auth module.  Call once in main.tsx before rendering.
  *
  * In dev/E2E builds, VITE_STATIC_TOKEN is set at build time and used as
- * the Bearer token for all API requests. In production, this will be
- * replaced by real MSAL/OIDC initialisation.
+ * the Bearer token for all API requests. In demo mode, auth is deferred
+ * until the user picks an account. In production, this will be replaced
+ * by real MSAL/OIDC initialisation.
  */
 export async function initAuth(_config: AuthConfig): Promise<void> {
+  _isDemoMode = import.meta.env.VITE_DEMO_MODE === 'true'
+
+  if (_isDemoMode) {
+    // In demo mode, no token until the user picks an account.
+    setTokenProvider(() => _currentUser?.accessToken ?? null)
+    return
+  }
+
   const staticToken = import.meta.env.VITE_STATIC_TOKEN as string | undefined
   if (staticToken) {
     _currentUser = {
@@ -65,6 +89,47 @@ export async function initAuth(_config: AuthConfig): Promise<void> {
     }
   }
   setTokenProvider(() => _currentUser?.accessToken ?? null)
+}
+
+/**
+ * Sign in as a demo user by their user ID.
+ * Calls the demo token endpoint and stores the resulting token.
+ */
+export async function demoLogin(userId: string): Promise<void> {
+  const response = await fetch('/demo/token', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ user_id: userId }),
+  })
+
+  if (!response.ok) {
+    throw new Error(`Demo login failed: ${response.status}`)
+  }
+
+  const data = (await response.json()) as {
+    token: string
+    account: { id: string; name: string; email: string; role: string }
+  }
+
+  _currentUser = {
+    id: data.account.id,
+    displayName: data.account.name,
+    email: data.account.email,
+    role: data.account.role as 'admin' | 'manager' | 'rep',
+    oid: data.account.id,
+    accessToken: data.token,
+    expiresAt: Date.now() + 24 * 60 * 60 * 1000,
+  }
+
+  _onAuthChange?.()
+}
+
+/**
+ * Sign out the current demo user, returning to the account picker.
+ */
+export function demoLogout(): void {
+  _currentUser = null
+  _onAuthChange?.()
 }
 
 /**
