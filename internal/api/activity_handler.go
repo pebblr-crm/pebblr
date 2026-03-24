@@ -217,33 +217,28 @@ func (h *ActivityHandler) List(w http.ResponseWriter, r *http.Request) {
 	})
 }
 
-// Create handles POST /api/v1/activities
-func (h *ActivityHandler) Create(w http.ResponseWriter, r *http.Request) {
-	actor, err := rbac.UserFromContext(r.Context())
-	if err != nil {
-		writeError(w, http.StatusUnauthorized, "UNAUTHORIZED", errMissingUser)
-		return
-	}
-
+// decodeActivityRequest decodes, validates, and converts an activity request body
+// into a domain.Activity. Returns nil and writes an error response if validation fails.
+func decodeActivityRequest(w http.ResponseWriter, r *http.Request) *domain.Activity {
 	var req activityRequest
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
 		writeError(w, http.StatusBadRequest, "BAD_REQUEST", errInvalidRequestBody)
-		return
+		return nil
 	}
 
 	if req.ActivityType == "" {
 		writeError(w, http.StatusBadRequest, "BAD_REQUEST", "activityType is required")
-		return
+		return nil
 	}
 	if req.DueDate == "" {
 		writeError(w, http.StatusBadRequest, "BAD_REQUEST", "dueDate is required")
-		return
+		return nil
 	}
 
 	dueDate, err := time.Parse(dateFormat, req.DueDate)
 	if err != nil {
 		writeError(w, http.StatusBadRequest, "BAD_REQUEST", "dueDate must be in YYYY-MM-DD format")
-		return
+		return nil
 	}
 
 	fields := req.Fields
@@ -251,7 +246,7 @@ func (h *ActivityHandler) Create(w http.ResponseWriter, r *http.Request) {
 		fields = map[string]any{}
 	}
 
-	activity := &domain.Activity{
+	return &domain.Activity{
 		ActivityType:  req.ActivityType,
 		Label:         req.Label,
 		Status:        req.Status,
@@ -261,6 +256,20 @@ func (h *ActivityHandler) Create(w http.ResponseWriter, r *http.Request) {
 		Fields:        fields,
 		TargetID:      req.TargetID,
 		JointVisitUID: hoistJointVisitUID(fields),
+	}
+}
+
+// Create handles POST /api/v1/activities
+func (h *ActivityHandler) Create(w http.ResponseWriter, r *http.Request) {
+	actor, err := rbac.UserFromContext(r.Context())
+	if err != nil {
+		writeError(w, http.StatusUnauthorized, "UNAUTHORIZED", errMissingUser)
+		return
+	}
+
+	activity := decodeActivityRequest(w, r)
+	if activity == nil {
+		return
 	}
 
 	created, err := h.svc.Create(r.Context(), actor, activity)
@@ -306,42 +315,9 @@ func (h *ActivityHandler) Update(w http.ResponseWriter, r *http.Request) {
 
 	id := chi.URLParam(r, "id")
 
-	var req activityRequest
-	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-		writeError(w, http.StatusBadRequest, "BAD_REQUEST", errInvalidRequestBody)
+	activity := decodeActivityRequest(w, r)
+	if activity == nil {
 		return
-	}
-
-	if req.ActivityType == "" {
-		writeError(w, http.StatusBadRequest, "BAD_REQUEST", "activityType is required")
-		return
-	}
-	if req.DueDate == "" {
-		writeError(w, http.StatusBadRequest, "BAD_REQUEST", "dueDate is required")
-		return
-	}
-
-	dueDate, err := time.Parse(dateFormat, req.DueDate)
-	if err != nil {
-		writeError(w, http.StatusBadRequest, "BAD_REQUEST", "dueDate must be in YYYY-MM-DD format")
-		return
-	}
-
-	fields := req.Fields
-	if fields == nil {
-		fields = map[string]any{}
-	}
-
-	activity := &domain.Activity{
-		ActivityType:  req.ActivityType,
-		Label:         req.Label,
-		Status:        req.Status,
-		DueDate:       dueDate,
-		Duration:      req.Duration,
-		Routing:       req.Routing,
-		Fields:        fields,
-		TargetID:      req.TargetID,
-		JointVisitUID: hoistJointVisitUID(fields),
 	}
 
 	updated, err := h.svc.Update(r.Context(), actor, id, activity)
