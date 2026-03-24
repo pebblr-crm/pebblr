@@ -2,7 +2,7 @@
 # CI/CD pipelines call these targets only.
 
 .DEFAULT_GOAL := help
-.PHONY: help build test lint typecheck dev-api dev-web dev-db dev-db-stop dev-db-reset seed cluster-up cluster-deps deploy migrate validate-config clean helm-validate e2e e2e-teardown e2e-cluster e2e-db e2e-deploy
+.PHONY: help build test lint typecheck dev-api dev-web dev-db dev-db-stop dev-db-reset seed cluster-up cluster-deps deploy migrate validate-config clean helm-validate e2e e2e-teardown e2e-cluster e2e-db e2e-deploy sonar
 
 # ── Pinned versions ───────────────────────────────────────────────────────────
 ESO_VERSION           := 0.12.1
@@ -112,6 +112,12 @@ e2e-deploy: ## Build, load, and deploy the app into pebblr-e2e namespace via Ska
 
 validate-config: ## Validate tenant config file
 	@go run ./$(GO_CMD) config validate --config config/tenant.json
+
+sonar: ## Run SonarCloud analysis locally
+	@docker run --rm --network=host -v $(CURDIR):/usr/src -w /usr/src \
+		sonarsource/sonar-scanner-cli \
+		-Dsonar.host.url=https://sonarcloud.io \
+		-Dsonar.token=$${SONAR_TOKEN:?Set SONAR_TOKEN}
 
 clean: ## Clean build artifacts
 	@rm -rf bin/ web/dist/ web/node_modules/.vite
