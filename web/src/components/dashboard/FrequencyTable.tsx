@@ -17,7 +17,7 @@ function complianceBarColor(compliance: number): string {
   return 'bg-error'
 }
 
-export function FrequencyTable({ items }: FrequencyTableProps) {
+export function FrequencyTable({ items }: Readonly<FrequencyTableProps>) {
   const { t } = useTranslation()
 
   if (items.length === 0) return null

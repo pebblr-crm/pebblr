@@ -151,23 +151,8 @@ func mapActivityServiceError(w http.ResponseWriter, err error) {
 	}
 }
 
-// List handles GET /api/v1/activities
-func (h *ActivityHandler) List(w http.ResponseWriter, r *http.Request) {
-	actor, err := rbac.UserFromContext(r.Context())
-	if err != nil {
-		writeError(w, http.StatusUnauthorized, "UNAUTHORIZED", errMissingUser)
-		return
-	}
-
-	page, _ := strconv.Atoi(r.URL.Query().Get("page"))
-	if page < 1 {
-		page = 1
-	}
-	limit, _ := strconv.Atoi(r.URL.Query().Get("limit"))
-	if limit < 1 {
-		limit = 20
-	}
-
+// parseActivityFilter builds an ActivityFilter from query parameters.
+func parseActivityFilter(r *http.Request) store.ActivityFilter {
 	var filter store.ActivityFilter
 	if v := r.URL.Query().Get("activityType"); v != "" {
 		filter.ActivityType = &v
@@ -194,6 +179,27 @@ func (h *ActivityHandler) List(w http.ResponseWriter, r *http.Request) {
 			filter.DateTo = &t
 		}
 	}
+	return filter
+}
+
+// List handles GET /api/v1/activities
+func (h *ActivityHandler) List(w http.ResponseWriter, r *http.Request) {
+	actor, err := rbac.UserFromContext(r.Context())
+	if err != nil {
+		writeError(w, http.StatusUnauthorized, "UNAUTHORIZED", errMissingUser)
+		return
+	}
+
+	page, _ := strconv.Atoi(r.URL.Query().Get("page"))
+	if page < 1 {
+		page = 1
+	}
+	limit, _ := strconv.Atoi(r.URL.Query().Get("limit"))
+	if limit < 1 {
+		limit = 20
+	}
+
+	filter := parseActivityFilter(r)
 
 	result, err := h.svc.List(r.Context(), actor, filter, page, limit)
 	if err != nil {
@@ -370,6 +376,64 @@ func (h *ActivityHandler) Submit(w http.ResponseWriter, r *http.Request) {
 	writeJSON(w, r, activityResponse{Activity: activity})
 }
 
+// parseRawString unmarshals a JSON value as a string pointer suitable for a patch field.
+// If the raw value is "null", it returns a pointer to an empty string.
+// Returns the string pointer and any parsing error message (empty if ok).
+func parseRawString(raw json.RawMessage) (val *string, errMsg string) {
+	if string(raw) == "null" {
+		s := ""
+		return &s, ""
+	}
+	var s string
+	if err := json.Unmarshal(raw, &s); err != nil {
+		return nil, err.Error()
+	}
+	return &s, ""
+}
+
+// parseRawDueDate unmarshals a JSON value as a time pointer for the dueDate patch field.
+// Returns the time pointer and any error message (empty if ok).
+func parseRawDueDate(raw json.RawMessage) (val *time.Time, errMsg string) {
+	if string(raw) == "null" {
+		zero := time.Time{}
+		return &zero, ""
+	}
+	var ds string
+	if err := json.Unmarshal(raw, &ds); err != nil {
+		return nil, "invalid dueDate value"
+	}
+	t, err := time.Parse(dateFormat, ds)
+	if err != nil {
+		return nil, "dueDate must be in YYYY-MM-DD format"
+	}
+	return &t, ""
+}
+
+// parsePatchFields unmarshals and processes the "fields" key from a patch request,
+// hoisting joint_visit_user_id into the patch's dedicated column field.
+func parsePatchFields(raw json.RawMessage, patch *domain.ActivityPatch) string {
+	patch.FieldsPresent = true
+	if string(raw) == "null" {
+		return ""
+	}
+	if err := json.Unmarshal(raw, &patch.Fields); err != nil {
+		return "invalid fields value"
+	}
+	// Hoist joint_visit_user_id from fields into the dedicated column.
+	jv, has := patch.Fields["joint_visit_user_id"]
+	if !has {
+		return ""
+	}
+	delete(patch.Fields, "joint_visit_user_id")
+	if jv == nil {
+		s := ""
+		patch.JointVisitUID = &s
+	} else if s, ok := jv.(string); ok {
+		patch.JointVisitUID = &s
+	}
+	return ""
+}
+
 // Patch handles PATCH /api/v1/activities/{id} with server-side apply semantics.
 // Only fields present in the request body are updated; absent fields are left untouched.
 // When the "fields" key is present, its sub-keys are merged individually.
@@ -388,101 +452,10 @@ func (h *ActivityHandler) Patch(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	patch := &domain.ActivityPatch{}
-
-	if v, ok := raw["status"]; ok {
-		if string(v) == "null" {
-			s := ""
-			patch.Status = &s
-		} else {
-			var s string
-			if err := json.Unmarshal(v, &s); err != nil {
-				writeError(w, http.StatusBadRequest, "BAD_REQUEST", "invalid status value")
-				return
-			}
-			patch.Status = &s
-		}
-	}
-
-	if v, ok := raw["dueDate"]; ok {
-		if string(v) == "null" {
-			zero := time.Time{}
-			patch.DueDate = &zero
-		} else {
-			var ds string
-			if err := json.Unmarshal(v, &ds); err != nil {
-				writeError(w, http.StatusBadRequest, "BAD_REQUEST", "invalid dueDate value")
-				return
-			}
-			t, err := time.Parse(dateFormat, ds)
-			if err != nil {
-				writeError(w, http.StatusBadRequest, "BAD_REQUEST", "dueDate must be in YYYY-MM-DD format")
-				return
-			}
-			patch.DueDate = &t
-		}
-	}
-
-	if v, ok := raw["duration"]; ok {
-		if string(v) == "null" {
-			s := ""
-			patch.Duration = &s
-		} else {
-			var s string
-			if err := json.Unmarshal(v, &s); err != nil {
-				writeError(w, http.StatusBadRequest, "BAD_REQUEST", "invalid duration value")
-				return
-			}
-			patch.Duration = &s
-		}
-	}
-
-	if v, ok := raw["routing"]; ok {
-		if string(v) == "null" {
-			s := ""
-			patch.Routing = &s
-		} else {
-			var s string
-			if err := json.Unmarshal(v, &s); err != nil {
-				writeError(w, http.StatusBadRequest, "BAD_REQUEST", "invalid routing value")
-				return
-			}
-			patch.Routing = &s
-		}
-	}
-
-	if v, ok := raw["fields"]; ok {
-		patch.FieldsPresent = true
-		if string(v) != "null" {
-			if err := json.Unmarshal(v, &patch.Fields); err != nil {
-				writeError(w, http.StatusBadRequest, "BAD_REQUEST", "invalid fields value")
-				return
-			}
-		}
-		// Hoist joint_visit_user_id from fields into the dedicated column.
-		if jv, has := patch.Fields["joint_visit_user_id"]; has {
-			delete(patch.Fields, "joint_visit_user_id")
-			if jv == nil {
-				s := ""
-				patch.JointVisitUID = &s
-			} else if s, ok := jv.(string); ok {
-				patch.JointVisitUID = &s
-			}
-		}
-	}
-
-	if v, ok := raw["targetId"]; ok {
-		if string(v) == "null" {
-			s := ""
-			patch.TargetID = &s
-		} else {
-			var s string
-			if err := json.Unmarshal(v, &s); err != nil {
-				writeError(w, http.StatusBadRequest, "BAD_REQUEST", "invalid targetId value")
-				return
-			}
-			patch.TargetID = &s
-		}
+	patch, errMsg := buildActivityPatch(raw)
+	if errMsg != "" {
+		writeError(w, http.StatusBadRequest, "BAD_REQUEST", errMsg)
+		return
 	}
 
 	updated, err := h.svc.PartialUpdate(r.Context(), actor, id, patch)
@@ -495,6 +468,60 @@ func (h *ActivityHandler) Patch(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set(headerContentType, contentTypeJSON)
 	w.WriteHeader(http.StatusOK)
 	writeJSON(w, r, activityResponse{Activity: updated})
+}
+
+// buildActivityPatch constructs an ActivityPatch from the raw JSON map.
+// Returns the patch and an error message (empty if ok).
+func buildActivityPatch(raw map[string]json.RawMessage) (result *domain.ActivityPatch, errMsg string) {
+	patch := &domain.ActivityPatch{}
+
+	if v, ok := raw["status"]; ok {
+		s, errMsg := parseRawString(v)
+		if errMsg != "" {
+			return nil, "invalid status value"
+		}
+		patch.Status = s
+	}
+
+	if v, ok := raw["dueDate"]; ok {
+		t, errMsg := parseRawDueDate(v)
+		if errMsg != "" {
+			return nil, errMsg
+		}
+		patch.DueDate = t
+	}
+
+	if v, ok := raw["duration"]; ok {
+		s, errMsg := parseRawString(v)
+		if errMsg != "" {
+			return nil, "invalid duration value"
+		}
+		patch.Duration = s
+	}
+
+	if v, ok := raw["routing"]; ok {
+		s, errMsg := parseRawString(v)
+		if errMsg != "" {
+			return nil, "invalid routing value"
+		}
+		patch.Routing = s
+	}
+
+	if v, ok := raw["fields"]; ok {
+		if errMsg := parsePatchFields(v, patch); errMsg != "" {
+			return nil, errMsg
+		}
+	}
+
+	if v, ok := raw["targetId"]; ok {
+		s, errMsg := parseRawString(v)
+		if errMsg != "" {
+			return nil, "invalid targetId value"
+		}
+		patch.TargetID = s
+	}
+
+	return patch, ""
 }
 
 // BatchCreate handles POST /api/v1/activities/batch

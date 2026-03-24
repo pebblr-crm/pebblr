@@ -20,7 +20,7 @@ function shiftPeriod(period: string, delta: number): string {
   return formatPeriod(new Date(Number(year), Number(month) - 1 + delta))
 }
 
-export function PeriodSelector({ period, onPeriodChange }: PeriodSelectorProps) {
+export function PeriodSelector({ period, onPeriodChange }: Readonly<PeriodSelectorProps>) {
   const { t } = useTranslation()
 
   return (

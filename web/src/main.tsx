@@ -15,7 +15,7 @@ async function bootstrap() {
   await initAuth({
     tenantId: '',
     clientId: '',
-    redirectUri: window.location.origin,
+    redirectUri: globalThis.location.origin,
     apiScope: '',
   })
 

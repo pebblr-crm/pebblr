@@ -6,7 +6,6 @@ import (
 	"strings"
 	"time"
 
-	"github.com/jackc/pgx/v5/pgxpool"
 	"github.com/pebblr/pebblr/internal/rbac"
 	"github.com/pebblr/pebblr/internal/store"
 )
@@ -17,7 +16,7 @@ const (
 )
 
 type dashboardRepository struct {
-	pool *pgxpool.Pool
+	pool dbPool
 }
 
 // ActivityStats returns activity counts grouped by status and category for the given scope and filter.

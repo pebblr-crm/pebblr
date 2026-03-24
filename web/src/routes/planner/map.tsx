@@ -136,6 +136,14 @@ function TargetMarker({
       title={title}
     >
       <div
+        role="button"
+        tabIndex={0}
+        onKeyDown={(e) => {
+          if (e.key === 'Enter' || e.key === ' ') {
+            e.preventDefault()
+            if (!cadenceLocked && !isAssigned) onToggle()
+          }
+        }}
         onMouseEnter={() => onHoverChange(true)}
         onMouseLeave={() => onHoverChange(false)}
         className={`rounded-full flex items-center justify-center border-2 transition-all cursor-pointer ${
@@ -492,6 +500,14 @@ function MapPlannerPage() {
                 {collections.map((col) => (
                   <div
                     key={col.id}
+                    role="listitem"
+                    tabIndex={0}
+                    onKeyDown={(e) => {
+                      if (e.key === 'Enter' || e.key === ' ') {
+                        e.preventDefault()
+                        handleLoadCollection(col.targetIds)
+                      }
+                    }}
                     draggable
                     onDragStart={() => setDragCollectionId(col.id)}
                     onDragEnd={() => setDragCollectionId(null)}
@@ -724,7 +740,7 @@ function CadencedSection({
   setHoveredTargetId,
   toggleTarget,
   setDragTargetId,
-}: CadencedSectionProps) {
+}: Readonly<CadencedSectionProps>) {
   const { t } = useTranslation()
   const [expanded, setExpanded] = useState(false)
 
@@ -791,6 +807,19 @@ interface TargetListItemProps {
   onDragEnd: () => void
 }
 
+function getListItemStyle(isHovered: boolean | undefined, isCadenced: boolean | undefined, isSelected: boolean): string {
+  if (isHovered) return 'bg-primary/10 ring-1 ring-inset ring-primary/30'
+  if (isCadenced) return 'opacity-40 cursor-not-allowed'
+  if (isSelected) return 'bg-primary-fixed'
+  return 'hover:bg-slate-50'
+}
+
+function getComplianceColor(compliance: number): string {
+  if (compliance >= 80) return 'text-emerald-600'
+  if (compliance >= 50) return 'text-amber-600'
+  return 'text-red-600'
+}
+
 function TargetListItem({
   target,
   lastVisit,
@@ -803,10 +832,18 @@ function TargetListItem({
   onToggle,
   onDragStart,
   onDragEnd,
-}: TargetListItemProps) {
+}: Readonly<TargetListItemProps>) {
   const { t } = useTranslation()
   return (
     <div
+      role="button"
+      tabIndex={0}
+      onKeyDown={(e) => {
+        if (e.key === 'Enter' || e.key === ' ') {
+          e.preventDefault()
+          onToggle()
+        }
+      }}
       draggable={isSelected}
       onDragStart={(e) => {
         e.dataTransfer.setData('text/plain', target.id)
@@ -816,15 +853,7 @@ function TargetListItem({
       onClick={onToggle}
       onMouseEnter={() => onHover?.(true)}
       onMouseLeave={() => onHover?.(false)}
-      className={`flex items-center gap-2 px-3 py-2 border-b border-slate-50 text-xs cursor-pointer transition-colors ${
-        isHovered
-          ? 'bg-primary/10 ring-1 ring-inset ring-primary/30'
-          : isCadenced
-            ? 'opacity-40 cursor-not-allowed'
-            : isSelected
-              ? 'bg-primary-fixed'
-              : 'hover:bg-slate-50'
-      }`}
+      className={`flex items-center gap-2 px-3 py-2 border-b border-slate-50 text-xs cursor-pointer transition-colors ${getListItemStyle(isHovered, isCadenced, isSelected)}`}
     >
       {isSelected && <GripVertical className="w-3 h-3 text-slate-400 shrink-0 cursor-grab" />}
       <div className="min-w-0 flex-1">
@@ -850,13 +879,7 @@ function TargetListItem({
         </span>
         {compliance != null && (
           <span
-            className={`text-[9px] font-bold px-1 py-0.5 rounded ${
-              compliance >= 80
-                ? 'text-emerald-600'
-                : compliance >= 50
-                  ? 'text-amber-600'
-                  : 'text-red-600'
-            }`}
+            className={`text-[9px] font-bold px-1 py-0.5 rounded ${getComplianceColor(compliance)}`}
           >
             {Math.round(compliance)}%
           </span>
@@ -901,7 +924,7 @@ function DayDropZone({
   onRemove,
   onActivityDragStart,
   onActivityDragEnd,
-}: DayDropZoneProps) {
+}: Readonly<DayDropZoneProps>) {
   const [dragOver, setDragOver] = useState(false)
   const totalCount = existingActivities.length + targetIds.length
   const ac = config.activities
@@ -913,6 +936,9 @@ function DayDropZone({
 
   return (
     <div
+      role="group"
+      tabIndex={0}
+      aria-label={label}
       onDragOver={(e) => {
         e.preventDefault()
         setDragOver(true)
@@ -948,6 +974,13 @@ function DayDropZone({
           return (
             <div
               key={a.id}
+              role="listitem"
+              tabIndex={0}
+              onKeyDown={(e) => {
+                if (e.key === 'Enter' || e.key === ' ') {
+                  e.preventDefault()
+                }
+              }}
               draggable={canDrag}
               onDragStart={() => { if (canDrag) onActivityDragStart(a.id) }}
               onDragEnd={onActivityDragEnd}

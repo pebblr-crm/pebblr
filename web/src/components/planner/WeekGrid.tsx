@@ -6,9 +6,9 @@ import { ActivityCard } from './ActivityCard'
 import { formatDate, addDays, extractDate } from '@/utils/date'
 
 interface WeekGridProps {
-  activities: Activity[]
-  weekStart: Date
-  config?: TenantConfig
+  readonly activities: Activity[]
+  readonly weekStart: Date
+  readonly config?: TenantConfig
 }
 
 const DAY_LABEL_KEYS = [
@@ -16,7 +16,7 @@ const DAY_LABEL_KEYS = [
   'weekdays.fri', 'weekdays.sat', 'weekdays.sun',
 ] as const
 
-export function WeekGrid({ activities, weekStart, config }: WeekGridProps) {
+export function WeekGrid({ activities, weekStart, config }: Readonly<WeekGridProps>) {
   const { t } = useTranslation()
   const today = formatDate(new Date())
   const days = Array.from({ length: 7 }, (_, i) => addDays(weekStart, i))
@@ -30,7 +30,7 @@ export function WeekGrid({ activities, weekStart, config }: WeekGridProps) {
           const dayActivities = activities.filter((a) => extractDate(a.dueDate) === dateStr)
 
           return (
-            <div key={i} className={`flex flex-col ${isToday ? 'bg-primary/5' : ''}`}>
+            <div key={dateStr} className={`flex flex-col ${isToday ? 'bg-primary/5' : ''}`}>
               {/* Day header */}
               <div className="px-2 py-1.5 border-b border-slate-100 text-center shrink-0">
                 <div className="text-[9px] font-bold text-on-surface-variant uppercase tracking-widest">

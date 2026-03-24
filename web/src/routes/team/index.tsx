@@ -39,25 +39,28 @@ export function TeamPage() {
         </button>
       </div>
 
-      {isLoading ? (
+      {isLoading && (
         <div className="flex items-center justify-center h-64">
           <LoadingSpinner size="lg" label={t('team.loading')} />
         </div>
-      ) : isError ? (
+      )}
+      {!isLoading && isError && (
         <div
           data-testid="team-error"
           className="text-center py-12 text-error"
         >
           {t('team.error')}
         </div>
-      ) : members.length === 0 ? (
+      )}
+      {!isLoading && !isError && members.length === 0 && (
         <div
           data-testid="team-empty"
           className="text-center py-12 text-on-surface-variant"
         >
           {t('team.empty')}
         </div>
-      ) : (
+      )}
+      {!isLoading && !isError && members.length > 0 && (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
           {members.map((member) => (
             <MemberCard key={member.id} member={member} />

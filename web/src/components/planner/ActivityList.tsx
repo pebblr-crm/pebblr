@@ -147,11 +147,11 @@ export function ActivityList() {
 // ── Table row (desktop) ────────────────────────────────────────────────────
 
 interface RowProps {
-  activity: Activity
-  config: import('@/types/config').TenantConfig | undefined
+  readonly activity: Activity
+  readonly config: import('@/types/config').TenantConfig | undefined
 }
 
-function ActivityRow({ activity: a, config }: RowProps) {
+function ActivityRow({ activity: a, config }: Readonly<RowProps>) {
   const ac = config?.activities
   const displayName = getActivityDisplayName(config, a)
   const catClass = CATEGORY_COLORS[getTypeCategory(ac, a.activityType)] ?? ''
@@ -187,7 +187,7 @@ function ActivityRow({ activity: a, config }: RowProps) {
 
 // ── Card row (mobile) ──────────────────────────────────────────────────────
 
-function ActivityCardRow({ activity: a, config }: RowProps) {
+function ActivityCardRow({ activity: a, config }: Readonly<RowProps>) {
   const ac = config?.activities
   const displayName = getActivityDisplayName(config, a)
   const catClass = CATEGORY_COLORS[getTypeCategory(ac, a.activityType)] ?? ''

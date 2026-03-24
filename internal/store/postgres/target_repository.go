@@ -9,14 +9,16 @@ import (
 	"time"
 
 	"github.com/jackc/pgx/v5"
-	"github.com/jackc/pgx/v5/pgxpool"
 	"github.com/pebblr/pebblr/internal/domain"
 	"github.com/pebblr/pebblr/internal/rbac"
 	"github.com/pebblr/pebblr/internal/store"
 )
 
+// errFmtMarshalTargetFields is the error format for target field marshalling failures.
+const errFmtMarshalTargetFields = "marshalling target fields: %w"
+
 type targetRepository struct {
-	pool *pgxpool.Pool
+	pool dbPool
 }
 
 const targetColumns = `
@@ -55,6 +57,80 @@ func (r *targetRepository) Get(ctx context.Context, id string) (*domain.Target, 
 	return scanTarget(row)
 }
 
+// targetQueryBuilder accumulates SQL conditions and positional arguments
+// for building target list queries.
+type targetQueryBuilder struct {
+	conditions []string
+	args       []any
+	argIdx     int
+}
+
+func newTargetQueryBuilder() *targetQueryBuilder {
+	return &targetQueryBuilder{argIdx: 1}
+}
+
+func (b *targetQueryBuilder) addCondition(sql string, val any) {
+	b.conditions = append(b.conditions, fmt.Sprintf(sql, b.argIdx))
+	b.args = append(b.args, val)
+	b.argIdx++
+}
+
+func (b *targetQueryBuilder) whereClause() string {
+	if len(b.conditions) == 0 {
+		return ""
+	}
+	return "WHERE " + strings.Join(b.conditions, " AND ")
+}
+
+// applyScope applies RBAC scope conditions to the query builder.
+// Returns false if the scope excludes all targets (empty result).
+func (b *targetQueryBuilder) applyScope(scope rbac.TargetScope) bool {
+	if scope.AllTargets {
+		return true
+	}
+
+	var scopeParts []string
+	if len(scope.AssigneeIDs) > 0 {
+		placeholders := make([]string, len(scope.AssigneeIDs))
+		for i, id := range scope.AssigneeIDs {
+			placeholders[i] = fmt.Sprintf("$%d", b.argIdx)
+			b.args = append(b.args, id)
+			b.argIdx++
+		}
+		scopeParts = append(scopeParts, fmt.Sprintf("assignee_id::TEXT = ANY(ARRAY[%s])", strings.Join(placeholders, ",")))
+	}
+	if len(scope.TeamIDs) > 0 {
+		placeholders := make([]string, len(scope.TeamIDs))
+		for i, id := range scope.TeamIDs {
+			placeholders[i] = fmt.Sprintf("$%d", b.argIdx)
+			b.args = append(b.args, id)
+			b.argIdx++
+		}
+		scopeParts = append(scopeParts, fmt.Sprintf("team_id::TEXT = ANY(ARRAY[%s])", strings.Join(placeholders, ",")))
+	}
+	if len(scopeParts) == 0 {
+		return false
+	}
+	b.conditions = append(b.conditions, "("+strings.Join(scopeParts, " OR ")+")")
+	return true
+}
+
+// applyTargetFilter adds filter conditions to the query builder.
+func (b *targetQueryBuilder) applyFilter(filter store.TargetFilter) {
+	if filter.TargetType != nil {
+		b.addCondition("target_type = $%d", *filter.TargetType)
+	}
+	if filter.AssigneeID != nil {
+		b.addCondition("assignee_id::TEXT = $%d", *filter.AssigneeID)
+	}
+	if filter.TeamID != nil {
+		b.addCondition("team_id::TEXT = $%d", *filter.TeamID)
+	}
+	if filter.Query != nil {
+		b.addCondition("name ILIKE $%d", "%"+*filter.Query+"%")
+	}
+}
+
 func (r *targetRepository) List(ctx context.Context, scope rbac.TargetScope, filter store.TargetFilter, page, limit int) (*store.TargetPage, error) {
 	if page < 1 {
 		page = 1
@@ -64,76 +140,27 @@ func (r *targetRepository) List(ctx context.Context, scope rbac.TargetScope, fil
 	}
 	offset := (page - 1) * limit
 
-	args := []any{}
-	argIdx := 1
-	var conditions []string
+	qb := newTargetQueryBuilder()
 
-	// RBAC scope
-	if !scope.AllTargets {
-		var scopeParts []string
-		if len(scope.AssigneeIDs) > 0 {
-			placeholders := make([]string, len(scope.AssigneeIDs))
-			for i, id := range scope.AssigneeIDs {
-				placeholders[i] = fmt.Sprintf("$%d", argIdx)
-				args = append(args, id)
-				argIdx++
-			}
-			scopeParts = append(scopeParts, fmt.Sprintf("assignee_id::TEXT = ANY(ARRAY[%s])", strings.Join(placeholders, ",")))
-		}
-		if len(scope.TeamIDs) > 0 {
-			placeholders := make([]string, len(scope.TeamIDs))
-			for i, id := range scope.TeamIDs {
-				placeholders[i] = fmt.Sprintf("$%d", argIdx)
-				args = append(args, id)
-				argIdx++
-			}
-			scopeParts = append(scopeParts, fmt.Sprintf("team_id::TEXT = ANY(ARRAY[%s])", strings.Join(placeholders, ",")))
-		}
-		if len(scopeParts) > 0 {
-			conditions = append(conditions, "("+strings.Join(scopeParts, " OR ")+")")
-		} else {
-			return &store.TargetPage{Targets: []*domain.Target{}, Total: 0, Page: page, Limit: limit}, nil
-		}
+	if !qb.applyScope(scope) {
+		return &store.TargetPage{Targets: []*domain.Target{}, Total: 0, Page: page, Limit: limit}, nil
 	}
 
-	// Filters
-	if filter.TargetType != nil {
-		conditions = append(conditions, fmt.Sprintf("target_type = $%d", argIdx))
-		args = append(args, *filter.TargetType)
-		argIdx++
-	}
-	if filter.AssigneeID != nil {
-		conditions = append(conditions, fmt.Sprintf("assignee_id::TEXT = $%d", argIdx))
-		args = append(args, *filter.AssigneeID)
-		argIdx++
-	}
-	if filter.TeamID != nil {
-		conditions = append(conditions, fmt.Sprintf("team_id::TEXT = $%d", argIdx))
-		args = append(args, *filter.TeamID)
-		argIdx++
-	}
-	if filter.Query != nil {
-		conditions = append(conditions, fmt.Sprintf("name ILIKE $%d", argIdx))
-		args = append(args, "%"+*filter.Query+"%")
-		argIdx++
-	}
+	qb.applyFilter(filter)
 
-	where := ""
-	if len(conditions) > 0 {
-		where = "WHERE " + strings.Join(conditions, " AND ")
-	}
+	where := qb.whereClause()
 
 	countQuery := `SELECT COUNT(*) FROM targets ` + where
 	var total int
-	if err := r.pool.QueryRow(ctx, countQuery, args...).Scan(&total); err != nil {
+	if err := r.pool.QueryRow(ctx, countQuery, qb.args...).Scan(&total); err != nil {
 		return nil, fmt.Errorf("counting targets: %w", err)
 	}
 
 	listQuery := `SELECT ` + targetColumns + ` FROM targets ` + where +
-		fmt.Sprintf(` ORDER BY name ASC LIMIT $%d OFFSET $%d`, argIdx, argIdx+1)
-	args = append(args, limit, offset)
+		fmt.Sprintf(` ORDER BY name ASC LIMIT $%d OFFSET $%d`, qb.argIdx, qb.argIdx+1)
+	qb.args = append(qb.args, limit, offset)
 
-	rows, err := r.pool.Query(ctx, listQuery, args...)
+	rows, err := r.pool.Query(ctx, listQuery, qb.args...)
 	if err != nil {
 		return nil, fmt.Errorf("querying targets: %w", err)
 	}
@@ -157,7 +184,7 @@ func (r *targetRepository) List(ctx context.Context, scope rbac.TargetScope, fil
 func (r *targetRepository) Create(ctx context.Context, t *domain.Target) (*domain.Target, error) {
 	fieldsJSON, err := json.Marshal(t.Fields)
 	if err != nil {
-		return nil, fmt.Errorf("marshalling target fields: %w", err)
+		return nil, fmt.Errorf(errFmtMarshalTargetFields, err)
 	}
 
 	row := r.pool.QueryRow(ctx,
@@ -173,7 +200,7 @@ func (r *targetRepository) Create(ctx context.Context, t *domain.Target) (*domai
 func (r *targetRepository) Update(ctx context.Context, t *domain.Target) (*domain.Target, error) {
 	fieldsJSON, err := json.Marshal(t.Fields)
 	if err != nil {
-		return nil, fmt.Errorf("marshalling target fields: %w", err)
+		return nil, fmt.Errorf(errFmtMarshalTargetFields, err)
 	}
 
 	row := r.pool.QueryRow(ctx,
@@ -206,7 +233,7 @@ func (r *targetRepository) Upsert(ctx context.Context, targets []*domain.Target)
 	for _, t := range targets {
 		fieldsJSON, err := json.Marshal(t.Fields)
 		if err != nil {
-			return nil, fmt.Errorf("marshalling target fields: %w", err)
+			return nil, fmt.Errorf(errFmtMarshalTargetFields, err)
 		}
 
 		var isNew bool

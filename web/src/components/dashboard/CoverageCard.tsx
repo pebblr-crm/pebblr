@@ -5,7 +5,7 @@ interface CoverageCardProps {
   data: CoverageResponse
 }
 
-export function CoverageCard({ data }: CoverageCardProps) {
+export function CoverageCard({ data }: Readonly<CoverageCardProps>) {
   const { t } = useTranslation()
   const pct = Math.round(data.percentage)
 

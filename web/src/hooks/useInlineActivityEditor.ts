@@ -50,34 +50,35 @@ export function useInlineActivityEditor(activity: Activity): InlineActivityEdito
 
   const debounceTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
 
+  const handleSaveSuccess = useCallback((updated: Activity, resolve: () => void) => {
+    setSaveState('idle')
+    if (updated.status !== localDataRef.current.status) {
+      setLocalData((prev) => ({ ...prev, status: updated.status }))
+    }
+    resolve()
+  }, [])
+
+  const handleSaveError = useCallback((err: Error, reject: (reason: unknown) => void) => {
+    const apiErr = err as Error & { status?: number; code?: string }
+    if (apiErr.status === 404) {
+      void navigate({ to: '/' })
+    }
+    setSaveState('error')
+    reject(err)
+  }, [navigate])
+
   const executeSave = useCallback((): Promise<void> => {
     return new Promise((resolve, reject) => {
       setSaveState('saving')
       patchMutation.mutate(
         { ...localDataRef.current, id: activity.id },
         {
-          onSuccess: (updated) => {
-            // If the server has set submittedAt from another session, the query
-            // cache is already updated by usePatchActivity's onSuccess.
-            setSaveState('idle')
-            // Keep localData status in sync if status PATCH raced and won.
-            if (updated.status !== localDataRef.current.status) {
-              setLocalData((prev) => ({ ...prev, status: updated.status }))
-            }
-            resolve()
-          },
-          onError: (err) => {
-            const apiErr = err as Error & { status?: number; code?: string }
-            if (apiErr.status === 404) {
-              void navigate({ to: '/' })
-            }
-            setSaveState('error')
-            reject(err)
-          },
+          onSuccess: (updated) => handleSaveSuccess(updated, resolve),
+          onError: (err) => handleSaveError(err as Error, reject),
         },
       )
     })
-  }, [activity.id, navigate, patchMutation])
+  }, [activity.id, handleSaveSuccess, handleSaveError, patchMutation])
 
   const scheduleSave = useCallback(() => {
     if (debounceTimerRef.current) clearTimeout(debounceTimerRef.current)
@@ -104,7 +105,8 @@ export function useInlineActivityEditor(activity: Activity): InlineActivityEdito
         if (['activityType', 'status', 'dueDate', 'duration', 'routing', 'targetId'].includes(key)) {
           return { ...prev, [key]: value }
         }
-        return { ...prev, fields: { ...(prev.fields ?? {}), [key]: value } }
+        const existingFields = prev.fields ?? {}
+        return { ...prev, fields: { ...existingFields, [key]: value } }
       })
       setSaveState('dirty')
       scheduleSave()

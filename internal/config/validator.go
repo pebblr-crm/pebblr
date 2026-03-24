@@ -40,46 +40,50 @@ func ValidateActivity(cfg *TenantConfig, activityType string, fields map[string]
 		return []FieldError{{Field: "activity_type", Message: fmt.Sprintf("unknown activity type %q", activityType)}}
 	}
 
+	submitRequired := buildSubmitRequired(at, phase)
+
 	var errs []FieldError
-
-	// Build submit-required lookup.
-	submitRequired := make(map[string]bool)
-	if phase == "submit" {
-		for _, k := range at.SubmitRequired {
-			submitRequired[k] = true
-		}
-	}
-
 	for _, fc := range at.Fields {
 		if hoistedFields[fc.Key] {
 			continue
 		}
-		val, present := fields[fc.Key]
-
-		// Check required-ness.
-		isRequired := fc.Required || submitRequired[fc.Key]
-		if isRequired && (!present || isEmpty(val)) {
-			errs = append(errs, FieldError{
-				Field:   fc.Key,
-				Message: "field is required",
-			})
-			continue
-		}
-
-		if !present || val == nil {
-			continue
-		}
-
-		// Type-specific validation.
-		switch fc.Type {
-		case "select":
-			errs = append(errs, validateSelect(cfg, fc, val)...)
-		case "multi_select":
-			errs = append(errs, validateMultiSelect(cfg, fc, val)...)
-		}
+		errs = append(errs, validateField(cfg, fc, fields, submitRequired)...)
 	}
 
 	return errs
+}
+
+// buildSubmitRequired returns a set of field keys that are required during submit phase.
+func buildSubmitRequired(at *ActivityTypeConfig, phase string) map[string]bool {
+	required := make(map[string]bool)
+	if phase == "submit" {
+		for _, k := range at.SubmitRequired {
+			required[k] = true
+		}
+	}
+	return required
+}
+
+// validateField validates a single field config entry against the provided fields map.
+func validateField(cfg *TenantConfig, fc FieldConfig, fields map[string]any, submitRequired map[string]bool) []FieldError {
+	val, present := fields[fc.Key]
+
+	isRequired := fc.Required || submitRequired[fc.Key]
+	if isRequired && (!present || isEmpty(val)) {
+		return []FieldError{{Field: fc.Key, Message: "field is required"}}
+	}
+
+	if !present || val == nil {
+		return nil
+	}
+
+	switch fc.Type {
+	case "select":
+		return validateSelect(cfg, fc, val)
+	case "multi_select":
+		return validateMultiSelect(cfg, fc, val)
+	}
+	return nil
 }
 
 // ValidateStatus checks that a status value is valid per the config.

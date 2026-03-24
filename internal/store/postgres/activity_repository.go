@@ -9,14 +9,13 @@ import (
 	"time"
 
 	"github.com/jackc/pgx/v5"
-	"github.com/jackc/pgx/v5/pgxpool"
 	"github.com/pebblr/pebblr/internal/domain"
 	"github.com/pebblr/pebblr/internal/rbac"
 	"github.com/pebblr/pebblr/internal/store"
 )
 
 type activityRepository struct {
-	pool *pgxpool.Pool
+	pool dbPool
 }
 
 const activityColumns = `
@@ -80,6 +79,91 @@ func (r *activityRepository) Get(ctx context.Context, id string) (*domain.Activi
 	return scanActivity(row)
 }
 
+// activityQueryBuilder accumulates SQL conditions and positional arguments
+// for building activity list queries.
+type activityQueryBuilder struct {
+	conditions []string
+	args       []any
+	argIdx     int
+}
+
+func newActivityQueryBuilder() *activityQueryBuilder {
+	return &activityQueryBuilder{argIdx: 1}
+}
+
+func (b *activityQueryBuilder) addCondition(sql string, val any) {
+	b.conditions = append(b.conditions, fmt.Sprintf(sql, b.argIdx))
+	b.args = append(b.args, val)
+	b.argIdx++
+}
+
+func (b *activityQueryBuilder) whereClause() string {
+	if len(b.conditions) == 0 {
+		return ""
+	}
+	return " WHERE " + strings.Join(b.conditions, " AND ")
+}
+
+// buildActivityScopeConditions applies RBAC scope conditions to the query builder.
+// Returns false if the scope excludes all activities (empty result).
+func (b *activityQueryBuilder) applyScope(scope rbac.ActivityScope) bool {
+	if scope.AllActivities {
+		return true
+	}
+
+	var scopeParts []string
+	if len(scope.CreatorIDs) > 0 {
+		placeholders := make([]string, len(scope.CreatorIDs))
+		for i, id := range scope.CreatorIDs {
+			placeholders[i] = fmt.Sprintf("$%d", b.argIdx)
+			b.args = append(b.args, id)
+			b.argIdx++
+		}
+		joined := strings.Join(placeholders, ",")
+		scopeParts = append(scopeParts, fmt.Sprintf("(a.creator_id::TEXT = ANY(ARRAY[%s]) OR a.joint_visit_user_id::TEXT = ANY(ARRAY[%s]))",
+			joined, joined))
+	}
+	if len(scope.TeamIDs) > 0 {
+		placeholders := make([]string, len(scope.TeamIDs))
+		for i, id := range scope.TeamIDs {
+			placeholders[i] = fmt.Sprintf("$%d", b.argIdx)
+			b.args = append(b.args, id)
+			b.argIdx++
+		}
+		scopeParts = append(scopeParts, fmt.Sprintf("a.team_id::TEXT = ANY(ARRAY[%s])", strings.Join(placeholders, ",")))
+	}
+	if len(scopeParts) == 0 {
+		return false
+	}
+	b.conditions = append(b.conditions, "("+strings.Join(scopeParts, " OR ")+")")
+	return true
+}
+
+// applyActivityFilter adds filter conditions to the query builder.
+func (b *activityQueryBuilder) applyFilter(filter store.ActivityFilter) {
+	if filter.ActivityType != nil {
+		b.addCondition("a.activity_type = $%d", *filter.ActivityType)
+	}
+	if filter.Status != nil {
+		b.addCondition("a.status = $%d", *filter.Status)
+	}
+	if filter.CreatorID != nil {
+		b.addCondition("a.creator_id::TEXT = $%d", *filter.CreatorID)
+	}
+	if filter.TargetID != nil {
+		b.addCondition("a.target_id::TEXT = $%d", *filter.TargetID)
+	}
+	if filter.TeamID != nil {
+		b.addCondition("a.team_id::TEXT = $%d", *filter.TeamID)
+	}
+	if filter.DateFrom != nil {
+		b.addCondition("a.due_date >= $%d", *filter.DateFrom)
+	}
+	if filter.DateTo != nil {
+		b.addCondition("a.due_date <= $%d", *filter.DateTo)
+	}
+}
+
 func (r *activityRepository) List(ctx context.Context, scope rbac.ActivityScope, filter store.ActivityFilter, page, limit int) (*store.ActivityPage, error) {
 	if page < 1 {
 		page = 1
@@ -89,95 +173,28 @@ func (r *activityRepository) List(ctx context.Context, scope rbac.ActivityScope,
 	}
 	offset := (page - 1) * limit
 
-	args := []any{}
-	argIdx := 1
-	var conditions []string
+	qb := newActivityQueryBuilder()
+	qb.conditions = append(qb.conditions, "a.deleted_at IS NULL")
 
-	// Always exclude soft-deleted.
-	conditions = append(conditions, "a.deleted_at IS NULL")
-
-	// RBAC scope.
-	if !scope.AllActivities {
-		var scopeParts []string
-		if len(scope.CreatorIDs) > 0 {
-			placeholders := make([]string, len(scope.CreatorIDs))
-			for i, id := range scope.CreatorIDs {
-				placeholders[i] = fmt.Sprintf("$%d", argIdx)
-				args = append(args, id)
-				argIdx++
-			}
-			scopeParts = append(scopeParts, fmt.Sprintf("(a.creator_id::TEXT = ANY(ARRAY[%s]) OR a.joint_visit_user_id::TEXT = ANY(ARRAY[%s]))",
-				strings.Join(placeholders, ","), strings.Join(placeholders, ",")))
-		}
-		if len(scope.TeamIDs) > 0 {
-			placeholders := make([]string, len(scope.TeamIDs))
-			for i, id := range scope.TeamIDs {
-				placeholders[i] = fmt.Sprintf("$%d", argIdx)
-				args = append(args, id)
-				argIdx++
-			}
-			scopeParts = append(scopeParts, fmt.Sprintf("a.team_id::TEXT = ANY(ARRAY[%s])", strings.Join(placeholders, ",")))
-		}
-		if len(scopeParts) > 0 {
-			conditions = append(conditions, "("+strings.Join(scopeParts, " OR ")+")")
-		} else {
-			return &store.ActivityPage{Activities: []*domain.Activity{}, Total: 0, Page: page, Limit: limit}, nil
-		}
+	if !qb.applyScope(scope) {
+		return &store.ActivityPage{Activities: []*domain.Activity{}, Total: 0, Page: page, Limit: limit}, nil
 	}
 
-	// Filters.
-	if filter.ActivityType != nil {
-		conditions = append(conditions, fmt.Sprintf("a.activity_type = $%d", argIdx))
-		args = append(args, *filter.ActivityType)
-		argIdx++
-	}
-	if filter.Status != nil {
-		conditions = append(conditions, fmt.Sprintf("a.status = $%d", argIdx))
-		args = append(args, *filter.Status)
-		argIdx++
-	}
-	if filter.CreatorID != nil {
-		conditions = append(conditions, fmt.Sprintf("a.creator_id::TEXT = $%d", argIdx))
-		args = append(args, *filter.CreatorID)
-		argIdx++
-	}
-	if filter.TargetID != nil {
-		conditions = append(conditions, fmt.Sprintf("a.target_id::TEXT = $%d", argIdx))
-		args = append(args, *filter.TargetID)
-		argIdx++
-	}
-	if filter.TeamID != nil {
-		conditions = append(conditions, fmt.Sprintf("a.team_id::TEXT = $%d", argIdx))
-		args = append(args, *filter.TeamID)
-		argIdx++
-	}
-	if filter.DateFrom != nil {
-		conditions = append(conditions, fmt.Sprintf("a.due_date >= $%d", argIdx))
-		args = append(args, *filter.DateFrom)
-		argIdx++
-	}
-	if filter.DateTo != nil {
-		conditions = append(conditions, fmt.Sprintf("a.due_date <= $%d", argIdx))
-		args = append(args, *filter.DateTo)
-		argIdx++
-	}
+	qb.applyFilter(filter)
 
-	where := ""
-	if len(conditions) > 0 {
-		where = " WHERE " + strings.Join(conditions, " AND ")
-	}
+	where := qb.whereClause()
 
 	countQuery := `SELECT COUNT(*)` + activityFrom + where
 	var total int
-	if err := r.pool.QueryRow(ctx, countQuery, args...).Scan(&total); err != nil {
+	if err := r.pool.QueryRow(ctx, countQuery, qb.args...).Scan(&total); err != nil {
 		return nil, fmt.Errorf("counting activities: %w", err)
 	}
 
 	listQuery := `SELECT ` + activityColumns + activityFrom + where +
-		fmt.Sprintf(` ORDER BY a.due_date DESC, a.created_at DESC LIMIT $%d OFFSET $%d`, argIdx, argIdx+1)
-	args = append(args, limit, offset)
+		fmt.Sprintf(` ORDER BY a.due_date DESC, a.created_at DESC LIMIT $%d OFFSET $%d`, qb.argIdx, qb.argIdx+1)
+	qb.args = append(qb.args, limit, offset)
 
-	rows, err := r.pool.Query(ctx, listQuery, args...)
+	rows, err := r.pool.Query(ctx, listQuery, qb.args...)
 	if err != nil {
 		return nil, fmt.Errorf("querying activities: %w", err)
 	}

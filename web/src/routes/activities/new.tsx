@@ -1,8 +1,7 @@
-import { createRoute, useNavigate } from '@tanstack/react-router'
+import { createRoute, useNavigate, Link } from '@tanstack/react-router'
 import { motion } from 'motion/react'
 import { useTranslation } from 'react-i18next'
 import { ArrowLeft } from 'lucide-react'
-import { Link } from '@tanstack/react-router'
 import { Route as rootRoute } from '../__root'
 import { ActivityForm } from '../../components/ActivityForm'
 import { useCreateActivity } from '../../services/activities'
@@ -13,6 +12,20 @@ import { usePlannerState } from '../../contexts/planner'
 import type { ValidationFieldError } from '../../types/activity'
 import type { ApiError } from '../../types/api'
 import { useState } from 'react'
+
+function resolveBackPath(from?: string): '/' | '/planner' | '/planner/daily' | '/planner/map' {
+  if (from === 'planner') return '/planner'
+  if (from === 'daily') return '/planner/daily'
+  if (from === 'map') return '/planner/map'
+  return '/'
+}
+
+function resolveBackLabel(from: string | undefined, t: (key: string) => string): string {
+  if (from === 'planner') return t('activityDetail.backToPlanner')
+  if (from === 'daily') return t('activityDetail.backToDaily')
+  if (from === 'map') return t('activityDetail.backToMap')
+  return t('activityDetail.backToDashboard')
+}
 
 interface NewActivitySearch {
   date?: string
@@ -37,14 +50,8 @@ export function NewActivityPage() {
   const { showToast } = useToast()
   const [serverErrors, setServerErrors] = useState<ValidationFieldError[]>([])
 
-  const backLabel = from === 'planner' ? t('activityDetail.backToPlanner')
-    : from === 'daily' ? t('activityDetail.backToDaily')
-    : from === 'map' ? t('activityDetail.backToMap')
-    : t('activityDetail.backToDashboard')
-  const backPath = from === 'daily' ? '/planner/daily' as const
-    : from === 'map' ? '/planner/map' as const
-    : from === 'planner' ? '/planner' as const
-    : '/' as const
+  const backLabel = resolveBackLabel(from ?? undefined, t)
+  const backPath = resolveBackPath(from ?? undefined)
 
   function navigateBack() {
     navigate({ to: backPath })

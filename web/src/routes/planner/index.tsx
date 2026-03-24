@@ -257,7 +257,7 @@ export function PlannerPage() {
                     </p>
                   </div>
                 </div>
-                {recoveryBalance.intervals.filter((iv) => !iv.claimed).length > 0 && (
+                {recoveryBalance.intervals.some((iv) => !iv.claimed) && (
                   <div className="space-y-1.5">
                     <p className="text-[9px] uppercase tracking-widest text-slate-400 font-bold">{t('planner.claimBy')}</p>
                     {recoveryBalance.intervals
@@ -280,13 +280,15 @@ export function PlannerPage() {
 
           {/* Calendar grid */}
           <div className="col-span-12 lg:col-span-9">
-            {isLoading ? (
+            {isLoading && (
               <div className="flex items-center justify-center h-64">
                 <LoadingSpinner size="lg" label={t('planner.loading')} />
               </div>
-            ) : viewMode === 'month' ? (
+            )}
+            {!isLoading && viewMode === 'month' && (
               <MonthGrid activities={activities} year={year} month={month} config={config} />
-            ) : (
+            )}
+            {!isLoading && viewMode !== 'month' && (
               <WeekGrid activities={activities} weekStart={weekStart} config={config} />
             )}
           </div>

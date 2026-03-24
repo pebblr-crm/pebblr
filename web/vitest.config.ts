@@ -11,6 +11,11 @@ export default defineConfig({
     setupFiles: ['./src/test/setup.ts'],
     passWithNoTests: true,
     css: true,
+    coverage: {
+      provider: 'v8',
+      reporter: ['text', 'lcov'],
+      reportsDirectory: './coverage',
+    },
   },
   resolve: {
     alias: {

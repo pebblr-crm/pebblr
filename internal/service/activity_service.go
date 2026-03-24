@@ -13,6 +13,9 @@ import (
 
 const dateFormat = "2006-01-02"
 
+// errFmtGettingActivity is the error format used when retrieving an activity fails.
+const errFmtGettingActivity = "getting activity: %w"
+
 // ErrSubmitted indicates that the activity is already submitted and locked.
 var ErrSubmitted = fmt.Errorf("activity is submitted and locked")
 
@@ -159,7 +162,7 @@ func (s *ActivityService) Create(ctx context.Context, actor *domain.User, activi
 func (s *ActivityService) Get(ctx context.Context, actor *domain.User, id string) (*domain.Activity, error) {
 	activity, err := s.activities.Get(ctx, id)
 	if err != nil {
-		return nil, fmt.Errorf("getting activity: %w", err)
+		return nil, fmt.Errorf(errFmtGettingActivity, err)
 	}
 	if !s.enforcer.CanViewActivity(ctx, actor, activity) {
 		return nil, ErrForbidden
@@ -181,7 +184,7 @@ func (s *ActivityService) List(ctx context.Context, actor *domain.User, filter s
 func (s *ActivityService) Update(ctx context.Context, actor *domain.User, id string, activity *domain.Activity) (*domain.Activity, error) {
 	existing, err := s.activities.Get(ctx, id)
 	if err != nil {
-		return nil, fmt.Errorf("getting activity: %w", err)
+		return nil, fmt.Errorf(errFmtGettingActivity, err)
 	}
 	if !s.enforcer.CanUpdateActivity(ctx, actor, existing) {
 		return nil, ErrForbidden
@@ -240,7 +243,7 @@ func (s *ActivityService) Update(ctx context.Context, actor *domain.User, id str
 func (s *ActivityService) Delete(ctx context.Context, actor *domain.User, id string) error {
 	existing, err := s.activities.Get(ctx, id)
 	if err != nil {
-		return fmt.Errorf("getting activity: %w", err)
+		return fmt.Errorf(errFmtGettingActivity, err)
 	}
 	if !s.enforcer.CanDeleteActivity(ctx, actor, existing) {
 		return ErrForbidden
@@ -268,7 +271,7 @@ func (s *ActivityService) Delete(ctx context.Context, actor *domain.User, id str
 func (s *ActivityService) Submit(ctx context.Context, actor *domain.User, id string) (*domain.Activity, error) {
 	existing, err := s.activities.Get(ctx, id)
 	if err != nil {
-		return nil, fmt.Errorf("getting activity: %w", err)
+		return nil, fmt.Errorf(errFmtGettingActivity, err)
 	}
 	if !s.enforcer.CanUpdateActivity(ctx, actor, existing) {
 		return nil, ErrForbidden
@@ -313,7 +316,7 @@ func (s *ActivityService) Submit(ctx context.Context, actor *domain.User, id str
 func (s *ActivityService) PartialUpdate(ctx context.Context, actor *domain.User, id string, patch *domain.ActivityPatch) (*domain.Activity, error) {
 	existing, err := s.activities.Get(ctx, id)
 	if err != nil {
-		return nil, fmt.Errorf("getting activity: %w", err)
+		return nil, fmt.Errorf(errFmtGettingActivity, err)
 	}
 	if !s.enforcer.CanUpdateActivity(ctx, actor, existing) {
 		return nil, ErrForbidden
@@ -361,7 +364,7 @@ func (s *ActivityService) PartialUpdate(ctx context.Context, actor *domain.User,
 func (s *ActivityService) PatchStatus(ctx context.Context, actor *domain.User, id, newStatus string) (*domain.Activity, error) {
 	existing, err := s.activities.Get(ctx, id)
 	if err != nil {
-		return nil, fmt.Errorf("getting activity: %w", err)
+		return nil, fmt.Errorf(errFmtGettingActivity, err)
 	}
 	if !s.enforcer.CanUpdateActivity(ctx, actor, existing) {
 		return nil, ErrForbidden
@@ -539,11 +542,11 @@ func (s *ActivityService) validateCore(activity *domain.Activity) error {
 	if activity.Status == "" {
 		activity.Status = s.cfg.InitialStatus()
 	}
-	if fe := config.ValidateStatus(s.cfg, activity.Status); fe != nil {
+	if config.ValidateStatus(s.cfg, activity.Status) != nil {
 		return ErrInvalidInput
 	}
 	if activity.Duration != "" {
-		if fe := config.ValidateDuration(s.cfg, activity.Duration); fe != nil {
+		if config.ValidateDuration(s.cfg, activity.Duration) != nil {
 			return ErrInvalidInput
 		}
 	}
@@ -594,33 +597,49 @@ func (s *ActivityService) checkBlockedDay(ctx context.Context, creatorID string,
 	}
 
 	if at.Category == "field" {
-		// Check if any blocking activity exists on this day.
-		blockingTypes := s.blockingActivityTypes()
-		if len(blockingTypes) > 0 {
-			blocked, err := s.activities.HasActivityWithTypes(ctx, creatorID, date, blockingTypes)
-			if err != nil {
-				return fmt.Errorf("checking blocked day: %w", err)
-			}
-			if blocked {
-				return ErrBlockedDay
-			}
+		if err := s.checkDayNotBlockedByNonField(ctx, creatorID, date); err != nil {
+			return err
 		}
 	}
 
 	if at.BlocksFieldActivities {
-		// Check if any field activity exists on this day.
-		fieldTypes := s.fieldActivityTypes()
-		if len(fieldTypes) > 0 {
-			hasField, err := s.activities.HasActivityWithTypes(ctx, creatorID, date, fieldTypes)
-			if err != nil {
-				return fmt.Errorf("checking blocked day: %w", err)
-			}
-			if hasField {
-				return ErrBlockedDay
-			}
+		if err := s.checkDayHasNoFieldActivities(ctx, creatorID, date); err != nil {
+			return err
 		}
 	}
 
+	return nil
+}
+
+// checkDayNotBlockedByNonField checks if any blocking activity (e.g. vacation) exists on this day.
+func (s *ActivityService) checkDayNotBlockedByNonField(ctx context.Context, creatorID string, date time.Time) error {
+	blockingTypes := s.blockingActivityTypes()
+	if len(blockingTypes) == 0 {
+		return nil
+	}
+	blocked, err := s.activities.HasActivityWithTypes(ctx, creatorID, date, blockingTypes)
+	if err != nil {
+		return fmt.Errorf("checking blocked day: %w", err)
+	}
+	if blocked {
+		return ErrBlockedDay
+	}
+	return nil
+}
+
+// checkDayHasNoFieldActivities checks if any field activity exists on this day.
+func (s *ActivityService) checkDayHasNoFieldActivities(ctx context.Context, creatorID string, date time.Time) error {
+	fieldTypes := s.fieldActivityTypes()
+	if len(fieldTypes) == 0 {
+		return nil
+	}
+	hasField, err := s.activities.HasActivityWithTypes(ctx, creatorID, date, fieldTypes)
+	if err != nil {
+		return fmt.Errorf("checking blocked day: %w", err)
+	}
+	if hasField {
+		return ErrBlockedDay
+	}
 	return nil
 }
 

@@ -4,12 +4,24 @@ import (
 	"context"
 	"fmt"
 
+	"github.com/jackc/pgx/v5"
+	"github.com/jackc/pgx/v5/pgconn"
 	"github.com/jackc/pgx/v5/pgxpool"
 )
 
+// dbPool is the subset of *pgxpool.Pool used by repository implementations.
+// Both *pgxpool.Pool and pgxmock.PgxPoolIface satisfy this interface,
+// allowing unit tests without a real database.
+type dbPool interface {
+	Query(ctx context.Context, sql string, args ...any) (pgx.Rows, error)
+	QueryRow(ctx context.Context, sql string, args ...any) pgx.Row
+	Exec(ctx context.Context, sql string, args ...any) (pgconn.CommandTag, error)
+	Begin(ctx context.Context) (pgx.Tx, error)
+}
+
 // DB wraps a pgx connection pool and implements store.Store.
 type DB struct {
-	pool *pgxpool.Pool
+	pool dbPool
 }
 
 // New creates a new DB using the given connection pool.

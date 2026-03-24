@@ -6,7 +6,7 @@ interface StatCardProps {
   variant?: 'default' | 'primary'
 }
 
-export function StatCard({ label, value, change, progress, variant = 'default' }: StatCardProps) {
+export function StatCard({ label, value, change, progress, variant = 'default' }: Readonly<StatCardProps>) {
   const isPositive = change?.startsWith('+')
 
   if (variant === 'primary') {

@@ -75,12 +75,26 @@ export function ActivityDetailPage() {
 // ── Inner component — rendered only when both activity + config are loaded ──
 
 interface InnerProps {
-  activityId: string
-  config: TenantConfig
-  from?: string
+  readonly activityId: string
+  readonly config: TenantConfig
+  readonly from?: string
 }
 
-export function ActivityDetailInner({ activityId, config, from }: InnerProps) {
+function resolveBackPath(from?: string): '/' | '/planner' | '/planner/daily' | '/planner/map' {
+  if (from === 'planner') return '/planner'
+  if (from === 'daily') return '/planner/daily'
+  if (from === 'map') return '/planner/map'
+  return '/'
+}
+
+function resolveBackLabel(from: string | undefined, t: (key: string) => string): string {
+  if (from === 'planner') return t('activityDetail.backToPlanner')
+  if (from === 'daily') return t('activityDetail.backToDaily')
+  if (from === 'map') return t('activityDetail.backToMap')
+  return t('activityDetail.backToDashboard')
+}
+
+export function ActivityDetailInner({ activityId, config, from }: Readonly<InnerProps>) {
   const { t } = useTranslation()
   const { data: activity } = useActivity(activityId)
   const { showToast } = useToast()
@@ -201,17 +215,11 @@ export function ActivityDetailInner({ activityId, config, from }: InnerProps) {
     >
       {/* Back link */}
       <Link
-        to={from === 'planner' ? '/planner'
-          : from === 'daily' ? '/planner/daily'
-          : from === 'map' ? '/planner/map'
-          : '/'}
+        to={resolveBackPath(from)}
         className="inline-flex items-center gap-2 text-sm font-medium text-on-surface-variant hover:text-primary transition-colors no-underline"
       >
         <ArrowLeft className="w-4 h-4" />
-        {from === 'planner' ? t('activityDetail.backToPlanner')
-          : from === 'daily' ? t('activityDetail.backToDaily')
-          : from === 'map' ? t('activityDetail.backToMap')
-          : t('activityDetail.backToDashboard')}
+        {resolveBackLabel(from, t)}
       </Link>
 
       {/* Header card */}
@@ -422,7 +430,13 @@ interface SubmitButtonProps {
   onClick: () => void
 }
 
-function SubmitButton({ saveState, isSubmitting, isStatusPending, onClick }: SubmitButtonProps) {
+function getSubmitButtonLabel(isSubmitting: boolean, saveState: string, t: (key: string) => string): string {
+  if (isSubmitting) return t('activityDetail.submitting')
+  if (saveState === 'error') return t('activityDetail.retrySave')
+  return t('activityDetail.submitReport')
+}
+
+function SubmitButton({ saveState, isSubmitting, isStatusPending, onClick }: Readonly<SubmitButtonProps>) {
   const { t } = useTranslation()
   const disabled = isSubmitting || isStatusPending
   return (
@@ -434,7 +448,7 @@ function SubmitButton({ saveState, isSubmitting, isStatusPending, onClick }: Sub
       data-testid="submit-report-button"
     >
       <Send className="w-4 h-4" />
-      {isSubmitting ? t('activityDetail.submitting') : saveState === 'error' ? t('activityDetail.retrySave') : t('activityDetail.submitReport')}
+      {getSubmitButtonLabel(isSubmitting, saveState, t)}
     </button>
   )
 }
@@ -446,7 +460,7 @@ interface StatusTransitionButtonProps {
   onClick: () => void
 }
 
-function StatusTransitionButton({ toStatus, config, isPending, onClick }: StatusTransitionButtonProps) {
+function StatusTransitionButton({ toStatus, config, isPending, onClick }: Readonly<StatusTransitionButtonProps>) {
   const label = getStatusLabel(config?.activities, toStatus)
   const badgeColor = getStatusBadgeColor(config?.activities, toStatus)
 
@@ -472,11 +486,23 @@ interface ConfirmModalProps {
   onCancel: () => void
 }
 
-function ConfirmModal({ title, message, onConfirm, onCancel }: ConfirmModalProps) {
+function ConfirmModal({ title, message, onConfirm, onCancel }: Readonly<ConfirmModalProps>) {
   const { t } = useTranslation()
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
-      <div className="fixed inset-0 bg-black/40" onClick={onCancel} />
+      <div
+        role="button"
+        tabIndex={0}
+        aria-label="Close dialog"
+        onClick={onCancel}
+        onKeyDown={(e) => {
+          if (e.key === 'Enter' || e.key === ' ') {
+            e.preventDefault()
+            onCancel()
+          }
+        }}
+        className="fixed inset-0 bg-black/40"
+      />
       <div className="relative bg-white rounded-2xl shadow-xl max-w-sm w-full p-6 space-y-4">
         <h3 className="text-lg font-bold text-on-surface font-headline">{title}</h3>
         <p className="text-sm text-on-surface-variant">{message}</p>
@@ -512,7 +538,7 @@ interface TargetFieldProps {
   error?: string
 }
 
-function TargetField({ value, onChange, onBlur, disabled, error }: TargetFieldProps) {
+function TargetField({ value, onChange, onBlur, disabled, error }: Readonly<TargetFieldProps>) {
   const { t } = useTranslation()
   const [search, setSearch] = useState('')
   const [modalOpen, setModalOpen] = useState(false)
@@ -598,7 +624,7 @@ interface DynamicFieldProps {
   config: TenantConfig
 }
 
-function DynamicField({ fieldDef, value, onChange, onBlur, disabled, error, config }: DynamicFieldProps) {
+function DynamicField({ fieldDef, value, onChange, onBlur, disabled, error, config }: Readonly<DynamicFieldProps>) {
   const { t } = useTranslation()
   const { data: membersResult } = useTeamMembers()
 

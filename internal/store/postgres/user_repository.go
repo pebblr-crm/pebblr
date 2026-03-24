@@ -6,13 +6,12 @@ import (
 	"fmt"
 
 	"github.com/jackc/pgx/v5"
-	"github.com/jackc/pgx/v5/pgxpool"
 	"github.com/pebblr/pebblr/internal/domain"
 	"github.com/pebblr/pebblr/internal/store"
 )
 
 type userRepository struct {
-	pool *pgxpool.Pool
+	pool dbPool
 }
 
 const userColumns = `id, external_id, email, name, role, avatar, online_status`

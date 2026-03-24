@@ -108,11 +108,12 @@ export function PlannerDailyPage() {
       </div>
 
       {/* Activity list */}
-      {isLoading ? (
+      {isLoading && (
         <div className="flex items-center justify-center h-64">
           <LoadingSpinner size="lg" label={t('activityList.loadingActivities')} />
         </div>
-      ) : activities.length === 0 ? (
+      )}
+      {!isLoading && activities.length === 0 && (
         <div data-testid="empty-state" className="bg-surface-container-lowest p-12 rounded-xl shadow-sm border border-slate-100 text-center">
           <p className="text-on-surface-variant text-sm">{t('daily.noActivities')}</p>
           <Link
@@ -124,7 +125,8 @@ export function PlannerDailyPage() {
             {t('daily.createActivity')}
           </Link>
         </div>
-      ) : (
+      )}
+      {!isLoading && activities.length > 0 && (
         <div className="space-y-1.5" data-testid="daily-activities">
           {activities.map((activity) => {
             const title = getActivityTitle(config, activity)

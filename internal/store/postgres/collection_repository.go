@@ -7,13 +7,12 @@ import (
 	"strings"
 
 	"github.com/jackc/pgx/v5"
-	"github.com/jackc/pgx/v5/pgxpool"
 	"github.com/pebblr/pebblr/internal/domain"
 	"github.com/pebblr/pebblr/internal/store"
 )
 
 type collectionRepository struct {
-	pool *pgxpool.Pool
+	pool dbPool
 }
 
 func (r *collectionRepository) Create(ctx context.Context, c *domain.Collection) (*domain.Collection, error) {

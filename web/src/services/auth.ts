@@ -76,7 +76,7 @@ export async function initAuth(_config: AuthConfig): Promise<void> {
     return
   }
 
-  const staticToken = import.meta.env.VITE_STATIC_TOKEN as string | undefined
+  const staticToken: string | undefined = import.meta.env.VITE_STATIC_TOKEN
   if (staticToken) {
     _currentUser = {
       id: 'static-dev-user',
