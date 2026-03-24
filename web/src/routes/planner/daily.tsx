@@ -14,7 +14,7 @@ import {
   getStatusLabel,
   getStatusBadgeColor,
   CATEGORY_COLORS,
-  MONTH_NAMES,
+  getMonthName,
 } from '@/utils/config'
 import { usePlannerState } from '@/contexts/planner'
 
@@ -43,7 +43,7 @@ export function PlannerDailyPage() {
   const activities = data?.items ?? []
 
   const dayName = t(DAY_NAME_KEYS[currentDate.getDay()])
-  const monthName = MONTH_NAMES[currentDate.getMonth()]
+  const monthName = getMonthName(currentDate.getMonth())
   const isToday = formatDate(new Date()) === dateStr
 
   function prevDay() { setCurrentDate((d) => addDays(d, -1)) }

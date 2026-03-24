@@ -12,7 +12,7 @@ import { MonthGrid } from '../../components/planner/MonthGrid'
 import { WeekGrid } from '../../components/planner/WeekGrid'
 import { ActivityList } from '../../components/planner/ActivityList'
 import { formatDate, addDays, getMonday, extractDate } from '@/utils/date'
-import { MONTH_NAMES, getStatusDotColor } from '@/utils/config'
+import { getMonthName, getStatusDotColor, getDateLocale } from '@/utils/config'
 import { usePlannerState } from '@/contexts/planner'
 
 export const Route = createRoute({
@@ -95,7 +95,7 @@ export function PlannerPage() {
 
   // Derive period label
   const periodLabel = viewMode === 'month'
-    ? `${MONTH_NAMES[month - 1]} ${year}`
+    ? `${getMonthName(month - 1)} ${year}`
     : `${formatDate(weekStart)} — ${formatDate(addDays(weekStart, 6))}`
 
   // Stats
@@ -265,10 +265,10 @@ export function PlannerPage() {
                       .map((iv) => (
                         <div key={iv.weekendDate} className="flex items-center justify-between text-[10px]">
                           <span className="text-on-surface-variant">
-                            {new Date(iv.weekendDate).toLocaleDateString('en-GB', { weekday: 'short', day: 'numeric', month: 'short' })}
+                            {new Date(iv.weekendDate).toLocaleDateString(getDateLocale(), { weekday: 'short', day: 'numeric', month: 'short' })}
                           </span>
                           <span className="font-bold text-amber-600">
-                            by {new Date(iv.claimBy).toLocaleDateString('en-GB', { day: 'numeric', month: 'short' })}
+                            {t('planner.byDate', { date: new Date(iv.claimBy).toLocaleDateString(getDateLocale(), { day: 'numeric', month: 'short' }) })}
                           </span>
                         </div>
                       ))}

@@ -1,6 +1,7 @@
 import { ChevronLeft, ChevronRight } from 'lucide-react'
 import { useTranslation } from 'react-i18next'
 import { formatPeriod } from '@/utils/date'
+import { getDateLocale } from '@/utils/config'
 
 interface PeriodSelectorProps {
   /** Current period in YYYY-MM format */
@@ -11,7 +12,7 @@ interface PeriodSelectorProps {
 function formatPeriodLabel(period: string): string {
   const [year, month] = period.split('-')
   const date = new Date(Number(year), Number(month) - 1)
-  return date.toLocaleDateString('en-US', { month: 'long', year: 'numeric' })
+  return date.toLocaleDateString(getDateLocale(), { month: 'long', year: 'numeric' })
 }
 
 function shiftPeriod(period: string, delta: number): string {

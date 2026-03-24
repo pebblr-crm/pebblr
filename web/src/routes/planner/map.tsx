@@ -1,5 +1,6 @@
 import { createRoute } from '@tanstack/react-router'
 import { useState, useMemo, useCallback, useEffect } from 'react'
+import { useTranslation } from 'react-i18next'
 import { APIProvider, Map as GoogleMap, AdvancedMarker } from '@vis.gl/react-google-maps'
 import { MapPin, Check, GripVertical, FolderOpen, Save, Trash2 } from 'lucide-react'
 import { Route as rootRoute } from '../__root'
@@ -8,7 +9,7 @@ import { useTargets, useTargetVisitStatus, useTargetFrequencyStatus } from '../.
 import { useActivities, useBatchCreateActivities, usePatchActivity } from '../../services/activities'
 import { useConfig } from '../../services/config'
 import { useToast } from '../../hooks/useToast'
-import { getStatusDotColor, getStatusLabel, getTypeCategory, getTypeLabel } from '@/utils/config'
+import { getStatusDotColor, getStatusLabel, getTypeCategory, getTypeLabel, getDateLocale } from '@/utils/config'
 import type { TenantConfig } from '@/types/config'
 import type { Activity } from '@/types/activity'
 import type { Target } from '@/types/target'
@@ -37,7 +38,7 @@ function getWeekDates(baseDate: Date): Array<{ date: Date; label: string }> {
     d.setDate(monday.getDate() + i)
     return {
       date: d,
-      label: d.toLocaleDateString('en-GB', { weekday: 'short', day: 'numeric', month: 'short' }),
+      label: d.toLocaleDateString(getDateLocale(), { weekday: 'short', day: 'numeric', month: 'short' }),
     }
   })
 }
@@ -68,6 +69,7 @@ function isWithinCadence(lastVisit: string | undefined, cadenceDays: number, ref
 // ── Main component ───────────────────────────────────────────────────────────
 
 function MapPlannerPage() {
+  const { t } = useTranslation()
   const { data: config, isLoading: configLoading } = useConfig()
   const { data: targetsResult, isLoading: targetsLoading } = useTargets({ limit: 200 })
   const { data: visitStatus } = useTargetVisitStatus()
@@ -252,8 +254,8 @@ function MapPlannerPage() {
       patchActivity.mutate(
         { id: dragActivityId, dueDate: dateStr },
         {
-          onSuccess: () => showToast('Activity rescheduled.', 'success'),
-          onError: () => showToast('Failed to reschedule activity.'),
+          onSuccess: () => showToast(t('mapPlanner.activityRescheduled'), 'success'),
+          onError: () => showToast(t('mapPlanner.failedToReschedule')),
         },
       )
       setDragActivityId(null)
@@ -273,7 +275,7 @@ function MapPlannerPage() {
       return { ...prev, [dateStr]: [...arr, ...toAdd] }
     })
     setSelectedIds(new Set())
-  }, [selectedIds, dragActivityId, dragCollectionId, patchActivity, showToast, handleCollectionDrop])
+  }, [selectedIds, dragActivityId, dragCollectionId, patchActivity, showToast, handleCollectionDrop, t])
 
   const removeFromDay = useCallback((dateStr: string, targetId: string) => {
     setDayAssignments((prev) => {
@@ -299,16 +301,16 @@ function MapPlannerPage() {
       const createdCount = result.created?.length ?? 0
       const errorCount = result.errors?.length ?? 0
       if (errorCount > 0) {
-        showToast(`Created ${createdCount} activities, ${errorCount} failed.`)
+        showToast(t('mapPlanner.createdWithErrors', { created: createdCount, errors: errorCount }))
       } else {
-        showToast(`Created ${createdCount} activities.`, 'success')
+        showToast(t('mapPlanner.createdActivities', { created: createdCount }), 'success')
       }
       setDayAssignments({})
       setSelectedIds(new Set())
     } catch {
-      showToast('Failed to create activities.')
+      showToast(t('mapPlanner.failedToCreate'))
     }
-  }, [dayAssignments, batchCreate, showToast])
+  }, [dayAssignments, batchCreate, showToast, t])
 
   const handleSaveCollection = useCallback(() => {
     if (!collectionName.trim() || selectedIds.size === 0) return
@@ -316,14 +318,14 @@ function MapPlannerPage() {
       { name: collectionName.trim(), targetIds: Array.from(selectedIds) },
       {
         onSuccess: () => {
-          showToast(`Collection "${collectionName.trim()}" saved.`, 'success')
+          showToast(t('mapPlanner.collectionSaved', { name: collectionName.trim() }), 'success')
           setSavingCollection(false)
           setCollectionName('')
         },
-        onError: () => showToast('Failed to save collection.'),
+        onError: () => showToast(t('mapPlanner.failedToSaveCollection')),
       },
     )
-  }, [collectionName, selectedIds, createCollection, showToast])
+  }, [collectionName, selectedIds, createCollection, showToast, t])
 
   const handleLoadCollection = useCallback((targetIds: string[]) => {
     setSelectedIds(new Set(targetIds))
@@ -331,15 +333,15 @@ function MapPlannerPage() {
 
   const handleDeleteCollection = useCallback((id: string, name: string) => {
     deleteCollectionMut.mutate(id, {
-      onSuccess: () => showToast(`Collection "${name}" deleted.`, 'success'),
-      onError: () => showToast('Failed to delete collection.'),
+      onSuccess: () => showToast(t('mapPlanner.collectionDeleted', { name }), 'success'),
+      onError: () => showToast(t('mapPlanner.failedToDeleteCollection')),
     })
-  }, [deleteCollectionMut, showToast])
+  }, [deleteCollectionMut, showToast, t])
 
   if (configLoading || targetsLoading) {
     return (
       <div className="flex items-center justify-center h-screen">
-        <LoadingSpinner size="lg" label="Loading map planner..." />
+        <LoadingSpinner size="lg" label={t('mapPlanner.loading')} />
       </div>
     )
   }
@@ -444,7 +446,7 @@ function MapPlannerPage() {
               <div className="border-b border-slate-100">
                 <div className="px-3 py-1.5">
                   <span className="text-[10px] uppercase tracking-widest text-slate-400 font-bold">
-                    Collections
+                    {t('mapPlanner.collections')}
                   </span>
                 </div>
                 {collections.map((col) => (
@@ -482,7 +484,7 @@ function MapPlannerPage() {
             <div className="p-3 border-b border-slate-100">
               <div className="flex items-center justify-between">
                 <h2 className="text-sm font-bold text-on-surface">
-                  Selected ({selectedIds.size})
+                  {t('mapPlanner.selected', { count: selectedIds.size })}
                 </h2>
                 {selectedIds.size > 0 && !savingCollection && (
                   <button
@@ -491,7 +493,7 @@ function MapPlannerPage() {
                     className="text-[10px] text-primary font-bold flex items-center gap-1 hover:opacity-70"
                   >
                     <Save className="w-3 h-3" />
-                    Save
+                    {t('mapPlanner.save')}
                   </button>
                 )}
               </div>
@@ -501,7 +503,7 @@ function MapPlannerPage() {
                     type="text"
                     value={collectionName}
                     onChange={(e) => setCollectionName(e.target.value)}
-                    placeholder="Collection name..."
+                    placeholder={t('mapPlanner.collectionPlaceholder')}
                     className="flex-1 px-2 py-1 text-xs border border-slate-200 rounded"
                     onKeyDown={(e) => { if (e.key === 'Enter') handleSaveCollection() }}
                     autoFocus
@@ -512,7 +514,7 @@ function MapPlannerPage() {
                     disabled={!collectionName.trim() || createCollection.isPending}
                     className="px-2 py-1 text-xs font-bold text-white bg-primary rounded disabled:opacity-50"
                   >
-                    {createCollection.isPending ? '...' : 'Save'}
+                    {createCollection.isPending ? '...' : t('mapPlanner.save')}
                   </button>
                   <button
                     type="button"
@@ -554,7 +556,7 @@ function MapPlannerPage() {
                     {(selectedIds.size > 0 || open.length > 0) && open.length > 0 && (
                       <div className="border-t border-slate-100 px-3 py-1">
                         <span className="text-[10px] uppercase tracking-widest text-slate-400 font-bold">
-                          {selectionCentroid ? 'Nearby' : 'Available'}
+                          {selectionCentroid ? t('mapPlanner.nearby') : t('mapPlanner.available')}
                         </span>
                       </div>
                     )}
@@ -602,19 +604,19 @@ function MapPlannerPage() {
                 onClick={() => setWeekOffset((w) => w - 1)}
                 className="px-2 py-1 text-xs rounded border border-slate-200 hover:bg-slate-100"
               >
-                Prev
+                {t('mapPlanner.prev')}
               </button>
               <button
                 onClick={() => setWeekOffset(0)}
                 className="px-2 py-1 text-xs rounded border border-slate-200 hover:bg-slate-100"
               >
-                This week
+                {t('mapPlanner.thisWeek')}
               </button>
               <button
                 onClick={() => setWeekOffset((w) => w + 1)}
                 className="px-2 py-1 text-xs rounded border border-slate-200 hover:bg-slate-100"
               >
-                Next
+                {t('mapPlanner.next')}
               </button>
             </div>
             {totalAssigned > 0 && (
@@ -624,8 +626,8 @@ function MapPlannerPage() {
                 className="px-4 py-2 text-sm font-bold text-white bg-primary rounded-xl hover:bg-primary/90 disabled:opacity-50"
               >
                 {batchCreate.isPending
-                  ? 'Creating...'
-                  : `Create ${totalAssigned} activities`}
+                  ? t('mapPlanner.creating')
+                  : t('mapPlanner.createActivities', { count: totalAssigned })}
               </button>
             )}
           </div>
@@ -683,6 +685,7 @@ function CadencedSection({
   toggleTarget,
   setDragTargetId,
 }: CadencedSectionProps) {
+  const { t } = useTranslation()
   const [expanded, setExpanded] = useState(false)
 
   return (
@@ -693,7 +696,7 @@ function CadencedSection({
         className="w-full flex items-center justify-between px-3 py-1.5 hover:bg-slate-50 transition-colors"
       >
         <span className="text-[10px] uppercase tracking-widest text-slate-400 font-bold">
-          Recently visited ({items.length})
+          {t('mapPlanner.recentlyVisited', { count: items.length })}
         </span>
         <span className="text-[10px] text-slate-400">{expanded ? '▲' : '▼'}</span>
       </button>
@@ -706,7 +709,7 @@ function CadencedSection({
               onChange={(e) => setShowCadenced(e.target.checked)}
               className="rounded border-slate-300"
             />
-            Allow scheduling
+            {t('mapPlanner.allowScheduling')}
           </label>
           {items.map(({ target, distance }) => (
             <TargetListItem
@@ -761,6 +764,7 @@ function TargetListItem({
   onDragStart,
   onDragEnd,
 }: TargetListItemProps) {
+  const { t } = useTranslation()
   return (
     <div
       draggable={isSelected}
@@ -789,7 +793,7 @@ function TargetListItem({
           {(target.fields?.address as string) ?? ''}
           {lastVisit && (
             <span className="ml-1">
-              — last: {new Date(lastVisit).toLocaleDateString()}
+              {t('mapPlanner.lastVisit', { date: new Date(lastVisit).toLocaleDateString(getDateLocale()) })}
             </span>
           )}
         </p>
