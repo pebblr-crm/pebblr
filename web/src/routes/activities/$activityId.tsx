@@ -94,7 +94,7 @@ export function ActivityDetailInner({ activityId, config, from }: InnerProps) {
   const isSubmitted = Boolean(act.submittedAt)
   const typeConfig = getTypeConfig(config?.activities, act.activityType)
   const typeLabel = getTypeLabel(config?.activities, act.activityType)
-  const hasDuration = typeConfig?.has_duration ?? false
+  const hasDuration = typeConfig?.fields.some((f) => f.key === 'duration') ?? false
   const jointVisitUserId = act.jointVisitUserId
     ?? (act.fields?.joint_visit_user_id as string | undefined)
   const jointVisitorName = jointVisitUserId
@@ -286,7 +286,7 @@ export function ActivityDetailInner({ activityId, config, from }: InnerProps) {
             )}
           </div>
 
-          {/* Duration (only for activity types with has_duration) */}
+          {/* Duration (only for activity types with a duration field) */}
           {hasDuration && (
             <div>
               <label className={labelClass}>

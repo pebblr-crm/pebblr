@@ -75,7 +75,7 @@ function ActivityFormInner({
   const durations = config.activities.durations
   const selectedType = activityTypes.find((t) => t.key === activityType)
   const isFieldActivity = selectedType?.category === 'field'
-  const hasDuration = selectedType?.has_duration ?? false
+  const hasDuration = selectedType?.fields.some((f) => f.key === 'duration') ?? false
   const isEditing = Boolean(initialData)
   const isLocked = Boolean(initialData?.submittedAt)
 
@@ -345,7 +345,7 @@ function ActivityFormInner({
             )}
           </div>
 
-          {/* Duration (only for activity types with has_duration) */}
+          {/* Duration (only for activity types with a duration field) */}
           {hasDuration && (
             <div>
               <label className="block text-xs font-bold uppercase tracking-widest text-slate-400 mb-1">

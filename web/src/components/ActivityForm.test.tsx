@@ -59,8 +59,9 @@ const testConfig: TenantConfig = {
         key: 'vacation',
         label: 'Vacation',
         category: 'non_field',
-        has_duration: true,
-        fields: [],
+        fields: [
+          { key: 'duration', label: 'Duration', type: 'select', required: true, options_ref: 'durations' },
+        ],
         blocks_field_activities: true,
       },
     ],
@@ -129,7 +130,7 @@ describe('ActivityForm', () => {
     expect(screen.getByTestId('activity-type-select')).toBeInTheDocument()
     expect(screen.queryByTestId('status-select')).not.toBeInTheDocument()
     expect(screen.getByTestId('due-date-input')).toBeInTheDocument()
-    // Duration is only shown after selecting a type with has_duration
+    // Duration is only shown after selecting a type with a duration field
     expect(screen.queryByTestId('duration-select')).not.toBeInTheDocument()
     expect(screen.getByText('New Activity')).toBeInTheDocument()
   })

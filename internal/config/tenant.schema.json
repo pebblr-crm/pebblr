@@ -193,11 +193,7 @@
           "items": { "type": "string" },
           "description": "Field keys that become required at submit time."
         },
-        "has_duration": {
-          "type": "boolean",
-          "description": "When true, this activity type shows a duration selector."
-        },
-        "blocks_field_activities": {
+"blocks_field_activities": {
           "type": "boolean",
           "description": "When true, this activity type prevents field activities on the same day."
         }

@@ -62,7 +62,6 @@ type ActivityTypeConfig struct {
 	Label                  string        `json:"label"`
 	Category               string        `json:"category"` // "field" or "non_field"
 	TitleField             string        `json:"title_field,omitempty"`
-	HasDuration            bool          `json:"has_duration,omitempty"` // whether this type uses duration
 	Fields                 []FieldConfig `json:"fields"`
 	SubmitRequired         []string      `json:"submit_required,omitempty"`
 	BlocksFieldActivities  bool          `json:"blocks_field_activities,omitempty"`
