@@ -1,4 +1,4 @@
-import { useState, useCallback, useEffect } from 'react'
+import { useState, useCallback, useEffect, useMemo } from 'react'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { createRouter, RouterProvider } from '@tanstack/react-router'
 import { DemoAccountPicker } from './components/DemoAccountPicker'
@@ -49,7 +49,7 @@ const queryClient = new QueryClient({
 })
 
 function getInitialTheme(): Theme {
-  if (typeof window === 'undefined') return 'light'
+  if (typeof globalThis.window === 'undefined') return 'light'
   const stored = localStorage.getItem('pebblr-theme')
   if (stored === 'dark' || stored === 'light') return stored
   return 'light'
@@ -60,13 +60,13 @@ export function App() {
   const setWeek = useCallback((week: string) => setPlannerState((s) => ({ ...s, week })), [])
   const setFrom = useCallback((from: string) => setPlannerState((s) => ({ ...s, from })), [])
 
-  const [theme, setThemeState] = useState<Theme>(getInitialTheme)
+  const [currentTheme, setThemeState] = useState<Theme>(getInitialTheme)
   const setTheme = useCallback((t: Theme) => {
     setThemeState(t)
     localStorage.setItem('pebblr-theme', t)
     document.documentElement.classList.toggle('dark', t === 'dark')
   }, [])
-  const toggle = useCallback(() => setTheme(theme === 'dark' ? 'light' : 'dark'), [theme, setTheme])
+  const toggle = useCallback(() => setTheme(currentTheme === 'dark' ? 'light' : 'dark'), [currentTheme, setTheme])
 
   // Track whether a demo user is selected.
   const [authed, setAuthed] = useState(() => !isDemoMode() || getCurrentUser() !== null)
@@ -81,8 +81,11 @@ export function App() {
 
   // Apply theme class on mount
   useEffect(() => {
-    document.documentElement.classList.toggle('dark', theme === 'dark')
-  }, [theme])
+    document.documentElement.classList.toggle('dark', currentTheme === 'dark')
+  }, [currentTheme])
+
+  const themeContextValue = useMemo(() => ({ theme: currentTheme, setTheme, toggle }), [currentTheme, setTheme, toggle])
+  const plannerContextValue = useMemo(() => ({ state: plannerState, setWeek, setFrom }), [plannerState, setWeek, setFrom])
 
   // Demo mode: show account picker if no user selected.
   if (isDemoMode() && !authed) {
@@ -91,8 +94,8 @@ export function App() {
 
   return (
     <QueryClientProvider client={queryClient}>
-      <ThemeContext.Provider value={{ theme, setTheme, toggle }}>
-        <PlannerContext.Provider value={{ state: plannerState, setWeek, setFrom }}>
+      <ThemeContext.Provider value={themeContextValue}>
+        <PlannerContext.Provider value={plannerContextValue}>
           <ToastProvider>
             <RouterProvider router={router} />
           </ToastProvider>

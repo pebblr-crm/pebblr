@@ -8,7 +8,7 @@ interface ActivityStatsCardProps {
   activitiesConfig?: ActivitiesConfig
 }
 
-export function ActivityStatsCard({ data, activitiesConfig }: ActivityStatsCardProps) {
+export function ActivityStatsCard({ data, activitiesConfig }: Readonly<ActivityStatsCardProps>) {
   const { t } = useTranslation()
   const statusEntries = Object.entries(data.byStatus).sort(([, a], [, b]) => b - a)
   const fieldCount = data.byCategory['field'] ?? 0

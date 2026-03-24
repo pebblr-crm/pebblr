@@ -1,4 +1,5 @@
-import { useState, type FormEvent } from 'react'
+import type { FormEvent } from 'react'
+import { useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { useConfig } from '../services/config'
 import { useTeamMembers } from '../services/teams'
@@ -24,7 +25,7 @@ interface ActivityFormProps {
   serverErrors?: Array<{ field: string; message: string }>
 }
 
-export function ActivityForm(props: ActivityFormProps) {
+export function ActivityForm(props: Readonly<ActivityFormProps>) {
   const { t } = useTranslation()
   const { data: config, isLoading: configLoading } = useConfig()
 
@@ -40,7 +41,7 @@ export function ActivityForm(props: ActivityFormProps) {
 }
 
 interface InnerProps extends ActivityFormProps {
-  config: TenantConfig
+  readonly config: TenantConfig
 }
 
 function ActivityFormInner({
@@ -51,7 +52,7 @@ function ActivityFormInner({
   isSubmitting,
   serverErrors,
   config,
-}: InnerProps) {
+}: Readonly<InnerProps>) {
   const { t } = useTranslation()
   const initialStatus = initialData?.status
     ?? config.activities.statuses.find((s) => s.initial)?.key
@@ -63,7 +64,7 @@ function ActivityFormInner({
   const [duration, setDuration] = useState(initialData?.duration ?? '')
   const [targetId, setTargetId] = useState(initialData?.targetId ?? '')
   const [fields, setFields] = useState<Record<string, unknown>>(() => {
-    const f = { ...(initialData?.fields ?? {}) }
+    const f: Record<string, unknown> = initialData?.fields ? { ...initialData.fields } : {}
     // Seed routing into fields so the dynamic form pre-populates it.
     if (initialData?.routing) f.routing = initialData.routing
     return f
@@ -81,6 +82,12 @@ function ActivityFormInner({
   const hasDuration = selectedType?.fields.some((f) => f.key === 'duration') ?? false
   const isEditing = Boolean(initialData)
   const isLocked = Boolean(initialData?.submittedAt)
+
+  function getSubmitLabel(): string {
+    if (isSubmitting) return t('activity.saving')
+    if (isEditing) return t('activity.update')
+    return t('activity.create')
+  }
 
   function getFieldError(key: string): string | undefined {
     return serverErrors?.find((e) => e.field === key)?.message
@@ -137,6 +144,7 @@ function ActivityFormInner({
 
     switch (fieldDef.type) {
       case 'text':
+      default:
         return (
           <div key={fieldDef.key}>
             {labelEl}
@@ -177,6 +185,14 @@ function ActivityFormInner({
       case 'multi_select': {
         const opts = resolveOptions(fieldDef)
         const selected = Array.isArray(value) ? (value as string[]) : []
+        const toggleOption = (optKey: string, isSelected: boolean) => {
+          setFieldValue(
+            fieldDef.key,
+            isSelected
+              ? selected.filter((s) => s !== optKey)
+              : [...selected, optKey],
+          )
+        }
         return (
           <div key={fieldDef.key}>
             {labelEl}
@@ -188,14 +204,7 @@ function ActivityFormInner({
                     key={o.key}
                     type="button"
                     disabled={!editable}
-                    onClick={() => {
-                      setFieldValue(
-                        fieldDef.key,
-                        isSelected
-                          ? selected.filter((s) => s !== o.key)
-                          : [...selected, o.key],
-                      )
-                    }}
+                    onClick={() => toggleOption(o.key, isSelected)}
                     className={`px-3 py-1 rounded-full text-xs font-medium border transition-colors ${
                       isSelected
                         ? 'bg-primary text-white border-primary'
@@ -243,22 +252,6 @@ function ActivityFormInner({
             {labelEl}
             <input
               type="date"
-              value={(value as string) ?? ''}
-              onChange={(e) => setFieldValue(fieldDef.key, e.target.value)}
-              disabled={!editable}
-              className={inputClass(error)}
-              data-testid={`field-${fieldDef.key}`}
-            />
-            {error && <p className="text-xs text-error mt-1">{error}</p>}
-          </div>
-        )
-
-      default:
-        return (
-          <div key={fieldDef.key}>
-            {labelEl}
-            <input
-              type="text"
               value={(value as string) ?? ''}
               onChange={(e) => setFieldValue(fieldDef.key, e.target.value)}
               disabled={!editable}
@@ -421,7 +414,7 @@ function ActivityFormInner({
       </div>
 
       {/* Dynamic fields based on activity type */}
-      {selectedType && selectedType.fields.filter((f) => !CORE_WIDGET_FIELDS.has(f.key)).length > 0 && (
+      {selectedType && selectedType.fields.some((f) => !CORE_WIDGET_FIELDS.has(f.key)) && (
         <div className="bg-surface-container-lowest p-8 rounded-xl shadow-[0px_24px_48px_rgba(25,28,30,0.06)]">
           <h2 className="text-lg font-bold text-on-surface mb-6 font-headline">
             {t('activity.detailsLabel', { type: selectedType.label })}
@@ -442,7 +435,7 @@ function ActivityFormInner({
           className="px-6 py-3 bg-primary text-white rounded-xl font-headline text-sm font-bold hover:bg-primary/90 transition-colors disabled:opacity-50"
           data-testid="submit-button"
         >
-          {isSubmitting ? t('activity.saving') : isEditing ? t('activity.update') : t('activity.create')}
+          {getSubmitLabel()}
         </button>
         <button
           type="button"

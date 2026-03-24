@@ -30,7 +30,7 @@ function getInitials(name: string): string {
     .slice(0, 2)
 }
 
-export function DemoAccountPicker({ onSelect }: DemoAccountPickerProps) {
+export function DemoAccountPicker({ onSelect }: Readonly<DemoAccountPickerProps>) {
   const { t } = useTranslation()
   const [accounts, setAccounts] = useState<DemoAccount[]>([])
   const [loading, setLoading] = useState(true)

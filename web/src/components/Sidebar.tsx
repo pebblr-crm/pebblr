@@ -20,7 +20,7 @@ interface SidebarProps {
   onClose: () => void
 }
 
-export function Sidebar({ open, onClose }: SidebarProps) {
+export function Sidebar({ open, onClose }: Readonly<SidebarProps>) {
   const { location } = useRouterState()
   const { theme, toggle } = useTheme()
   const { t, i18n } = useTranslation()

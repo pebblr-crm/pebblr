@@ -7,7 +7,7 @@ interface SaveStateIndicatorProps {
   onRetry?: () => void
 }
 
-export function SaveStateIndicator({ saveState, onRetry }: SaveStateIndicatorProps) {
+export function SaveStateIndicator({ saveState, onRetry }: Readonly<SaveStateIndicatorProps>) {
   const { t } = useTranslation()
 
   if (saveState === 'idle') return null

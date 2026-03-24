@@ -16,7 +16,7 @@ interface MemberAvatarProps {
   size?: string
 }
 
-export function MemberAvatar({ avatar, name, status, size = 'w-12 h-12' }: MemberAvatarProps) {
+export function MemberAvatar({ avatar, name, status, size = 'w-12 h-12' }: Readonly<MemberAvatarProps>) {
   return (
     <div className="relative">
       {avatar ? (
@@ -39,7 +39,7 @@ export function MemberAvatar({ avatar, name, status, size = 'w-12 h-12' }: Membe
 }
 
 /** Compact row variant — used on the dashboard Team Performance panel. */
-export function MemberRow({ member }: { member: TeamMember }) {
+export function MemberRow({ member }: Readonly<{ member: TeamMember }>) {
   const { t } = useTranslation()
   return (
     <div className="bg-white p-4 rounded-xl flex items-center justify-between group hover:shadow-md transition-shadow">
@@ -77,7 +77,7 @@ export function MemberRow({ member }: { member: TeamMember }) {
 }
 
 /** Full card variant — used on the Team Management page. */
-export function MemberCard({ member }: { member: TeamMember }) {
+export function MemberCard({ member }: Readonly<{ member: TeamMember }>) {
   const { t } = useTranslation()
   const completionRate = member.metrics.assigned > 0
     ? Math.round((member.metrics.completed / member.metrics.assigned) * 100)

@@ -7,6 +7,12 @@ import { LoadingSpinner } from '../../components/LoadingSpinner'
 import { useTarget } from '../../services/targets'
 import { useConfig } from '../../services/config'
 
+function getTypeBadgeColor(targetType: string): string {
+  if (targetType === 'doctor') return 'bg-primary-fixed text-primary'
+  if (targetType === 'pharmacy') return 'bg-emerald-100 text-emerald-700'
+  return 'bg-slate-200 text-slate-600'
+}
+
 export const Route = createRoute({
   getParentRoute: () => rootRoute,
   path: '/targets/$targetId',
@@ -61,6 +67,7 @@ export function TargetDetailPage() {
     if (fieldDef?.options_ref && typeof value === 'string') {
       return resolveOptionLabel(fieldDef.options_ref, value)
     }
+    if (typeof value === 'object') return JSON.stringify(value)
     return String(value)
   }
 
@@ -95,13 +102,7 @@ export function TargetDetailPage() {
               {target.name}
             </h1>
             <div className="flex items-center gap-3 mt-2">
-              <span className={`px-3 py-1 rounded-full text-[10px] font-bold uppercase tracking-tight ${
-                target.targetType === 'doctor'
-                  ? 'bg-primary-fixed text-primary'
-                  : target.targetType === 'pharmacy'
-                    ? 'bg-emerald-100 text-emerald-700'
-                    : 'bg-slate-200 text-slate-600'
-              }`}>
+              <span className={`px-3 py-1 rounded-full text-[10px] font-bold uppercase tracking-tight ${getTypeBadgeColor(target.targetType)}`}>
                 {typeLabel}
               </span>
               {location && (

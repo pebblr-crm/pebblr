@@ -5,7 +5,7 @@ interface TopBarProps {
   onMenuToggle: () => void
 }
 
-export function TopBar({ onMenuToggle }: TopBarProps) {
+export function TopBar({ onMenuToggle }: Readonly<TopBarProps>) {
   const { t } = useTranslation()
 
   return (

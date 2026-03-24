@@ -1,4 +1,4 @@
-import { useCallback, useState, type ReactNode } from 'react'
+import { useCallback, useMemo, useState, type ReactNode } from 'react'
 import { AnimatePresence, motion } from 'motion/react'
 import { AlertCircle, CheckCircle, X } from 'lucide-react'
 import { ToastContext } from '../contexts/toast'
@@ -31,7 +31,7 @@ interface Toast {
 let nextId = 0
 const AUTO_DISMISS_MS = 5000
 
-export function ToastProvider({ children }: { children: ReactNode }) {
+export function ToastProvider({ children }: Readonly<{ children: ReactNode }>) {
   const [toasts, setToasts] = useState<Toast[]>([])
 
   const dismiss = useCallback((id: number) => {
@@ -47,8 +47,10 @@ export function ToastProvider({ children }: { children: ReactNode }) {
     [dismiss],
   )
 
+  const toastContextValue = useMemo(() => ({ showToast }), [showToast])
+
   return (
-    <ToastContext.Provider value={{ showToast }}>
+    <ToastContext.Provider value={toastContextValue}>
       {children}
 
       {/* Toast container — fixed top-right */}

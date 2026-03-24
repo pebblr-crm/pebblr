@@ -15,18 +15,17 @@ func NewEnforcer() Enforcer {
 }
 
 func (e *policyEnforcer) CanViewTarget(_ context.Context, actor *domain.User, target *domain.Target) bool {
-	switch actor.Role {
-	case domain.RoleAdmin:
-		return true
-	case domain.RoleManager:
-		return containsString(actor.TeamIDs, target.TeamID)
-	case domain.RoleRep:
-		return actor.ID == target.AssigneeID
-	}
-	return false
+	return canAccessTarget(actor, target)
 }
 
 func (e *policyEnforcer) CanUpdateTarget(_ context.Context, actor *domain.User, target *domain.Target) bool {
+	return canAccessTarget(actor, target)
+}
+
+// canAccessTarget checks whether the actor has access to the given target
+// based on their role. Both CanViewTarget and CanUpdateTarget share this logic
+// today; they are kept as separate methods so they can diverge in the future.
+func canAccessTarget(actor *domain.User, target *domain.Target) bool {
 	switch actor.Role {
 	case domain.RoleAdmin:
 		return true
@@ -64,18 +63,18 @@ func (e *policyEnforcer) CanViewActivity(_ context.Context, actor *domain.User, 
 }
 
 func (e *policyEnforcer) CanUpdateActivity(_ context.Context, actor *domain.User, activity *domain.Activity) bool {
-	switch actor.Role {
-	case domain.RoleAdmin:
-		return true
-	case domain.RoleManager:
-		return containsString(actor.TeamIDs, activity.TeamID)
-	case domain.RoleRep:
-		return actor.ID == activity.CreatorID
-	}
-	return false
+	return canModifyActivity(actor, activity)
 }
 
 func (e *policyEnforcer) CanDeleteActivity(_ context.Context, actor *domain.User, activity *domain.Activity) bool {
+	return canModifyActivity(actor, activity)
+}
+
+// canModifyActivity checks whether the actor can modify (update or delete) the
+// given activity based on their role. Both CanUpdateActivity and CanDeleteActivity
+// share this logic today; they are kept as separate methods so they can diverge
+// in the future.
+func canModifyActivity(actor *domain.User, activity *domain.Activity) bool {
 	switch actor.Role {
 	case domain.RoleAdmin:
 		return true

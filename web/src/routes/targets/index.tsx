@@ -36,17 +36,18 @@ function computeVisiblePages(current: number, total: number, maxVisible: number)
 
 function colorForInitials(s: string): string {
   let hash = 0
-  for (let i = 0; i < s.length; i++) hash = s.charCodeAt(i) + ((hash << 5) - hash)
+  for (let i = 0; i < s.length; i++) hash = (s.codePointAt(i) ?? 0) + ((hash << 5) - hash)
   return INITIALS_COLORS[Math.abs(hash) % INITIALS_COLORS.length]
 }
 
-function TypeBadge({ targetType, label }: { targetType: string; label?: string }) {
-  const style =
-    targetType === 'doctor'
-      ? 'bg-primary-fixed text-primary'
-      : targetType === 'pharmacy'
-        ? 'bg-emerald-100 text-emerald-700'
-        : 'bg-slate-200 text-slate-600'
+function getTypeBadgeColor(targetType: string): string {
+  if (targetType === 'doctor') return 'bg-primary-fixed text-primary'
+  if (targetType === 'pharmacy') return 'bg-emerald-100 text-emerald-700'
+  return 'bg-slate-200 text-slate-600'
+}
+
+function TypeBadge({ targetType, label }: Readonly<{ targetType: string; label?: string }>) {
+  const style = getTypeBadgeColor(targetType)
   return (
     <span className={`px-3 py-1 rounded-full text-[10px] font-bold uppercase tracking-tight ${style}`}>
       {label ?? targetType.replace(/_/g, ' ')}
@@ -60,7 +61,7 @@ function getFrequencyBadgeColor(pct: number): string {
   return 'bg-red-100 text-red-700'
 }
 
-function FrequencyBadge({ freq }: { freq?: { compliance: number; visitCount: number; required: number } }) {
+function FrequencyBadge({ freq }: Readonly<{ freq?: { compliance: number; visitCount: number; required: number } }>) {
   if (!freq || freq.required === 0) {
     return <span className="text-sm text-slate-300">—</span>
   }
@@ -154,6 +155,7 @@ export function TargetsPage() {
     if (fieldDef?.options_ref && typeof value === 'string') {
       return resolveOptionLabel(fieldDef.options_ref, value)
     }
+    if (typeof value === 'object') return JSON.stringify(value)
     return String(value)
   }
 

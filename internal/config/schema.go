@@ -1,7 +1,7 @@
 package config
 
 import (
-	_ "embed"
+	_ "embed" // required for go:embed directive
 	"encoding/json"
 	"fmt"
 	"os"

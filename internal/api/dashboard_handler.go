@@ -40,41 +40,59 @@ func NewDashboardRouter(h *DashboardHandler) http.Handler {
 	return r
 }
 
+// parseDashboardDateRange parses the date range from query parameters.
+// Supports "period" (YYYY-MM) or explicit "dateFrom"/"dateTo" (YYYY-MM-DD).
+func parseDashboardDateRange(r *http.Request) (from, to time.Time, err error) {
+	if period := r.URL.Query().Get("period"); period != "" {
+		t, parseErr := time.Parse("2006-01", period)
+		if parseErr != nil {
+			return time.Time{}, time.Time{}, parseErr
+		}
+		return t, t.AddDate(0, 1, -1), nil
+	}
+
+	from, err = parseDateFromParam(r, "dateFrom")
+	if err != nil {
+		return time.Time{}, time.Time{}, err
+	}
+	if from.IsZero() {
+		now := time.Now()
+		from = time.Date(now.Year(), now.Month(), 1, 0, 0, 0, 0, time.UTC)
+	}
+
+	to, err = parseDateFromParam(r, "dateTo")
+	if err != nil {
+		return time.Time{}, time.Time{}, err
+	}
+	if to.IsZero() {
+		to = from.AddDate(0, 1, -1)
+	}
+
+	return from, to, nil
+}
+
+// parseDateFromParam parses a YYYY-MM-DD date from the named query parameter.
+// Returns zero time if the parameter is absent or empty.
+func parseDateFromParam(r *http.Request, param string) (time.Time, error) {
+	v := r.URL.Query().Get(param)
+	if v == "" {
+		return time.Time{}, nil
+	}
+	return time.Parse(dateFormat, v)
+}
+
 // parseDashboardFilter extracts period and scope from query parameters.
 // period is expected as YYYY-MM (returns first and last day of that month).
 // Alternatively dateFrom/dateTo can be specified as YYYY-MM-DD.
 func parseDashboardFilter(r *http.Request) (store.DashboardFilter, error) {
 	var filter store.DashboardFilter
 
-	if period := r.URL.Query().Get("period"); period != "" {
-		t, err := time.Parse("2006-01", period)
-		if err != nil {
-			return filter, err
-		}
-		filter.DateFrom = t
-		filter.DateTo = t.AddDate(0, 1, -1)
-	} else {
-		if v := r.URL.Query().Get("dateFrom"); v != "" {
-			t, err := time.Parse(dateFormat, v)
-			if err != nil {
-				return filter, err
-			}
-			filter.DateFrom = t
-		} else {
-			// Default to current month.
-			now := time.Now()
-			filter.DateFrom = time.Date(now.Year(), now.Month(), 1, 0, 0, 0, 0, time.UTC)
-		}
-		if v := r.URL.Query().Get("dateTo"); v != "" {
-			t, err := time.Parse(dateFormat, v)
-			if err != nil {
-				return filter, err
-			}
-			filter.DateTo = t
-		} else {
-			filter.DateTo = filter.DateFrom.AddDate(0, 1, -1)
-		}
+	from, to, err := parseDashboardDateRange(r)
+	if err != nil {
+		return filter, err
 	}
+	filter.DateFrom = from
+	filter.DateTo = to
 
 	if v := r.URL.Query().Get("userId"); v != "" {
 		filter.UserID = &v

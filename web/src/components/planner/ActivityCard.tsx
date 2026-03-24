@@ -10,11 +10,11 @@ import {
 } from '@/utils/config'
 
 interface ActivityCardProps {
-  activity: Activity
-  config?: TenantConfig
+  readonly activity: Activity
+  readonly config?: TenantConfig
 }
 
-export function ActivityCard({ activity, config }: ActivityCardProps) {
+export function ActivityCard({ activity, config }: Readonly<ActivityCardProps>) {
   const title = getActivityTitle(config, activity)
   const category = getTypeCategory(config?.activities, activity.activityType)
   const style = CATEGORY_COLORS[category] ?? CATEGORY_COLORS.field

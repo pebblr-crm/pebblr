@@ -181,10 +181,10 @@ func TestTenantConfig_AccountType(t *testing.T) {
 	t.Parallel()
 	cfg := testConfig(t)
 
-	if at := cfg.AccountType("doctor"); at == nil {
+	if cfg.AccountType("doctor") == nil {
 		t.Fatal("expected doctor account type")
 	}
-	if at := cfg.AccountType("nonexistent"); at != nil {
+	if cfg.AccountType("nonexistent") != nil {
 		t.Fatal("expected nil for unknown account type")
 	}
 }
@@ -193,13 +193,13 @@ func TestTenantConfig_ActivityType(t *testing.T) {
 	t.Parallel()
 	cfg := testConfig(t)
 
-	if at := cfg.ActivityType("visit"); at == nil {
+	if cfg.ActivityType("visit") == nil {
 		t.Fatal("expected visit activity type")
 	}
-	if at := cfg.ActivityType("admin"); at == nil {
+	if cfg.ActivityType("admin") == nil {
 		t.Fatal("expected admin activity type")
 	}
-	if at := cfg.ActivityType("nonexistent"); at != nil {
+	if cfg.ActivityType("nonexistent") != nil {
 		t.Fatal("expected nil for unknown activity type")
 	}
 }

@@ -4,10 +4,10 @@ import { ActivityCard } from './ActivityCard'
 import { formatDateStr, extractDate } from '@/utils/date'
 
 interface MonthGridProps {
-  activities: Activity[]
-  year: number
-  month: number
-  config?: TenantConfig
+  readonly activities: Activity[]
+  readonly year: number
+  readonly month: number
+  readonly config?: TenantConfig
 }
 
 const DAYS = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun']
@@ -18,7 +18,7 @@ function startDayOffset(year: number, month: number): number {
   return dow === 0 ? 6 : dow - 1
 }
 
-export function MonthGrid({ activities, year, month, config }: MonthGridProps) {
+export function MonthGrid({ activities, year, month, config }: Readonly<MonthGridProps>) {
   const daysInMonth = new Date(year, month, 0).getDate()
   const offset = startDayOffset(year, month)
   const today = new Date()
@@ -35,8 +35,8 @@ export function MonthGrid({ activities, year, month, config }: MonthGridProps) {
       </div>
       <div className="grid grid-cols-7 min-w-[560px]">
         {/* empty cells before first day */}
-        {Array.from({ length: offset }).map((_, i) => (
-          <div key={`pad-${i}`} className="min-h-[120px] p-2 border-r border-b border-slate-50 bg-slate-50/30" />
+        {Array.from({ length: offset }).map((_, padIdx) => (
+          <div key={`pad-${padIdx}`} className="min-h-[120px] p-2 border-r border-b border-slate-50 bg-slate-50/30" />
         ))}
         {Array.from({ length: daysInMonth }).map((_, i) => {
           const day = i + 1
