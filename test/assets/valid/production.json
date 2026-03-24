@@ -142,6 +142,17 @@
         "fields": [
           { "key": "duration", "label": "Duration", "type": "select", "required": true, "options_ref": "durations" }
         ]
+      },
+      {
+        "key": "recovery",
+        "label": "Recovery Day",
+        "category": "non_field",
+        "has_duration": true,
+        "blocks_field_activities": true,
+        "fields": [
+          { "key": "duration", "label": "Duration", "type": "select", "required": true, "options_ref": "durations" },
+          { "key": "details", "label": "Details", "type": "text", "required": false }
+        ]
       }
     ],
     "routing_options": []
@@ -195,7 +206,7 @@
     "recovery": {
       "weekend_activity_flag": true,
       "recovery_window_days": 5,
-      "recovery_type": "full_day"
+      "recovery_type": "recovery"
     }
   }
 }

@@ -142,6 +142,8 @@ func mapActivityServiceError(w http.ResponseWriter, err error) {
 		writeError(w, http.StatusBadRequest, "BAD_REQUEST", "invalid joint visit user")
 	case errors.Is(err, service.ErrStatusNotSubmittable):
 		writeError(w, http.StatusConflict, "CONFLICT", "set status to completed or cancelled before submitting")
+	case errors.Is(err, service.ErrNoRecoveryBalance):
+		writeError(w, http.StatusConflict, "CONFLICT", "no recovery day balance available")
 	default:
 		writeError(w, http.StatusInternalServerError, "INTERNAL_ERROR", "an unexpected error occurred")
 	}

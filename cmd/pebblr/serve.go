@@ -86,7 +86,7 @@ func serve(configPath string) error {
 		logger.Info("geocoding disabled (no API key file)")
 	}
 	targetSvc := service.NewTargetService(db.Targets(), enforcer, tenantCfg, targetOpts...)
-	activitySvc := service.NewActivityService(db.Activities(), db.Users(), db.Audit(), enforcer, tenantCfg)
+	activitySvc := service.NewActivityService(db.Activities(), db.Users(), db.Audit(), enforcer, tenantCfg, service.WithDashboard(db.Dashboard()))
 	dashboardSvc := service.NewDashboardService(db.Dashboard(), enforcer, tenantCfg)
 	collectionSvc := service.NewCollectionService(db.Collections())
 

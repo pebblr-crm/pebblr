@@ -77,7 +77,7 @@
     "recovery": {
       "weekend_activity_flag": false,
       "recovery_window_days": 7,
-      "recovery_type": "full_day"
+      "recovery_type": "recovery"
     }
   }
 }

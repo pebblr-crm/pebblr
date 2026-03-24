@@ -151,12 +151,28 @@ func activityTestConfig() *config.TenantConfig {
 					Category:              "non_field",
 					BlocksFieldActivities: true,
 				},
+				{
+					Key:                   "recovery",
+					Label:                 "Recovery Day",
+					Category:              "non_field",
+					BlocksFieldActivities: true,
+				},
 			},
 		},
 		Rules: config.RulesConfig{
 			MaxActivitiesPerDay: 10,
 		},
 	}
+}
+
+func activityTestConfigWithRecovery() *config.TenantConfig {
+	cfg := activityTestConfig()
+	cfg.Rules.Recovery = &config.RecoveryRule{
+		WeekendActivityFlag: true,
+		RecoveryWindowDays:  5,
+		RecoveryType:        "recovery",
+	}
+	return cfg
 }
 
 func sampleActivity() *domain.Activity {
@@ -1029,5 +1045,135 @@ func TestCloneWeek_EmptySourceWeek(t *testing.T) {
 	_, err := svc.CloneWeek(context.Background(), repUser(), monday, target)
 	if err == nil {
 		t.Fatal("expected error for empty source week")
+	}
+}
+
+// --- Recovery balance tests ---
+
+func TestCreate_RecoveryWithBalance_Succeeds(t *testing.T) {
+	t.Parallel()
+	// Saturday weekend work earns a recovery day; claim on Monday (next business day).
+	saturday := time.Date(2026, 3, 21, 0, 0, 0, 0, time.UTC) // Saturday
+	monday := time.Date(2026, 3, 23, 0, 0, 0, 0, time.UTC)   // Monday
+
+	dashRepo := &stubDashboardRepo{
+		weekendActivities:  []store.WeekendActivity{{DueDate: saturday}},
+		recoveryActivities: []time.Time{}, // none taken yet
+	}
+	actRepo := &stubActivityRepo{}
+	cfg := activityTestConfigWithRecovery()
+	svc := service.NewActivityService(actRepo, defaultUserRepo(), &stubAuditRepo{}, rbac.NewEnforcer(), cfg, service.WithDashboard(dashRepo))
+
+	activity := &domain.Activity{
+		ActivityType: "recovery",
+		DueDate:      monday,
+		Duration:     "full_day",
+		Fields:       map[string]any{},
+	}
+	_, err := svc.Create(context.Background(), repUser(), activity)
+	if err != nil {
+		t.Fatalf("expected success, got: %v", err)
+	}
+}
+
+func TestCreate_RecoveryWithZeroBalance_Fails(t *testing.T) {
+	t.Parallel()
+	monday := time.Date(2026, 3, 23, 0, 0, 0, 0, time.UTC)
+
+	// No weekend activities — zero earned balance.
+	dashRepo := &stubDashboardRepo{
+		weekendActivities:  []store.WeekendActivity{},
+		recoveryActivities: []time.Time{},
+	}
+	actRepo := &stubActivityRepo{}
+	cfg := activityTestConfigWithRecovery()
+	svc := service.NewActivityService(actRepo, defaultUserRepo(), &stubAuditRepo{}, rbac.NewEnforcer(), cfg, service.WithDashboard(dashRepo))
+
+	activity := &domain.Activity{
+		ActivityType: "recovery",
+		DueDate:      monday,
+		Duration:     "full_day",
+		Fields:       map[string]any{},
+	}
+	_, err := svc.Create(context.Background(), repUser(), activity)
+	if !errors.Is(err, service.ErrNoRecoveryBalance) {
+		t.Fatalf("expected ErrNoRecoveryBalance, got: %v", err)
+	}
+}
+
+func TestCreate_RecoveryAlreadyClaimed_Fails(t *testing.T) {
+	t.Parallel()
+	saturday := time.Date(2026, 3, 21, 0, 0, 0, 0, time.UTC)
+	monday := time.Date(2026, 3, 23, 0, 0, 0, 0, time.UTC)
+	tuesday := time.Date(2026, 3, 24, 0, 0, 0, 0, time.UTC)
+
+	// Weekend earned, but already claimed on Monday.
+	dashRepo := &stubDashboardRepo{
+		weekendActivities:  []store.WeekendActivity{{DueDate: saturday}},
+		recoveryActivities: []time.Time{monday}, // already claimed
+	}
+	actRepo := &stubActivityRepo{}
+	cfg := activityTestConfigWithRecovery()
+	svc := service.NewActivityService(actRepo, defaultUserRepo(), &stubAuditRepo{}, rbac.NewEnforcer(), cfg, service.WithDashboard(dashRepo))
+
+	activity := &domain.Activity{
+		ActivityType: "recovery",
+		DueDate:      tuesday,
+		Duration:     "full_day",
+		Fields:       map[string]any{},
+	}
+	_, err := svc.Create(context.Background(), repUser(), activity)
+	if !errors.Is(err, service.ErrNoRecoveryBalance) {
+		t.Fatalf("expected ErrNoRecoveryBalance, got: %v", err)
+	}
+}
+
+func TestCreate_RecoveryOutsideClaimWindow_Fails(t *testing.T) {
+	t.Parallel()
+	saturday := time.Date(2026, 3, 21, 0, 0, 0, 0, time.UTC)
+	// Claim window is Mon 23–Fri 27 (5 business days). The following Monday is outside.
+	nextMonday := time.Date(2026, 3, 30, 0, 0, 0, 0, time.UTC)
+
+	dashRepo := &stubDashboardRepo{
+		weekendActivities:  []store.WeekendActivity{{DueDate: saturday}},
+		recoveryActivities: []time.Time{},
+	}
+	actRepo := &stubActivityRepo{}
+	cfg := activityTestConfigWithRecovery()
+	svc := service.NewActivityService(actRepo, defaultUserRepo(), &stubAuditRepo{}, rbac.NewEnforcer(), cfg, service.WithDashboard(dashRepo))
+
+	activity := &domain.Activity{
+		ActivityType: "recovery",
+		DueDate:      nextMonday,
+		Duration:     "full_day",
+		Fields:       map[string]any{},
+	}
+	_, err := svc.Create(context.Background(), repUser(), activity)
+	if !errors.Is(err, service.ErrNoRecoveryBalance) {
+		t.Fatalf("expected ErrNoRecoveryBalance, got: %v", err)
+	}
+}
+
+func TestCreate_NonRecoveryType_SkipsBalanceCheck(t *testing.T) {
+	t.Parallel()
+	// Even with no weekend activities, creating a visit should work fine.
+	dashRepo := &stubDashboardRepo{
+		weekendActivities:  []store.WeekendActivity{},
+		recoveryActivities: []time.Time{},
+	}
+	actRepo := &stubActivityRepo{}
+	cfg := activityTestConfigWithRecovery()
+	svc := service.NewActivityService(actRepo, defaultUserRepo(), &stubAuditRepo{}, rbac.NewEnforcer(), cfg, service.WithDashboard(dashRepo))
+
+	activity := &domain.Activity{
+		ActivityType: "visit",
+		DueDate:      time.Date(2026, 3, 23, 0, 0, 0, 0, time.UTC),
+		Duration:     "full_day",
+		TargetID:     "target-1",
+		Fields:       map[string]any{},
+	}
+	_, err := svc.Create(context.Background(), repUser(), activity)
+	if err != nil {
+		t.Fatalf("expected success for non-recovery type, got: %v", err)
 	}
 }

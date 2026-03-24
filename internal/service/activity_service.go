@@ -30,6 +30,9 @@ var ErrInvalidJointVisitor = fmt.Errorf("invalid joint visit user")
 // ErrStatusNotSubmittable indicates the activity's current status does not allow submission.
 var ErrStatusNotSubmittable = fmt.Errorf("current status does not allow submission")
 
+// ErrNoRecoveryBalance indicates that no recovery day is available to claim.
+var ErrNoRecoveryBalance = fmt.Errorf("no recovery day balance available")
+
 // ValidationErrors wraps a slice of config.FieldError for returning from the service layer.
 type ValidationErrors struct {
 	Errors []config.FieldError
@@ -47,6 +50,7 @@ type ActivityService struct {
 	activities store.ActivityRepository
 	users      store.UserRepository
 	audit      store.AuditRepository
+	dashboard  store.DashboardRepository
 	enforcer   rbac.Enforcer
 	cfg        *config.TenantConfig
 }
@@ -58,13 +62,28 @@ func NewActivityService(
 	audit store.AuditRepository,
 	enforcer rbac.Enforcer,
 	cfg *config.TenantConfig,
+	opts ...ActivityServiceOption,
 ) *ActivityService {
-	return &ActivityService{
+	s := &ActivityService{
 		activities: activities,
 		users:      users,
 		audit:      audit,
 		enforcer:   enforcer,
 		cfg:        cfg,
+	}
+	for _, opt := range opts {
+		opt(s)
+	}
+	return s
+}
+
+// ActivityServiceOption configures optional dependencies on ActivityService.
+type ActivityServiceOption func(*ActivityService)
+
+// WithDashboard injects a DashboardRepository for recovery balance validation.
+func WithDashboard(d store.DashboardRepository) ActivityServiceOption {
+	return func(s *ActivityService) {
+		s.dashboard = d
 	}
 }
 
@@ -102,6 +121,11 @@ func (s *ActivityService) Create(ctx context.Context, actor *domain.User, activi
 
 	// Business rule: blocked days (vacation/holiday blocks field activities and vice versa).
 	if err := s.checkBlockedDay(ctx, activity.CreatorID, activity.DueDate, activity.ActivityType); err != nil {
+		return nil, err
+	}
+
+	// Business rule: recovery activities require available balance in a valid claim window.
+	if err := s.checkRecoveryBalance(ctx, actor, activity); err != nil {
 		return nil, err
 	}
 
@@ -582,6 +606,83 @@ func (s *ActivityService) fieldActivityTypes() []string {
 		}
 	}
 	return types
+}
+
+// checkRecoveryBalance verifies that a recovery-type activity can only be created
+// when the actor has available recovery balance and the activity date falls within
+// a valid claim window.
+func (s *ActivityService) checkRecoveryBalance(ctx context.Context, actor *domain.User, activity *domain.Activity) error {
+	if s.cfg == nil || s.cfg.Rules.Recovery == nil || !s.cfg.Rules.Recovery.WeekendActivityFlag {
+		return nil
+	}
+	if activity.ActivityType != s.cfg.Rules.Recovery.RecoveryType {
+		return nil
+	}
+	if s.dashboard == nil {
+		return nil
+	}
+
+	scope := s.enforcer.ScopeActivityQuery(ctx, actor)
+	recoveryRule := s.cfg.Rules.Recovery
+
+	// Use a broad filter that covers the possible earning period.
+	// Weekend activities could be up to recovery_window_days business days before the due date.
+	lookback := time.Duration(recoveryRule.RecoveryWindowDays*2+7) * 24 * time.Hour
+	filter := store.DashboardFilter{
+		DateFrom: activity.DueDate.Add(-lookback),
+		DateTo:   activity.DueDate,
+	}
+
+	// Get field activity types.
+	var fieldTypes []string
+	for i := range s.cfg.Activities.Types {
+		if s.cfg.Activities.Types[i].Category == "field" {
+			fieldTypes = append(fieldTypes, s.cfg.Activities.Types[i].Key)
+		}
+	}
+
+	weekendActivities, err := s.dashboard.WeekendFieldActivities(ctx, scope, fieldTypes, filter)
+	if err != nil {
+		return fmt.Errorf("checking recovery balance: %w", err)
+	}
+
+	recoveryDates, err := s.dashboard.RecoveryActivities(ctx, scope, recoveryRule.RecoveryType, filter)
+	if err != nil {
+		return fmt.Errorf("checking recovery balance: %w", err)
+	}
+
+	// Check that the activity's due date falls within at least one unclaimed claim window.
+	takenSet := make(map[string]bool)
+	for _, rd := range recoveryDates {
+		takenSet[rd.Format("2006-01-02")] = true
+	}
+
+	dueDate := activity.DueDate
+	for _, wa := range weekendActivities {
+		claimFrom := nextBusinessDay(wa.DueDate)
+		claimBy := addBusinessDays(claimFrom, recoveryRule.RecoveryWindowDays-1)
+
+		if dueDate.Before(claimFrom) || dueDate.After(claimBy) {
+			continue
+		}
+
+		// Check if this window is already claimed by an existing recovery activity.
+		alreadyClaimed := false
+		for _, rd := range recoveryDates {
+			rdKey := rd.Format("2006-01-02")
+			if !rd.Before(claimFrom) && !rd.After(claimBy) && !takenSet[rdKey+"_used"] {
+				alreadyClaimed = true
+				takenSet[rdKey+"_used"] = true
+				break
+			}
+		}
+
+		if !alreadyClaimed {
+			return nil // Found a valid, unclaimed window — allow creation.
+		}
+	}
+
+	return ErrNoRecoveryBalance
 }
 
 // checkJointVisitUser validates the joint visit user ID when set.
