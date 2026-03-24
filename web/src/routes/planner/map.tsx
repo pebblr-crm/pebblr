@@ -123,7 +123,7 @@ function TargetMarker({
   const lat = target.fields.lat as number
   const lng = target.fields.lng as number
 
-  const complianceLabel = compliance != null ? ` (${Math.round(compliance)}% compliance)` : ''
+  const complianceLabel = compliance == null ? '' : ` (${Math.round(compliance)}% compliance)`
   const cadenceLabel = isCadenced ? ' (recently visited)' : ''
   const title = `${target.name}${complianceLabel}${cadenceLabel}`
 

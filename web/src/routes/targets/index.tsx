@@ -78,8 +78,8 @@ function FrequencyBadge({ freq }: { freq?: { compliance: number; visitCount: num
 }
 
 function LocationCell({ fields }: { readonly fields: Record<string, unknown> }) {
-  const city = fields['city']
-  const county = fields['county']
+  const city = typeof fields['city'] === 'string' ? fields['city'] : ''
+  const county = typeof fields['county'] === 'string' ? fields['county'] : ''
   if (!city) {
     return <span className="text-sm text-slate-300">—</span>
   }
@@ -87,8 +87,8 @@ function LocationCell({ fields }: { readonly fields: Record<string, unknown> }) 
     <div className="flex items-center gap-2">
       <MapPin className="w-4 h-4 text-slate-300" />
       <span className="text-sm text-slate-600">
-        {String(city)}
-        {county ? `, ${String(county)}` : ''}
+        {city}
+        {county ? `, ${county}` : ''}
       </span>
     </div>
   )
