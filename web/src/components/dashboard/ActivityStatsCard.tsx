@@ -47,14 +47,14 @@ export function ActivityStatsCard({ data, activitiesConfig }: ActivityStatsCardP
           <div
             className="bg-primary h-full"
             style={{ width: `${fieldPct}%` }}
-            title={`Field: ${fieldCount}`}
+            title={`${t('dashboardCards.field')}: ${fieldCount}`}
           />
         )}
         {nonFieldCount > 0 && (
           <div
             className="bg-tertiary-container h-full"
             style={{ width: `${100 - fieldPct}%` }}
-            title={`Non-field: ${nonFieldCount}`}
+            title={`${t('dashboardCards.nonField')}: ${nonFieldCount}`}
           />
         )}
       </div>
