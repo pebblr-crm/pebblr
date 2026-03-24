@@ -1,5 +1,6 @@
 import { createRoute, Link } from '@tanstack/react-router'
 import { motion } from 'motion/react'
+import { useTranslation } from 'react-i18next'
 import { ArrowLeft, MapPin } from 'lucide-react'
 import { Route as rootRoute } from '../__root'
 import { LoadingSpinner } from '../../components/LoadingSpinner'
@@ -13,6 +14,7 @@ export const Route = createRoute({
 })
 
 export function TargetDetailPage() {
+  const { t } = useTranslation()
   const { targetId } = Route.useParams()
   const { data: target, isLoading, isError, error } = useTarget(targetId)
   const { data: config } = useConfig()
@@ -20,7 +22,7 @@ export function TargetDetailPage() {
   if (isLoading) {
     return (
       <div className="flex items-center justify-center h-64">
-        <LoadingSpinner size="lg" label="Loading target..." />
+        <LoadingSpinner size="lg" label={t('targets.loadingTarget')} />
       </div>
     )
   }
@@ -28,7 +30,7 @@ export function TargetDetailPage() {
   if (isError) {
     return (
       <div data-testid="error-state" className="p-8 text-center text-error">
-        {error instanceof Error ? error.message : 'Failed to load target.'}
+        {error instanceof Error ? error.message : t('targets.failedToLoad')}
       </div>
     )
   }
@@ -36,7 +38,7 @@ export function TargetDetailPage() {
   if (!target) {
     return (
       <div data-testid="not-found" className="p-8 text-center text-on-surface-variant">
-        Target not found.
+        {t('targets.notFound')}
       </div>
     )
   }
@@ -79,7 +81,7 @@ export function TargetDetailPage() {
         className="inline-flex items-center gap-2 text-sm font-medium text-on-surface-variant hover:text-primary transition-colors no-underline"
       >
         <ArrowLeft className="w-4 h-4" />
-        Back to targets
+        {t('targets.backToTargets')}
       </Link>
 
       {/* Header */}
@@ -115,7 +117,7 @@ export function TargetDetailPage() {
 
       {/* Details */}
       <div className="bg-surface-container-lowest p-8 rounded-xl shadow-[0px_24px_48px_rgba(25,28,30,0.06)]">
-        <h2 className="text-lg font-bold text-on-surface mb-6 font-headline">Details</h2>
+        <h2 className="text-lg font-bold text-on-surface mb-6 font-headline">{t('targets.details')}</h2>
         <dl className="grid grid-cols-1 sm:grid-cols-2 gap-x-8 gap-y-4">
           {fields.map((f) => (
             <div key={f.key}>
@@ -132,9 +134,9 @@ export function TargetDetailPage() {
 
       {/* Activities placeholder */}
       <div className="bg-surface-container-lowest p-8 rounded-xl shadow-[0px_24px_48px_rgba(25,28,30,0.06)]">
-        <h2 className="text-lg font-bold text-on-surface mb-4 font-headline">Activities</h2>
+        <h2 className="text-lg font-bold text-on-surface mb-4 font-headline">{t('targets.activitiesSection')}</h2>
         <p className="text-sm text-on-surface-variant">
-          Activity tracking will be available after the activities feature is implemented.
+          {t('targets.activitiesPlaceholder')}
         </p>
       </div>
     </motion.div>

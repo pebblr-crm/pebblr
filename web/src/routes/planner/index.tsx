@@ -1,6 +1,7 @@
 import { useState, useMemo, useEffect } from 'react'
 import { createRoute, Link } from '@tanstack/react-router'
 import { motion } from 'motion/react'
+import { useTranslation } from 'react-i18next'
 import { ChevronLeft, ChevronRight, PlusCircle, CalendarDays, TrendingUp, Sun } from 'lucide-react'
 import { Route as rootRoute } from '../__root'
 import { LoadingSpinner } from '../../components/LoadingSpinner'
@@ -24,6 +25,7 @@ type ViewMode = 'week' | 'month' | 'list'
 
 
 export function PlannerPage() {
+  const { t } = useTranslation()
   const { state: plannerState, setWeek, setFrom } = usePlannerState()
   const now = new Date()
   const [viewMode, setViewMode] = useState<ViewMode>('week')
@@ -116,9 +118,9 @@ export function PlannerPage() {
       <div className="flex flex-col md:flex-row md:items-end justify-between gap-4">
         <div>
           <h1 className="text-2xl sm:text-4xl font-headline font-extrabold text-primary tracking-tight">
-            Planner
+            {t('planner.title')}
           </h1>
-          <p className="text-on-surface-variant mt-1">Plan and track field activities.</p>
+          <p className="text-on-surface-variant mt-1">{t('planner.subtitle')}</p>
         </div>
         <div className="flex flex-wrap items-center gap-3">
           {/* View toggle */}
@@ -129,7 +131,7 @@ export function PlannerPage() {
                 viewMode === 'week' ? 'bg-primary text-white' : 'text-on-surface-variant hover:text-primary'
               }`}
             >
-              Week
+              {t('planner.week')}
             </button>
             <button
               onClick={() => setViewMode('month')}
@@ -137,7 +139,7 @@ export function PlannerPage() {
                 viewMode === 'month' ? 'bg-primary text-white' : 'text-on-surface-variant hover:text-primary'
               }`}
             >
-              Month
+              {t('planner.month')}
             </button>
             <button
               onClick={() => setViewMode('list')}
@@ -146,7 +148,7 @@ export function PlannerPage() {
               }`}
               data-testid="list-view-toggle"
             >
-              My Activities
+              {t('planner.myActivities')}
             </button>
           </div>
 
@@ -157,16 +159,16 @@ export function PlannerPage() {
                 onClick={goToToday}
                 className="px-3 py-1.5 text-xs font-bold text-primary border border-primary rounded-lg hover:bg-primary-fixed transition-colors"
               >
-                Today
+                {t('common.today')}
               </button>
               <div className="flex items-center gap-2 bg-surface-container-lowest px-4 py-2 rounded-xl shadow-sm">
-                <button className="text-on-surface-variant hover:text-primary" onClick={prevPeriod} aria-label="Previous period">
+                <button className="text-on-surface-variant hover:text-primary" onClick={prevPeriod} aria-label={t('pagination.previousPeriod')}>
                   <ChevronLeft className="w-5 h-5" />
                 </button>
                 <span className="font-headline font-bold text-primary px-2 min-w-[180px] text-center text-sm" data-testid="period-label">
                   {periodLabel}
                 </span>
-                <button className="text-on-surface-variant hover:text-primary" onClick={nextPeriod} aria-label="Next period">
+                <button className="text-on-surface-variant hover:text-primary" onClick={nextPeriod} aria-label={t('pagination.nextPeriod')}>
                   <ChevronRight className="w-5 h-5" />
                 </button>
               </div>
@@ -179,7 +181,7 @@ export function PlannerPage() {
             className="flex items-center gap-2 bg-gradient-to-br from-primary to-primary-container text-white py-2.5 px-6 rounded-xl font-bold text-sm shadow-md no-underline"
           >
             <PlusCircle className="w-4 h-4" />
-            New Activity
+            {t('nav.newActivity')}
           </Link>
         </div>
       </div>
@@ -193,7 +195,7 @@ export function PlannerPage() {
           <div className="col-span-12 lg:col-span-3 space-y-6">
             {/* Status legend */}
             <div className="bg-surface-container-lowest p-6 rounded-xl shadow-sm border border-slate-100">
-              <h3 className="font-headline font-bold text-primary mb-4 text-sm">Status Legend</h3>
+              <h3 className="font-headline font-bold text-primary mb-4 text-sm">{t('planner.statusLegend')}</h3>
               <div className="space-y-3">
                 {statusLegend.map((item) => (
                   <div key={item.label} className="flex items-center gap-2">
@@ -206,34 +208,34 @@ export function PlannerPage() {
 
             {/* Category legend */}
             <div className="bg-surface-container-lowest p-6 rounded-xl shadow-sm border border-slate-100">
-              <h3 className="font-headline font-bold text-primary mb-4 text-sm">Categories</h3>
+              <h3 className="font-headline font-bold text-primary mb-4 text-sm">{t('planner.categories')}</h3>
               <div className="space-y-3">
                 <div className="flex items-center gap-2">
                   <span className="w-3 h-3 rounded-sm bg-amber-500" />
-                  <span className="text-[10px] font-medium text-on-surface-variant">Field activities</span>
+                  <span className="text-[10px] font-medium text-on-surface-variant">{t('planner.fieldActivities')}</span>
                 </div>
                 <div className="flex items-center gap-2">
                   <span className="w-3 h-3 rounded-sm bg-blue-400" />
-                  <span className="text-[10px] font-medium text-on-surface-variant">Non-field activities</span>
+                  <span className="text-[10px] font-medium text-on-surface-variant">{t('planner.nonFieldActivities')}</span>
                 </div>
               </div>
             </div>
 
             {/* Daily pulse */}
             <div className="bg-surface-container-lowest p-6 rounded-xl shadow-sm border border-slate-100">
-              <h4 className="font-headline font-bold text-primary mb-4 text-sm">Daily Pulse</h4>
+              <h4 className="font-headline font-bold text-primary mb-4 text-sm">{t('planner.dailyPulse')}</h4>
               <div className="space-y-4">
                 <div className="flex items-start gap-3">
                   <CalendarDays className="w-4 h-4 text-primary mt-0.5" />
                   <div>
-                    <p className="text-xs font-bold text-on-surface">{todayCount} Today</p>
+                    <p className="text-xs font-bold text-on-surface">{t('planner.todayCount', { count: todayCount })}</p>
                     <p className="text-[10px] text-on-surface-variant">{formatDate(now)}</p>
                   </div>
                 </div>
                 <div className="flex items-start gap-3">
                   <TrendingUp className="w-4 h-4 text-tertiary-fixed-dim mt-0.5" />
                   <div>
-                    <p className="text-xs font-bold text-on-surface">{activities.length} In View</p>
+                    <p className="text-xs font-bold text-on-surface">{t('planner.inView', { count: activities.length })}</p>
                     <p className="text-[10px] text-on-surface-variant">{periodLabel}</p>
                   </div>
                 </div>
@@ -243,21 +245,21 @@ export function PlannerPage() {
             {/* Recovery balance — only shown when recovery is configured */}
             {recoveryEnabled && recoveryBalance && recoveryBalance.earned > 0 && (
               <div className="bg-surface-container-lowest p-6 rounded-xl shadow-sm border border-slate-100">
-                <h4 className="font-headline font-bold text-primary mb-4 text-sm">Recovery Days</h4>
+                <h4 className="font-headline font-bold text-primary mb-4 text-sm">{t('planner.recoveryDays')}</h4>
                 <div className="flex items-start gap-3 mb-3">
                   <Sun className="w-4 h-4 text-amber-500 mt-0.5" />
                   <div>
                     <p className="text-xs font-bold text-on-surface">
-                      {recoveryBalance.balance} available
+                      {t('planner.recoveryAvailable', { count: recoveryBalance.balance })}
                     </p>
                     <p className="text-[10px] text-on-surface-variant">
-                      {recoveryBalance.earned} earned, {recoveryBalance.taken} taken
+                      {t('planner.recoveryEarnedTaken', { earned: recoveryBalance.earned, taken: recoveryBalance.taken })}
                     </p>
                   </div>
                 </div>
                 {recoveryBalance.intervals.filter((iv) => !iv.claimed).length > 0 && (
                   <div className="space-y-1.5">
-                    <p className="text-[9px] uppercase tracking-widest text-slate-400 font-bold">Claim by</p>
+                    <p className="text-[9px] uppercase tracking-widest text-slate-400 font-bold">{t('planner.claimBy')}</p>
                     {recoveryBalance.intervals
                       .filter((iv) => !iv.claimed)
                       .map((iv) => (
@@ -280,7 +282,7 @@ export function PlannerPage() {
           <div className="col-span-12 lg:col-span-9">
             {isLoading ? (
               <div className="flex items-center justify-center h-64">
-                <LoadingSpinner size="lg" label="Loading planner..." />
+                <LoadingSpinner size="lg" label={t('planner.loading')} />
               </div>
             ) : viewMode === 'month' ? (
               <MonthGrid activities={activities} year={year} month={month} config={config} />

@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react'
 import { createRoute, Link } from '@tanstack/react-router'
 import { motion } from 'motion/react'
+import { useTranslation } from 'react-i18next'
 import { ChevronLeft, ChevronRight, ArrowLeft, PlusCircle } from 'lucide-react'
 import { Route as rootRoute } from '../__root'
 import { LoadingSpinner } from '../../components/LoadingSpinner'
@@ -23,9 +24,14 @@ export const Route = createRoute({
   component: PlannerDailyPage,
 })
 
-const DAY_NAMES = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday']
+const DAY_NAME_KEYS = [
+  'weekdaysFull.sunday', 'weekdaysFull.monday', 'weekdaysFull.tuesday',
+  'weekdaysFull.wednesday', 'weekdaysFull.thursday', 'weekdaysFull.friday',
+  'weekdaysFull.saturday',
+] as const
 
 export function PlannerDailyPage() {
+  const { t } = useTranslation()
   const { setFrom } = usePlannerState()
   const [currentDate, setCurrentDate] = useState(() => new Date())
   const dateStr = formatDate(currentDate)
@@ -36,7 +42,7 @@ export function PlannerDailyPage() {
   const { data, isLoading } = useActivities({ dateFrom: dateStr, dateTo: dateStr, limit: 50 })
   const activities = data?.items ?? []
 
-  const dayName = DAY_NAMES[currentDate.getDay()]
+  const dayName = t(DAY_NAME_KEYS[currentDate.getDay()])
   const monthName = MONTH_NAMES[currentDate.getMonth()]
   const isToday = formatDate(new Date()) === dateStr
 
@@ -56,7 +62,7 @@ export function PlannerDailyPage() {
         className="inline-flex items-center gap-2 text-sm font-medium text-on-surface-variant hover:text-primary transition-colors no-underline"
       >
         <ArrowLeft className="w-4 h-4" />
-        Back to planner
+        {t('daily.backToPlanner')}
       </Link>
 
       {/* Header */}
@@ -67,7 +73,7 @@ export function PlannerDailyPage() {
           </h1>
           <p className="text-on-surface-variant mt-1">
             {currentDate.getDate()} {monthName} {currentDate.getFullYear()}
-            {isToday && <span className="ml-2 text-xs font-bold text-primary">(Today)</span>}
+            {isToday && <span className="ml-2 text-xs font-bold text-primary">({t('common.today')})</span>}
           </p>
         </div>
         <div className="flex flex-wrap items-center gap-3">
@@ -76,17 +82,17 @@ export function PlannerDailyPage() {
               onClick={goToToday}
               className="px-3 py-1.5 text-xs font-bold text-primary border border-primary rounded-lg hover:bg-primary-fixed transition-colors"
             >
-              Today
+              {t('common.today')}
             </button>
           )}
           <div className="flex items-center gap-2 bg-surface-container-lowest px-4 py-2 rounded-xl shadow-sm">
-            <button className="text-on-surface-variant hover:text-primary" onClick={prevDay} aria-label="Previous day">
+            <button className="text-on-surface-variant hover:text-primary" onClick={prevDay} aria-label={t('pagination.previousDay')}>
               <ChevronLeft className="w-5 h-5" />
             </button>
             <span className="font-headline font-bold text-primary px-2 text-sm" data-testid="daily-date">
               {dateStr}
             </span>
-            <button className="text-on-surface-variant hover:text-primary" onClick={nextDay} aria-label="Next day">
+            <button className="text-on-surface-variant hover:text-primary" onClick={nextDay} aria-label={t('pagination.nextDay')}>
               <ChevronRight className="w-5 h-5" />
             </button>
           </div>
@@ -96,7 +102,7 @@ export function PlannerDailyPage() {
             className="flex items-center gap-2 bg-gradient-to-br from-primary to-primary-container text-white py-2.5 px-6 rounded-xl font-bold text-sm shadow-md no-underline"
           >
             <PlusCircle className="w-4 h-4" />
-            New Activity
+            {t('nav.newActivity')}
           </Link>
         </div>
       </div>
@@ -104,18 +110,18 @@ export function PlannerDailyPage() {
       {/* Activity list */}
       {isLoading ? (
         <div className="flex items-center justify-center h-64">
-          <LoadingSpinner size="lg" label="Loading activities..." />
+          <LoadingSpinner size="lg" label={t('activityList.loadingActivities')} />
         </div>
       ) : activities.length === 0 ? (
         <div data-testid="empty-state" className="bg-surface-container-lowest p-12 rounded-xl shadow-sm border border-slate-100 text-center">
-          <p className="text-on-surface-variant text-sm">No activities scheduled for this day.</p>
+          <p className="text-on-surface-variant text-sm">{t('daily.noActivities')}</p>
           <Link
             to="/activities/new"
             search={{ date: dateStr }}
             className="inline-flex items-center gap-2 mt-4 text-sm font-medium text-primary hover:underline no-underline"
           >
             <PlusCircle className="w-4 h-4" />
-            Create an activity
+            {t('daily.createActivity')}
           </Link>
         </div>
       ) : (
@@ -145,7 +151,7 @@ export function PlannerDailyPage() {
                     </span>
                     {activity.submittedAt && (
                       <span className="px-2 py-0.5 rounded-full text-[9px] font-bold uppercase tracking-tight bg-slate-200 text-slate-600">
-                        Submitted
+                        {t('daily.submitted')}
                       </span>
                     )}
                   </div>
@@ -159,7 +165,7 @@ export function PlannerDailyPage() {
       {/* Summary */}
       {activities.length > 0 && (
         <div className="text-xs text-on-surface-variant text-center" data-testid="daily-summary">
-          {activities.length} {activities.length === 1 ? 'activity' : 'activities'} scheduled
+          {t('daily.activitiesScheduled', { count: activities.length })}
         </div>
       )}
     </motion.div>

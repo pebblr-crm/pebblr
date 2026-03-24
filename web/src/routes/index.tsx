@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import { createRoute } from '@tanstack/react-router'
 import { motion } from 'motion/react'
+import { useTranslation } from 'react-i18next'
 import { Route as rootRoute } from './__root'
 import { LoadingSpinner } from '../components/LoadingSpinner'
 import { StatCard } from '../components/dashboard/StatCard'
@@ -26,6 +27,7 @@ function currentPeriod(): string {
 }
 
 export function DashboardPage() {
+  const { t } = useTranslation()
   const [period, setPeriod] = useState(currentPeriod)
 
   const filter: DashboardFilter = { period }
@@ -42,7 +44,7 @@ export function DashboardPage() {
   if (isLoading) {
     return (
       <div className="flex items-center justify-center h-full">
-        <LoadingSpinner size="lg" label="Loading dashboard..." />
+        <LoadingSpinner size="lg" label={t('dashboard.loading')} />
       </div>
     )
   }
@@ -67,10 +69,10 @@ export function DashboardPage() {
         <div className="flex flex-col sm:flex-row sm:justify-between sm:items-end gap-4 mb-6">
           <div>
             <h1 className="text-2xl sm:text-3xl font-extrabold text-primary tracking-tight font-headline">
-              Command Center
+              {t('dashboard.title')}
             </h1>
             <p className="text-on-surface-variant text-sm sm:text-base">
-              Activity-based KPIs for your team
+              {t('dashboard.subtitle')}
             </p>
           </div>
           <PeriodSelector period={period} onPeriodChange={setPeriod} />
@@ -80,18 +82,18 @@ export function DashboardPage() {
       {/* Top-level KPI cards */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
         <StatCard
-          label={initialStatus?.label ?? statuses[0]?.label ?? 'Planned'}
+          label={initialStatus?.label ?? statuses[0]?.label ?? t('dashboard.planned')}
           value={String(planned)}
           variant="default"
         />
         <StatCard
-          label={completedKey ? (statuses.find((s) => s.key === completedKey)?.label ?? completedKey) : 'Completed'}
+          label={completedKey ? (statuses.find((s) => s.key === completedKey)?.label ?? completedKey) : t('dashboard.completed')}
           value={String(completed)}
           variant="primary"
           progress={realizationPct}
         />
         <StatCard
-          label="Completion Rate"
+          label={t('dashboard.completionRate')}
           value={`${realizationPct}%`}
           progress={realizationPct}
         />

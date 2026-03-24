@@ -1,5 +1,6 @@
 import { createRoute, Link } from '@tanstack/react-router'
 import { motion } from 'motion/react'
+import { useTranslation } from 'react-i18next'
 import { ArrowLeft, Lock, Send, Users } from 'lucide-react'
 import { useState, useEffect, useRef } from 'react'
 import { Route as rootRoute } from '../__root'
@@ -30,6 +31,7 @@ export const Route = createRoute({
 })
 
 export function ActivityDetailPage() {
+  const { t } = useTranslation()
   const { activityId } = Route.useParams()
   const { state: { from } } = usePlannerState()
   const { data: activity, isLoading, isError, error } = useActivity(activityId)
@@ -38,7 +40,7 @@ export function ActivityDetailPage() {
   if (isLoading) {
     return (
       <div className="flex items-center justify-center h-64">
-        <LoadingSpinner size="lg" label="Loading activity..." />
+        <LoadingSpinner size="lg" label={t('activity.loading')} />
       </div>
     )
   }
@@ -46,7 +48,7 @@ export function ActivityDetailPage() {
   if (isError) {
     return (
       <div data-testid="error-state" className="p-8 text-center text-error">
-        {error instanceof Error ? error.message : 'Failed to load activity.'}
+        {error instanceof Error ? error.message : t('activity.failedToLoad')}
       </div>
     )
   }
@@ -54,7 +56,7 @@ export function ActivityDetailPage() {
   if (!activity) {
     return (
       <div data-testid="not-found" className="p-8 text-center text-on-surface-variant">
-        Activity not found.
+        {t('activity.notFound')}
       </div>
     )
   }
@@ -62,7 +64,7 @@ export function ActivityDetailPage() {
   if (!config) {
     return (
       <div className="flex items-center justify-center h-64">
-        <LoadingSpinner size="lg" label="Loading configuration..." />
+        <LoadingSpinner size="lg" label={t('activity.loadingConfig')} />
       </div>
     )
   }
@@ -79,6 +81,7 @@ interface InnerProps {
 }
 
 export function ActivityDetailInner({ activityId, config, from }: InnerProps) {
+  const { t } = useTranslation()
   const { data: activity } = useActivity(activityId)
   const { showToast } = useToast()
 
@@ -98,7 +101,7 @@ export function ActivityDetailInner({ activityId, config, from }: InnerProps) {
   const jointVisitUserId = act.jointVisitUserId
     ?? (act.fields?.joint_visit_user_id as string | undefined)
   const jointVisitorName = jointVisitUserId
-    ? (membersResult?.items.find((u) => u.id === jointVisitUserId)?.name ?? 'Unknown user')
+    ? (membersResult?.items.find((u) => u.id === jointVisitUserId)?.name ?? '?')
     : undefined
   const activityTitle = getActivityTitle(config, act)
   const statusLabel = getStatusLabel(config?.activities, localData.status ?? act.status)
@@ -135,10 +138,10 @@ export function ActivityDetailInner({ activityId, config, from }: InnerProps) {
   const prevSaveStateForToast = useRef(saveState)
   useEffect(() => {
     if (prevSaveStateForToast.current !== 'error' && saveState === 'error') {
-      showToast('Failed to save changes. Tap retry to try again.')
+      showToast(t('activityDetail.failedToSave'))
     }
     prevSaveStateForToast.current = saveState
-  }, [saveState, showToast])
+  }, [saveState, showToast, t])
 
   // Show toast when field validation errors arrive
   const prevFieldErrorCount = useRef(0)
@@ -165,8 +168,8 @@ export function ActivityDetailInner({ activityId, config, from }: InnerProps) {
     if (isTerminalStatus(toStatus)) {
       const label = getStatusLabel(config?.activities, toStatus)
       setConfirmAction({
-        title: `Mark as ${label}?`,
-        message: `This will change the status to ${label}. This action cannot be undone.`,
+        title: t('activityDetail.markAs', { status: label }),
+        message: t('activityDetail.markAsMessage', { status: label }),
         onConfirm: () => { handleStatusChange(toStatus); setConfirmAction(null) },
       })
     } else {
@@ -180,12 +183,12 @@ export function ActivityDetailInner({ activityId, config, from }: InnerProps) {
       return
     }
     if (!isSubmittable) {
-      showToast('Set status to completed or cancelled before submitting.')
+      showToast(t('activityDetail.setStatusFirst'))
       return
     }
     setConfirmAction({
-      title: 'Submit report?',
-      message: 'Once submitted, the activity will be locked and can no longer be edited.',
+      title: t('activityDetail.submitReportQuestion'),
+      message: t('activityDetail.submitReportMessage'),
       onConfirm: () => { setConfirmAction(null); void handleSubmit() },
     })
   }
@@ -205,10 +208,10 @@ export function ActivityDetailInner({ activityId, config, from }: InnerProps) {
         className="inline-flex items-center gap-2 text-sm font-medium text-on-surface-variant hover:text-primary transition-colors no-underline"
       >
         <ArrowLeft className="w-4 h-4" />
-        {from === 'planner' ? 'Back to planner'
-          : from === 'daily' ? 'Back to daily view'
-          : from === 'map' ? 'Back to map planner'
-          : 'Back to dashboard'}
+        {from === 'planner' ? t('activityDetail.backToPlanner')
+          : from === 'daily' ? t('activityDetail.backToDaily')
+          : from === 'map' ? t('activityDetail.backToMap')
+          : t('activityDetail.backToDashboard')}
       </Link>
 
       {/* Header card */}
@@ -230,7 +233,7 @@ export function ActivityDetailInner({ activityId, config, from }: InnerProps) {
               {isSubmitted && (
                 <span className="inline-flex items-center gap-1 px-3 py-1 rounded-full text-[10px] font-bold uppercase tracking-tight bg-slate-200 text-slate-600">
                   <Lock className="w-3 h-3" />
-                  Submitted
+                  {t('activityDetail.submitted')}
                 </span>
               )}
 
@@ -240,7 +243,7 @@ export function ActivityDetailInner({ activityId, config, from }: InnerProps) {
                   data-testid="joint-visit-badge"
                 >
                   <Users className="w-3 h-3" />
-                  Joint visit with {jointVisitorName}
+                  {t('activityDetail.jointVisit', { name: jointVisitorName })}
                 </span>
               )}
             </div>
@@ -259,18 +262,18 @@ export function ActivityDetailInner({ activityId, config, from }: InnerProps) {
 
       {/* Core editable fields */}
       <div className="bg-surface-container-lowest p-6 sm:p-8 rounded-xl shadow-[0px_24px_48px_rgba(25,28,30,0.06)]">
-        <h2 className="text-lg font-bold text-on-surface mb-6 font-headline">Details</h2>
+        <h2 className="text-lg font-bold text-on-surface mb-6 font-headline">{t('activity.details')}</h2>
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
           {/* Activity type — read-only, cannot change after creation */}
           <div>
-            <label className={labelClass}>Type</label>
+            <label className={labelClass}>{t('activity.type')}</label>
             <p className="text-sm text-on-surface py-2">{typeLabel}</p>
           </div>
 
           {/* Due date */}
           <div>
             <label className={labelClass}>
-              Date <span className="text-error">*</span>
+              {t('activity.date')} <span className="text-error">*</span>
             </label>
             <input
               type="date"
@@ -290,7 +293,7 @@ export function ActivityDetailInner({ activityId, config, from }: InnerProps) {
           {hasDuration && (
             <div>
               <label className={labelClass}>
-                Duration <span className="text-error">*</span>
+                {t('activity.duration')} <span className="text-error">*</span>
               </label>
               <select
                 value={localData.duration ?? ''}
@@ -300,7 +303,7 @@ export function ActivityDetailInner({ activityId, config, from }: InnerProps) {
                 className={inputClass(getFieldError('duration'))}
                 data-testid="duration-select"
               >
-                <option value="">— Select duration —</option>
+                <option value="">{t('activity.selectDuration')}</option>
                 {config.activities.durations.map((d) => (
                   <option key={d.key} value={d.key}>{d.label}</option>
                 ))}
@@ -312,7 +315,7 @@ export function ActivityDetailInner({ activityId, config, from }: InnerProps) {
           {getTypeConfig(config.activities, act.activityType)?.category === 'field' && (
             <div className="sm:col-span-2">
               <label className={labelClass}>
-                Target <span className="text-error">*</span>
+                {t('activity.target')} <span className="text-error">*</span>
               </label>
               <TargetField
                 value={localData.targetId ?? ''}
@@ -331,7 +334,7 @@ export function ActivityDetailInner({ activityId, config, from }: InnerProps) {
       {typeConfig && typeConfig.fields.length > 0 && (
         <div className="bg-surface-container-lowest p-6 sm:p-8 rounded-xl shadow-[0px_24px_48px_rgba(25,28,30,0.06)]">
           <h2 className="text-lg font-bold text-on-surface mb-6 font-headline">
-            {typeLabel} Fields
+            {t('activity.fields', { type: typeLabel })}
           </h2>
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
             {typeConfig.fields
@@ -420,6 +423,7 @@ interface SubmitButtonProps {
 }
 
 function SubmitButton({ saveState, isSubmitting, isStatusPending, onClick }: SubmitButtonProps) {
+  const { t } = useTranslation()
   const disabled = isSubmitting || isStatusPending
   return (
     <button
@@ -430,7 +434,7 @@ function SubmitButton({ saveState, isSubmitting, isStatusPending, onClick }: Sub
       data-testid="submit-report-button"
     >
       <Send className="w-4 h-4" />
-      {isSubmitting ? 'Submitting…' : saveState === 'error' ? 'Retry Save' : 'Submit Report'}
+      {isSubmitting ? t('activityDetail.submitting') : saveState === 'error' ? t('activityDetail.retrySave') : t('activityDetail.submitReport')}
     </button>
   )
 }
@@ -469,6 +473,7 @@ interface ConfirmModalProps {
 }
 
 function ConfirmModal({ title, message, onConfirm, onCancel }: ConfirmModalProps) {
+  const { t } = useTranslation()
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
       <div className="fixed inset-0 bg-black/40" onClick={onCancel} />
@@ -481,7 +486,7 @@ function ConfirmModal({ title, message, onConfirm, onCancel }: ConfirmModalProps
             onClick={onCancel}
             className="px-4 py-2.5 min-h-[44px] text-sm font-medium text-slate-500 rounded-xl hover:bg-slate-50 transition-colors"
           >
-            Go back
+            {t('common.goBack')}
           </button>
           <button
             type="button"
@@ -489,7 +494,7 @@ function ConfirmModal({ title, message, onConfirm, onCancel }: ConfirmModalProps
             className="px-4 py-2.5 min-h-[44px] text-sm font-bold text-white bg-primary rounded-xl hover:bg-primary/90 transition-colors"
             data-testid="confirm-action"
           >
-            Confirm
+            {t('common.confirm')}
           </button>
         </div>
       </div>
@@ -508,6 +513,7 @@ interface TargetFieldProps {
 }
 
 function TargetField({ value, onChange, onBlur, disabled, error }: TargetFieldProps) {
+  const { t } = useTranslation()
   const [search, setSearch] = useState('')
   const [modalOpen, setModalOpen] = useState(false)
   const { data: targetsResult } = useTargets({ q: search, limit: 20 })
@@ -528,7 +534,7 @@ function TargetField({ value, onChange, onBlur, disabled, error }: TargetFieldPr
         className={`w-full text-left ${inputClass(error)}`}
         data-testid="target-search-trigger"
       >
-        {selectedName || <span className="text-slate-400">Search targets…</span>}
+        {selectedName || <span className="text-slate-400">{t('activity.searchTargetsEllipsis')}</span>}
       </button>
       {error && <p className="text-xs text-error mt-1">{error}</p>}
 
@@ -547,7 +553,7 @@ function TargetField({ value, onChange, onBlur, disabled, error }: TargetFieldPr
             <input
               type="text"
               autoFocus
-              placeholder="Search targets…"
+              placeholder={t('activity.searchTargetsEllipsis')}
               value={search}
               onChange={(e) => setSearch(e.target.value)}
               className="flex-1 text-sm border-none focus:outline-none"
@@ -593,6 +599,7 @@ interface DynamicFieldProps {
 }
 
 function DynamicField({ fieldDef, value, onChange, onBlur, disabled, error, config }: DynamicFieldProps) {
+  const { t } = useTranslation()
   const { data: membersResult } = useTeamMembers()
 
   function resolveOptions(): OptionDef[] {
@@ -626,7 +633,7 @@ function DynamicField({ fieldDef, value, onChange, onBlur, disabled, error, conf
             className={inputClass(error)}
             data-testid={`field-${fieldDef.key}`}
           >
-            <option value="">— Select —</option>
+            <option value="">{t('common.select')}</option>
             {opts.map((o) => <option key={o.key} value={o.key}>{o.label}</option>)}
           </select>
           {error && <p className="text-xs text-error mt-1">{error}</p>}
@@ -690,7 +697,7 @@ function DynamicField({ fieldDef, value, onChange, onBlur, disabled, error, conf
               className={inputClass(error)}
               data-testid={`field-${fieldDef.key}`}
             >
-              <option value="">— Select —</option>
+              <option value="">{t('common.select')}</option>
               {users.map((u) => (
                 <option key={u.id} value={u.id}>{u.name}</option>
               ))}

@@ -1,3 +1,4 @@
+import { useTranslation } from 'react-i18next'
 import type { FrequencyItem } from '@/types/dashboard'
 
 interface FrequencyTableProps {
@@ -17,12 +18,14 @@ function complianceBarColor(compliance: number): string {
 }
 
 export function FrequencyTable({ items }: FrequencyTableProps) {
+  const { t } = useTranslation()
+
   if (items.length === 0) return null
 
   return (
     <div className="bg-surface-container-lowest p-6 rounded-xl shadow-sm border border-slate-50">
       <p className="text-[10px] font-bold text-on-surface-variant uppercase tracking-wider mb-4">
-        Frequency Compliance
+        {t('dashboardCards.frequencyCompliance')}
       </p>
       <div className="space-y-3">
         {items.map((item) => {
@@ -45,11 +48,11 @@ export function FrequencyTable({ items }: FrequencyTableProps) {
                   />
                 </div>
                 <span className="text-xs text-on-surface-variant whitespace-nowrap">
-                  {item.totalVisits} / {item.required * item.targetCount} visits
+                  {item.totalVisits} / {item.required * item.targetCount} {t('dashboardCards.visits')}
                 </span>
               </div>
               <p className="text-xs text-on-surface-variant mt-0.5">
-                {item.targetCount} targets, {item.required} required/target
+                {t('dashboardCards.targets_count', { count: item.targetCount, required: item.required })}
               </p>
             </div>
           )

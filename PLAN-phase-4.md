@@ -7,7 +7,7 @@
 24. ✅ Weekend activity + recovery days
 25. ❌ Target group management (quarterly)
 26. ❌ Plan generation (rule-based monthly plan proposal)
-27. ❌ i18n / Romanian UI
+27. ✅ i18n / Romanian UI
 28. ❌ Data migration from Twenty CRM
 
 ### Removed / Superseded
@@ -67,17 +67,19 @@ Auto-propose a monthly activity plan based on rules:
 
 ---
 
-## 4. i18n / Romanian UI ❌
+## 4. i18n / Romanian UI ✅
 
-DrMax Romania needs a Romanian-language interface. The tenant config already drives labels for domain concepts (activity types, statuses, field labels), but the UI chrome (buttons, navigation, empty states, error messages) is in English.
+Implemented client-side i18n using `react-i18next` with browser language detection and localStorage persistence.
 
-### Approach
+### What was built
 
-- Lightweight i18n: tenant config `locale` field already exists (`"locale": "en"`)
-- Add a `ui_strings` section to tenant config with overridable UI labels
-- Fallback to English for any missing keys
-- No heavy i18n framework needed — this is single-tenant, single-locale per deployment
-- Key areas: navigation labels, button text ("Create", "Save", "Submit"), planner headers, empty states, error/success toasts
+- **Library:** `react-i18next` + `i18next` + `i18next-browser-languagedetector`
+- **Languages:** English (en) and Romanian (ro) — translation files at `web/src/i18n/`
+- **Language switcher:** Globe icon in Sidebar Settings popover, cycles through available languages
+- **Detection order:** localStorage (`pebblr-language`) → browser language → fallback to English
+- **Coverage:** All UI chrome strings — navigation, buttons, form labels, empty states, error messages, pagination, dashboard cards, planner sidebar
+- **Tests:** 5 tests covering default language, switching, persistence, restoration, and cycling
+- **Domain labels** (activity types, statuses, field names) remain config-driven — not duplicated in i18n files
 
 ---
 
