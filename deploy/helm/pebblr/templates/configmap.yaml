@@ -14,6 +14,7 @@ data:
   DB_NAME: {{ .Values.database.name | quote }}
   DB_USER: {{ .Values.database.user | quote }}
   DB_SSL_MODE: {{ .Values.database.sslMode | quote }}
+  AUTH_PROVIDER: {{ .Values.auth.provider | quote }}
   AUTH_TENANT_ID: {{ .Values.auth.tenantId | quote }}
   AUTH_CLIENT_ID: {{ .Values.auth.clientId | quote }}
   AUTH_AUDIENCE: {{ .Values.auth.audience | quote }}

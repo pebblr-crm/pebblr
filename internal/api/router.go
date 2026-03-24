@@ -10,6 +10,7 @@ import (
 	"github.com/go-chi/chi/v5"
 	chimiddleware "github.com/go-chi/chi/v5/middleware"
 	"github.com/pebblr/pebblr/internal/auth"
+	"github.com/pebblr/pebblr/internal/auth/demo"
 	"github.com/pebblr/pebblr/internal/rbac"
 )
 
@@ -24,6 +25,7 @@ type RouterConfig struct {
 	UserHandler      *UserHandler
 	ConfigHandler      *ConfigHandler
 	CollectionHandler  *CollectionHandler
+	DemoHandler        *demo.Handler
 	WebDistPath        string
 }
 
@@ -40,6 +42,14 @@ func NewRouter(cfg RouterConfig) http.Handler {
 	// Kubernetes probe endpoints — outside auth middleware.
 	r.Get("/healthz", healthHandler)
 	r.Get("/readyz", healthHandler)
+
+	// Demo auth endpoints — outside auth middleware so prospects can obtain tokens.
+	if cfg.DemoHandler != nil {
+		r.Route("/demo", func(r chi.Router) {
+			r.Get("/accounts", cfg.DemoHandler.ListAccounts)
+			r.Post("/token", cfg.DemoHandler.IssueToken)
+		})
+	}
 
 	r.Route("/api/v1", func(r chi.Router) {
 		r.Use(auth.Middleware(cfg.Authenticator))
