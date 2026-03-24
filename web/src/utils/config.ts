@@ -1,5 +1,20 @@
+import i18n from '@/i18n'
 import type { ActivitiesConfig, ActivityTypeConfig, TenantConfig } from '@/types/config'
 import type { Activity } from '@/types/activity'
+
+// ── i18n config label helper ────────────────────────────────────────────────
+
+/**
+ * Translates a config-driven label via i18n.
+ * Looks up `configLabels.<key>` — if a translation exists, returns it;
+ * otherwise falls back to the raw config label.
+ */
+export function translateConfigLabel(i18nKey: string, fallback: string): string {
+  const fullKey = `configLabels.${i18nKey}`
+  const translated = i18n.t(fullKey)
+  // i18next returns the key itself when no translation is found
+  return translated === fullKey ? fallback : translated
+}
 
 // ── Lookup helpers ──────────────────────────────────────────────────────────
 // All helpers accept ActivitiesConfig | undefined.
@@ -13,7 +28,7 @@ export function getTypeConfig(
 }
 
 export function getTypeLabel(config: ActivitiesConfig | undefined, typeKey: string): string {
-  return getTypeConfig(config, typeKey)?.label ?? typeKey
+  return translateConfigLabel(`type.${typeKey}`, getTypeConfig(config, typeKey)?.label ?? typeKey)
 }
 
 export function getTypeCategory(
@@ -24,11 +39,11 @@ export function getTypeCategory(
 }
 
 export function getStatusLabel(config: ActivitiesConfig | undefined, statusKey: string): string {
-  return config?.statuses.find((s) => s.key === statusKey)?.label ?? statusKey
+  return translateConfigLabel(`status.${statusKey}`, config?.statuses.find((s) => s.key === statusKey)?.label ?? statusKey)
 }
 
 export function getDurationLabel(config: ActivitiesConfig | undefined, durationKey: string): string {
-  return config?.durations.find((d) => d.key === durationKey)?.label ?? durationKey
+  return translateConfigLabel(`duration.${durationKey}`, config?.durations.find((d) => d.key === durationKey)?.label ?? durationKey)
 }
 
 // ── Style constants ─────────────────────────────────────────────────────────
@@ -113,7 +128,7 @@ export function getActivityTitle(config: TenantConfig | undefined, activity: Act
 export function getActivityDisplayName(config: TenantConfig | undefined, activity: Activity): string {
   const title = getActivityTitle(config, activity)
   const date = new Date(activity.dueDate)
-  const dateStr = date.toLocaleDateString('en-GB', { day: 'numeric', month: 'short' })
+  const dateStr = date.toLocaleDateString(getDateLocale(), { day: 'numeric', month: 'short' })
   return `${title} — ${dateStr}`
 }
 
@@ -136,11 +151,34 @@ function resolveOptionLabel(
     const opts = config.options[fieldCfg.options_ref]
       ?? (fieldCfg.options_ref === 'durations' ? config.activities.durations : undefined)
     const match = opts?.find((o) => o.key === value)
-    if (match) return match.label
+    if (match) return translateConfigLabel(`option.${fieldCfg.options_ref}.${value}`, match.label)
   }
 
   // Inline string options have no labels — return the raw value.
   return value
+}
+
+/** Returns the BCP 47 locale tag matching the current i18n language. */
+export function getDateLocale(): string {
+  const lang = i18n.language
+  if (lang === 'ro') return 'ro-RO'
+  return 'en-GB'
+}
+
+/**
+ * Translates a config option label.
+ * Used by components rendering option dropdowns from config data.
+ */
+export function getOptionLabel(optionsRef: string, key: string, fallback: string): string {
+  return translateConfigLabel(`option.${optionsRef}.${key}`, fallback)
+}
+
+/**
+ * Translates a config field label.
+ * Used by components rendering dynamic field labels from config data.
+ */
+export function getConfigFieldLabel(fieldKey: string, fallback: string): string {
+  return translateConfigLabel(`field.${fieldKey}`, fallback)
 }
 
 /** Month names indexed 0–11. */

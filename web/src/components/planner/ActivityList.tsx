@@ -12,6 +12,7 @@ import {
   getTypeCategory,
   getStatusBadgeColor,
   CATEGORY_COLORS,
+  translateConfigLabel,
 } from '@/utils/config'
 import type { Activity } from '@/types/activity'
 
@@ -62,7 +63,7 @@ export function ActivityList() {
         >
           <option value="">{t('activityList.allStatuses')}</option>
           {statuses.map((s) => (
-            <option key={s.key} value={s.key}>{s.label}</option>
+            <option key={s.key} value={s.key}>{translateConfigLabel(`status.${s.key}`, s.label)}</option>
           ))}
         </select>
         <select
@@ -72,8 +73,8 @@ export function ActivityList() {
           data-testid="type-filter"
         >
           <option value="">{t('activityList.allTypes')}</option>
-          {types.map((t) => (
-            <option key={t.key} value={t.key}>{t.label}</option>
+          {types.map((at) => (
+            <option key={at.key} value={at.key}>{translateConfigLabel(`type.${at.key}`, at.label)}</option>
           ))}
         </select>
         <span className="text-xs text-on-surface-variant ml-auto">

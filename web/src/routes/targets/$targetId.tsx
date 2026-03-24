@@ -6,6 +6,7 @@ import { Route as rootRoute } from '../__root'
 import { LoadingSpinner } from '../../components/LoadingSpinner'
 import { useTarget } from '../../services/targets'
 import { useConfig } from '../../services/config'
+import { translateConfigLabel, getOptionLabel, getConfigFieldLabel } from '@/utils/config'
 
 export const Route = createRoute({
   getParentRoute: () => rootRoute,
@@ -45,14 +46,15 @@ export function TargetDetailPage() {
 
   const accountTypes = config?.accounts.types ?? []
   const acctConfig = accountTypes.find((a) => a.key === target.targetType)
-  const typeLabel = acctConfig?.label ?? target.targetType
+  const typeLabel = translateConfigLabel(`accountType.${target.targetType}`, acctConfig?.label ?? target.targetType)
   const fields = acctConfig?.fields.filter((f) => f.key !== 'name') ?? []
 
   function resolveOptionLabel(ref: string, value: string): string {
     const opts = config?.options[ref]
     if (!opts) return value
     const opt = opts.find((o) => o.key === value)
-    return opt?.label ?? value
+    if (!opt) return value
+    return getOptionLabel(ref, opt.key, opt.label)
   }
 
   function getFieldDisplay(fieldKey: string, value: unknown): string {
@@ -122,7 +124,7 @@ export function TargetDetailPage() {
           {fields.map((f) => (
             <div key={f.key}>
               <dt className="text-xs font-bold uppercase tracking-widest text-slate-400 mb-1">
-                {f.key.replace(/_/g, ' ')}
+                {getConfigFieldLabel(f.key, f.label ?? f.key.replace(/_/g, ' '))}
               </dt>
               <dd className="text-sm text-on-surface">
                 {getFieldDisplay(f.key, target.fields[f.key])}

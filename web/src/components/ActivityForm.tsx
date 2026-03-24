@@ -7,6 +7,7 @@ import type { Activity, CreateActivityInput } from '../types/activity'
 import type { FieldConfig, OptionDef, TenantConfig } from '../types/config'
 import { LoadingSpinner } from './LoadingSpinner'
 import { extractDate } from '@/utils/date'
+import { translateConfigLabel, getConfigFieldLabel, getOptionLabel } from '@/utils/config'
 
 /**
  * Field keys that have dedicated core widgets in the form (duration selector,
@@ -106,16 +107,17 @@ function ActivityFormInner({
   }
 
   function resolveOptions(fieldDef: FieldConfig): OptionDef[] {
+    let opts: OptionDef[] = []
     if (fieldDef.options_ref) {
       // Check top-level options map first, then special-case refs
       // that live outside the options map (mirrors backend ResolveOptions).
       if (config.options[fieldDef.options_ref]) {
-        return config.options[fieldDef.options_ref]
+        opts = config.options[fieldDef.options_ref]
+      } else if (fieldDef.options_ref === 'durations') {
+        opts = config.activities.durations
       }
-      if (fieldDef.options_ref === 'durations') {
-        return config.activities.durations
-      }
-      return []
+      const ref = fieldDef.options_ref
+      return opts.map((o) => ({ key: o.key, label: getOptionLabel(ref, o.key, o.label) }))
     }
     if (fieldDef.options) {
       return fieldDef.options.map((o) => ({ key: o, label: o }))
@@ -130,7 +132,7 @@ function ActivityFormInner({
 
     const labelEl = (
       <label className="block text-xs font-bold uppercase tracking-widest text-slate-400 mb-1">
-        {fieldDef.label ?? fieldDef.key.replace(/_/g, ' ')}
+        {getConfigFieldLabel(fieldDef.key, fieldDef.label ?? fieldDef.key.replace(/_/g, ' '))}
         {fieldDef.required && <span className="text-error ml-1">*</span>}
       </label>
     )
@@ -298,8 +300,8 @@ function ActivityFormInner({
               required
             >
               <option value="">{t('activity.selectType')}</option>
-              {activityTypes.map((t) => (
-                <option key={t.key} value={t.key}>{t.label}</option>
+              {activityTypes.map((at) => (
+                <option key={at.key} value={at.key}>{translateConfigLabel(`type.${at.key}`, at.label)}</option>
               ))}
             </select>
             {getFieldError('activityType') && (
@@ -323,7 +325,7 @@ function ActivityFormInner({
               >
                 <option value="">{t('activity.selectStatus')}</option>
                 {statuses.map((s) => (
-                  <option key={s.key} value={s.key}>{s.label}</option>
+                  <option key={s.key} value={s.key}>{translateConfigLabel(`status.${s.key}`, s.label)}</option>
                 ))}
               </select>
             </div>
@@ -364,7 +366,7 @@ function ActivityFormInner({
               >
                 <option value="">{t('activity.selectDuration')}</option>
                 {durations.map((d) => (
-                  <option key={d.key} value={d.key}>{d.label}</option>
+                  <option key={d.key} value={d.key}>{translateConfigLabel(`duration.${d.key}`, d.label)}</option>
                 ))}
               </select>
             </div>
@@ -424,7 +426,7 @@ function ActivityFormInner({
       {selectedType && selectedType.fields.filter((f) => !CORE_WIDGET_FIELDS.has(f.key)).length > 0 && (
         <div className="bg-surface-container-lowest p-8 rounded-xl shadow-[0px_24px_48px_rgba(25,28,30,0.06)]">
           <h2 className="text-lg font-bold text-on-surface mb-6 font-headline">
-            {t('activity.detailsLabel', { type: selectedType.label })}
+            {t('activity.detailsLabel', { type: translateConfigLabel(`type.${selectedType.key}`, selectedType.label) })}
           </h2>
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
             {selectedType.fields

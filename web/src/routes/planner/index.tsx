@@ -12,7 +12,7 @@ import { MonthGrid } from '../../components/planner/MonthGrid'
 import { WeekGrid } from '../../components/planner/WeekGrid'
 import { ActivityList } from '../../components/planner/ActivityList'
 import { formatDate, addDays, getMonday, extractDate } from '@/utils/date'
-import { MONTH_NAMES, getStatusDotColor } from '@/utils/config'
+import { MONTH_NAMES, getStatusDotColor, translateConfigLabel } from '@/utils/config'
 import { usePlannerState } from '@/contexts/planner'
 
 export const Route = createRoute({
@@ -104,7 +104,7 @@ export function PlannerPage() {
 
   // Status legend from config
   const statusLegend = config?.activities.statuses.map((s) => ({
-    label: s.label,
+    label: translateConfigLabel(`status.${s.key}`, s.label),
     dot: getStatusDotColor(config?.activities, s.key),
   })) ?? []
 

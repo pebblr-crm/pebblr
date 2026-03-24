@@ -13,6 +13,7 @@ import { TeamPerformanceCard } from '../components/dashboard/TeamPerformanceCard
 import { useActivityStats, useCoverage, useFrequency } from '../services/dashboard'
 import { useConfig } from '../services/config'
 import { useTeamMembers } from '../services/teams'
+import { translateConfigLabel } from '@/utils/config'
 import type { DashboardFilter } from '../types/dashboard'
 import { formatPeriod } from '../utils/date'
 
@@ -82,12 +83,12 @@ export function DashboardPage() {
       {/* Top-level KPI cards */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
         <StatCard
-          label={initialStatus?.label ?? statuses[0]?.label ?? t('dashboard.planned')}
+          label={initialStatus ? translateConfigLabel(`status.${initialStatus.key}`, initialStatus.label) : (statuses[0] ? translateConfigLabel(`status.${statuses[0].key}`, statuses[0].label) : t('dashboard.planned'))}
           value={String(planned)}
           variant="default"
         />
         <StatCard
-          label={completedKey ? (statuses.find((s) => s.key === completedKey)?.label ?? completedKey) : t('dashboard.completed')}
+          label={completedKey ? translateConfigLabel(`status.${completedKey}`, statuses.find((s) => s.key === completedKey)?.label ?? completedKey) : t('dashboard.completed')}
           value={String(completed)}
           variant="primary"
           progress={realizationPct}

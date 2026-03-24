@@ -7,6 +7,7 @@ import { Route as rootRoute } from '../__root'
 import { LoadingSpinner } from '../../components/LoadingSpinner'
 import { useTargets, useTargetFrequencyStatus } from '../../services/targets'
 import { useConfig } from '../../services/config'
+import { translateConfigLabel, getOptionLabel, getConfigFieldLabel } from '@/utils/config'
 
 export const Route = createRoute({
   getParentRoute: () => rootRoute,
@@ -109,23 +110,25 @@ export function TargetsPage() {
   const accountTypes = config?.accounts.types ?? []
   const typeOptions: { value: string; label: string }[] = [
     { value: '', label: t('targets.allTypes') },
-    ...accountTypes.map((t) => ({ value: t.key, label: t.label })),
+    ...accountTypes.map((at) => ({ value: at.key, label: translateConfigLabel(`accountType.${at.key}`, at.label) })),
   ]
 
-  // Resolve field label from config
+  // Resolve field label from config (with i18n)
   function resolveFieldLabel(targetType: string, fieldKey: string): string {
     const acct = accountTypes.find((a) => a.key === targetType)
     const field = acct?.fields.find((f) => f.key === fieldKey)
-    if (field) return field.key.replace(/_/g, ' ')
-    return fieldKey.replace(/_/g, ' ')
+    const fallback = fieldKey.replace(/_/g, ' ')
+    if (field?.label) return getConfigFieldLabel(fieldKey, field.label)
+    return getConfigFieldLabel(fieldKey, fallback)
   }
 
-  // Resolve option label from config
+  // Resolve option label from config (with i18n)
   function resolveOptionLabel(ref: string, value: string): string {
     const opts = config?.options[ref]
     if (!opts) return value
     const opt = opts.find((o) => o.key === value)
-    return opt?.label ?? value
+    if (!opt) return value
+    return getOptionLabel(ref, opt.key, opt.label)
   }
 
   // Get display value for a dynamic field
@@ -220,7 +223,7 @@ export function TargetsPage() {
                 </div>
               </div>
               <div className="mt-4">
-                <div className="text-sm font-medium text-slate-500">{acct.label}s</div>
+                <div className="text-sm font-medium text-slate-500">{translateConfigLabel(`accountType.${acct.key}`, acct.label)}s</div>
                 <div className="text-3xl font-extrabold font-headline mt-1">{count}</div>
               </div>
             </div>
@@ -288,7 +291,7 @@ export function TargetsPage() {
                       <td className="px-6 py-5">
                         <TypeBadge
                           targetType={target.targetType}
-                          label={accountTypes.find((a) => a.key === target.targetType)?.label}
+                          label={translateConfigLabel(`accountType.${target.targetType}`, accountTypes.find((a) => a.key === target.targetType)?.label ?? target.targetType)}
                         />
                       </td>
                       {dynamicColumns.map((col) => (

@@ -20,6 +20,9 @@ import {
   getActivityTitle,
   getStatusLabel,
   getStatusBadgeColor,
+  translateConfigLabel,
+  getConfigFieldLabel,
+  getOptionLabel,
 } from '@/utils/config'
 import type { FieldConfig, OptionDef, TenantConfig } from '@/types/config'
 import { usePlannerState } from '@/contexts/planner'
@@ -305,7 +308,7 @@ export function ActivityDetailInner({ activityId, config, from }: InnerProps) {
               >
                 <option value="">{t('activity.selectDuration')}</option>
                 {config.activities.durations.map((d) => (
-                  <option key={d.key} value={d.key}>{d.label}</option>
+                  <option key={d.key} value={d.key}>{translateConfigLabel(`duration.${d.key}`, d.label)}</option>
                 ))}
               </select>
             </div>
@@ -604,9 +607,11 @@ function DynamicField({ fieldDef, value, onChange, onBlur, disabled, error, conf
 
   function resolveOptions(): OptionDef[] {
     if (fieldDef.options_ref) {
-      if (config.options[fieldDef.options_ref]) return config.options[fieldDef.options_ref]
-      if (fieldDef.options_ref === 'durations') return config.activities.durations
-      return []
+      let opts: OptionDef[] = []
+      if (config.options[fieldDef.options_ref]) opts = config.options[fieldDef.options_ref]
+      else if (fieldDef.options_ref === 'durations') opts = config.activities.durations
+      const ref = fieldDef.options_ref
+      return opts.map((o) => ({ key: o.key, label: getOptionLabel(ref, o.key, o.label) }))
     }
     if (fieldDef.options) return fieldDef.options.map((o) => ({ key: o, label: o }))
     return []
@@ -614,7 +619,7 @@ function DynamicField({ fieldDef, value, onChange, onBlur, disabled, error, conf
 
   const labelEl = (
     <label className={labelClass}>
-      {fieldDef.label ?? fieldDef.key.replace(/_/g, ' ')}
+      {getConfigFieldLabel(fieldDef.key, fieldDef.label ?? fieldDef.key.replace(/_/g, ' '))}
       {fieldDef.required && <span className="text-error ml-1">*</span>}
     </label>
   )

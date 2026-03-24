@@ -46,16 +46,21 @@ describe('getTypeConfig', () => {
 })
 
 describe('getTypeLabel', () => {
-  it('returns label for known type', () => {
-    expect(getTypeLabel(mockConfig, 'visit')).toBe('Vizită')
+  // i18n defaults to English in tests, so configLabels.type.visit = 'Visit'
+  it('returns i18n label for known type', () => {
+    expect(getTypeLabel(mockConfig, 'visit')).toBe('Visit')
   })
 
   it('returns key as fallback for unknown type', () => {
     expect(getTypeLabel(mockConfig, 'unknown')).toBe('unknown')
   })
 
-  it('returns key as fallback when config is undefined', () => {
-    expect(getTypeLabel(undefined, 'visit')).toBe('visit')
+  it('returns i18n label when config is undefined but translation exists', () => {
+    expect(getTypeLabel(undefined, 'visit')).toBe('Visit')
+  })
+
+  it('returns raw key when no config and no translation', () => {
+    expect(getTypeLabel(undefined, 'custom_unknown')).toBe('custom_unknown')
   })
 })
 
@@ -78,7 +83,8 @@ describe('getTypeCategory', () => {
 })
 
 describe('getStatusLabel', () => {
-  it('returns label for known status', () => {
+  // 'planificat' has no English i18n key, so falls back to config label
+  it('returns config label for status without i18n key', () => {
     expect(getStatusLabel(mockConfig, 'planificat')).toBe('Planificat')
     expect(getStatusLabel(mockConfig, 'realizat')).toBe('Realizat')
   })
@@ -90,10 +96,19 @@ describe('getStatusLabel', () => {
   it('returns key as fallback when config is undefined', () => {
     expect(getStatusLabel(undefined, 'planificat')).toBe('planificat')
   })
+
+  // 'planned' has an English i18n key
+  it('returns i18n label for known status key', () => {
+    const enConfig: ActivitiesConfig = {
+      ...mockConfig,
+      statuses: [{ key: 'planned', label: 'Planned', initial: true }],
+    }
+    expect(getStatusLabel(enConfig, 'planned')).toBe('Planned')
+  })
 })
 
 describe('getDurationLabel', () => {
-  it('returns label for known duration', () => {
+  it('returns config label for duration without i18n key', () => {
     expect(getDurationLabel(mockConfig, '30m')).toBe('30 minutes')
     expect(getDurationLabel(mockConfig, '1h')).toBe('1 hour')
   })
@@ -104,6 +119,14 @@ describe('getDurationLabel', () => {
 
   it('returns key as fallback when config is undefined', () => {
     expect(getDurationLabel(undefined, '30m')).toBe('30m')
+  })
+
+  it('returns i18n label for known duration key', () => {
+    const enConfig: ActivitiesConfig = {
+      ...mockConfig,
+      durations: [{ key: 'full_day', label: 'Full Day' }],
+    }
+    expect(getDurationLabel(enConfig, 'full_day')).toBe('Full Day')
   })
 })
 
@@ -164,9 +187,9 @@ function makeActivity(overrides: Partial<Activity> = {}): Activity {
 }
 
 describe('getActivityTitle', () => {
-  it('returns type label with target name for field activities', () => {
+  it('returns i18n type label with target name for field activities', () => {
     const a = makeActivity({ targetName: 'Dr. Popescu' })
-    expect(getActivityTitle(fullConfig, a)).toBe('Vizită — Dr. Popescu')
+    expect(getActivityTitle(fullConfig, a)).toBe('Visit — Dr. Popescu')
   })
 
   it('returns just type label when no target name', () => {
@@ -179,14 +202,14 @@ describe('getActivityTitle', () => {
     expect(getActivityTitle(fullConfig, a)).toBe('Custom Label')
   })
 
-  it('falls back to activityType key when config is undefined', () => {
+  it('falls back to i18n label when config is undefined', () => {
     const a = makeActivity({ targetName: 'Dr. Popescu' })
-    expect(getActivityTitle(undefined, a)).toBe('visit — Dr. Popescu')
+    expect(getActivityTitle(undefined, a)).toBe('Visit — Dr. Popescu')
   })
 
-  it('returns type key without target for non-field activity and no config', () => {
+  it('returns i18n label for non-field activity without config', () => {
     const a = makeActivity({ activityType: 'training' })
-    expect(getActivityTitle(undefined, a)).toBe('training')
+    expect(getActivityTitle(undefined, a)).toBe('Training')
   })
 })
 
@@ -194,7 +217,7 @@ describe('getActivityDisplayName', () => {
   it('appends short date to title', () => {
     const a = makeActivity({ targetName: 'Dr. Popescu', dueDate: '2026-03-24' })
     const result = getActivityDisplayName(fullConfig, a)
-    expect(result).toBe('Vizită — Dr. Popescu — 24 Mar')
+    expect(result).toBe('Visit — Dr. Popescu — 24 Mar')
   })
 
   it('works for non-field activities without target', () => {

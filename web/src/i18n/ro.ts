@@ -233,6 +233,55 @@ const ro = {
       nextPage: 'Pagina următoare',
     },
 
+    // Config-driven labels (activity types, statuses, durations, options)
+    configLabels: {
+      // Activity types
+      'type.visit': 'Vizită',
+      'type.administrative': 'Administrativ',
+      'type.business_travel': 'Deplasare',
+      'type.company_event': 'Eveniment companie',
+      'type.cycle_meeting': 'Întâlnire de ciclu',
+      'type.team_meeting': 'Întâlnire de echipă',
+      'type.training': 'Training',
+      'type.public_holiday': 'Sărbătoare legală',
+      'type.vacation': 'Concediu',
+      'type.lunch_break': 'Pauză de masă',
+      'type.recovery': 'Zi de recuperare',
+      // Statuses
+      'status.planned': 'Planificat',
+      'status.completed': 'Finalizat',
+      'status.cancelled': 'Anulat',
+      // Durations
+      'duration.full_day': 'Zi întreagă',
+      'duration.half_day': 'Jumătate de zi',
+      // Visit types
+      'option.visit_types.f2f': 'F2F',
+      'option.visit_types.remote': 'La distanță',
+      // Routing options
+      'option.routing_options.week_1': 'Săptămâna 1',
+      'option.routing_options.week_2': 'Săptămâna 2',
+      'option.routing_options.week_3': 'Săptămâna 3',
+      // Account types
+      'accountType.doctor': 'Doctor',
+      'accountType.pharmacy': 'Farmacie',
+      // Field labels (config-driven)
+      'field.name': 'Nume',
+      'field.specialty': 'Specialitate',
+      'field.potential': 'Potențial',
+      'field.city': 'Oraș',
+      'field.county': 'Județ',
+      'field.address': 'Adresă',
+      'field.pharmacy_type': 'Tip farmacie',
+      'field.account_id': 'Cont',
+      'field.visit_type': 'Tip vizită',
+      'field.promoted_products': 'Produse promovate',
+      'field.feedback': 'Feedback',
+      'field.details': 'Detalii',
+      'field.joint_visit_user_id': 'Utilizator vizită comună',
+      'field.routing': 'Rutare',
+      'field.duration': 'Durată',
+    },
+
     // Errors
     error: {
       failedToLoadTargets: 'Nu s-au putut încărca conturile. Vă rugăm să încercați din nou.',

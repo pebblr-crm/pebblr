@@ -233,6 +233,55 @@ const en = {
       nextPage: 'Next page',
     },
 
+    // Config-driven labels (activity types, statuses, durations, options)
+    configLabels: {
+      // Activity types
+      'type.visit': 'Visit',
+      'type.administrative': 'Administrative',
+      'type.business_travel': 'Business Travel',
+      'type.company_event': 'Company Event',
+      'type.cycle_meeting': 'Cycle Meeting',
+      'type.team_meeting': 'Team Meeting',
+      'type.training': 'Training',
+      'type.public_holiday': 'Public Holiday',
+      'type.vacation': 'Vacation',
+      'type.lunch_break': 'Lunch Break',
+      'type.recovery': 'Recovery Day',
+      // Statuses
+      'status.planned': 'Planned',
+      'status.completed': 'Completed',
+      'status.cancelled': 'Cancelled',
+      // Durations
+      'duration.full_day': 'Full Day',
+      'duration.half_day': 'Half Day',
+      // Visit types
+      'option.visit_types.f2f': 'F2F',
+      'option.visit_types.remote': 'Remote',
+      // Routing options
+      'option.routing_options.week_1': 'Week 1',
+      'option.routing_options.week_2': 'Week 2',
+      'option.routing_options.week_3': 'Week 3',
+      // Account types
+      'accountType.doctor': 'Doctor',
+      'accountType.pharmacy': 'Pharmacy',
+      // Field labels (config-driven)
+      'field.name': 'Name',
+      'field.specialty': 'Specialty',
+      'field.potential': 'Potential',
+      'field.city': 'City',
+      'field.county': 'County',
+      'field.address': 'Address',
+      'field.pharmacy_type': 'Pharmacy Type',
+      'field.account_id': 'Account',
+      'field.visit_type': 'Visit Type',
+      'field.promoted_products': 'Promoted Products',
+      'field.feedback': 'Feedback',
+      'field.details': 'Details',
+      'field.joint_visit_user_id': 'Joint Visit User',
+      'field.routing': 'Routing',
+      'field.duration': 'Duration',
+    },
+
     // Errors
     error: {
       failedToLoadTargets: 'Failed to load targets. Please try again.',
