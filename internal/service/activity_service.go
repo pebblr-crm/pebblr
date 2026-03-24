@@ -612,10 +612,10 @@ func (s *ActivityService) fieldActivityTypes() []string {
 // when the actor has available recovery balance and the activity date falls within
 // a valid claim window.
 func (s *ActivityService) checkRecoveryBalance(ctx context.Context, actor *domain.User, activity *domain.Activity) error {
-	if s.cfg == nil || s.cfg.Rules.Recovery == nil || !s.cfg.Rules.Recovery.WeekendActivityFlag {
+	if s.cfg == nil || s.cfg.Recovery == nil || !s.cfg.Recovery.WeekendActivityFlag {
 		return nil
 	}
-	if activity.ActivityType != s.cfg.Rules.Recovery.RecoveryType {
+	if activity.ActivityType != s.cfg.Recovery.RecoveryType {
 		return nil
 	}
 	if s.dashboard == nil {
@@ -623,7 +623,7 @@ func (s *ActivityService) checkRecoveryBalance(ctx context.Context, actor *domai
 	}
 
 	scope := s.enforcer.ScopeActivityQuery(ctx, actor)
-	recoveryRule := s.cfg.Rules.Recovery
+	recoveryRule := s.cfg.Recovery
 
 	// Use a broad filter that covers the possible earning period.
 	// Weekend activities could be up to recovery_window_days business days before the due date.

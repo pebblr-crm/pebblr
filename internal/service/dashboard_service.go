@@ -169,12 +169,12 @@ type RecoveryBalanceResponse struct {
 
 // RecoveryBalance returns the recovery day balance for the actor in the given period.
 func (s *DashboardService) RecoveryBalance(ctx context.Context, actor *domain.User, filter store.DashboardFilter) (*RecoveryBalanceResponse, error) {
-	if s.cfg == nil || s.cfg.Rules.Recovery == nil || !s.cfg.Rules.Recovery.WeekendActivityFlag {
+	if s.cfg == nil || s.cfg.Recovery == nil || !s.cfg.Recovery.WeekendActivityFlag {
 		return &RecoveryBalanceResponse{Intervals: []RecoveryClaimInterval{}}, nil
 	}
 
 	scope := s.enforcer.ScopeActivityQuery(ctx, actor)
-	recoveryRule := s.cfg.Rules.Recovery
+	recoveryRule := s.cfg.Recovery
 
 	// Get field activity types from config.
 	var fieldTypes []string

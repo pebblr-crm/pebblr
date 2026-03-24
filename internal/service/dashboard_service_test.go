@@ -52,11 +52,11 @@ func dashboardConfig() *config.TenantConfig {
 		},
 		Rules: config.RulesConfig{
 			Frequency: map[string]int{"a": 4, "b": 2, "c": 1},
-			Recovery: &config.RecoveryRule{
-				WeekendActivityFlag: true,
-				RecoveryWindowDays:  5,
-				RecoveryType:        "recovery",
-			},
+		},
+		Recovery: &config.RecoveryRule{
+			WeekendActivityFlag: true,
+			RecoveryWindowDays:  5,
+			RecoveryType:        "recovery",
 		},
 	}
 }

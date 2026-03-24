@@ -202,11 +202,11 @@
       "doctor": 30,
       "pharmacy": 15
     },
-    "visit_duration_step_minutes": 15,
-    "recovery": {
-      "weekend_activity_flag": true,
-      "recovery_window_days": 5,
-      "recovery_type": "recovery"
-    }
+    "visit_duration_step_minutes": 15
+  },
+  "recovery": {
+    "weekend_activity_flag": true,
+    "recovery_window_days": 5,
+    "recovery_type": "recovery"
   }
 }

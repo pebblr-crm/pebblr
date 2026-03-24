@@ -375,6 +375,141 @@ func TestErrorResponseFormat(t *testing.T) {
 	}
 }
 
+// ── Recovery Config E2E Tests ─────────────────────────────────────────────
+
+func TestConfigEndpointExposesRecovery(t *testing.T) {
+	resp := apiRequest(t, "GET", "/api/v1/config", "")
+	body := readBody(t, resp)
+
+	if resp.StatusCode != http.StatusOK {
+		t.Fatalf("expected 200, got %d: %s", resp.StatusCode, body)
+	}
+
+	var cfg map[string]any
+	if err := json.Unmarshal([]byte(body), &cfg); err != nil {
+		t.Fatalf("decoding config: %v", err)
+	}
+
+	recovery, ok := cfg["recovery"]
+	if !ok {
+		// Recovery is optional — if not present, the feature is disabled. That's valid.
+		t.Log("recovery key absent in config — feature is disabled for this tenant")
+		return
+	}
+
+	recoveryMap, ok := recovery.(map[string]any)
+	if !ok {
+		t.Fatalf("expected recovery to be an object, got %T", recovery)
+	}
+
+	// When present, it must have the required fields.
+	if _, ok := recoveryMap["weekend_activity_flag"]; !ok {
+		t.Error("recovery missing 'weekend_activity_flag' field")
+	}
+	if _, ok := recoveryMap["recovery_window_days"]; !ok {
+		t.Error("recovery missing 'recovery_window_days' field")
+	}
+	if _, ok := recoveryMap["recovery_type"]; !ok {
+		t.Error("recovery missing 'recovery_type' field")
+	}
+
+	// Verify recovery is NOT nested under rules.
+	if rules, ok := cfg["rules"].(map[string]any); ok {
+		if _, nested := rules["recovery"]; nested {
+			t.Error("recovery should be a top-level key, not nested under rules")
+		}
+	}
+}
+
+func TestRecoveryBalanceEndpointWhenConfigured(t *testing.T) {
+	// First check if recovery is configured for this tenant.
+	configResp := apiRequest(t, "GET", "/api/v1/config", "")
+	configBody := readBody(t, configResp)
+
+	var cfg map[string]any
+	if err := json.Unmarshal([]byte(configBody), &cfg); err != nil {
+		t.Fatalf("decoding config: %v", err)
+	}
+
+	recovery, hasRecovery := cfg["recovery"]
+	if !hasRecovery {
+		t.Skip("recovery not configured — skipping balance endpoint test")
+	}
+
+	recoveryMap, _ := recovery.(map[string]any)
+	enabled, _ := recoveryMap["weekend_activity_flag"].(bool)
+
+	resp := apiRequest(t, "GET", "/api/v1/dashboard/recovery?dateFrom=2026-01-01&dateTo=2026-12-31", "")
+	body := readBody(t, resp)
+
+	if resp.StatusCode != http.StatusOK {
+		t.Fatalf("expected 200, got %d: %s", resp.StatusCode, body)
+	}
+
+	var balance map[string]any
+	if err := json.Unmarshal([]byte(body), &balance); err != nil {
+		t.Fatalf("decoding recovery balance: %v", err)
+	}
+
+	// Response must always have these keys.
+	for _, key := range []string{"earned", "taken", "balance", "intervals"} {
+		if _, ok := balance[key]; !ok {
+			t.Errorf("recovery balance missing '%s' field", key)
+		}
+	}
+
+	if !enabled {
+		// When disabled, balance should be zero.
+		if earned, _ := balance["earned"].(float64); earned != 0 {
+			t.Errorf("expected earned=0 when disabled, got %v", earned)
+		}
+	}
+}
+
+func TestRecoveryActivityWithoutBalance_Returns409(t *testing.T) {
+	// Check if recovery is configured.
+	configResp := apiRequest(t, "GET", "/api/v1/config", "")
+	configBody := readBody(t, configResp)
+
+	var cfg map[string]any
+	if err := json.Unmarshal([]byte(configBody), &cfg); err != nil {
+		t.Fatalf("decoding config: %v", err)
+	}
+
+	recovery, hasRecovery := cfg["recovery"]
+	if !hasRecovery {
+		t.Skip("recovery not configured — skipping balance validation test")
+	}
+
+	recoveryMap, _ := recovery.(map[string]any)
+	recoveryType, _ := recoveryMap["recovery_type"].(string)
+	if recoveryType == "" {
+		t.Skip("recovery_type is empty — skipping")
+	}
+
+	// Try to create a recovery activity on a day with no earned balance.
+	activityBody := fmt.Sprintf(`{
+		"activityType": %q,
+		"dueDate": "2026-01-05",
+		"duration": "full_day"
+	}`, recoveryType)
+
+	resp := apiRequest(t, "POST", "/api/v1/activities", activityBody)
+	body := readBody(t, resp)
+
+	if resp.StatusCode != http.StatusConflict {
+		t.Fatalf("expected 409 for recovery without balance, got %d: %s", resp.StatusCode, body)
+	}
+
+	var errResp errorEnvelope
+	if err := json.Unmarshal([]byte(body), &errResp); err != nil {
+		t.Fatalf("decoding error response: %v", err)
+	}
+	if errResp.Error.Code != "CONFLICT" {
+		t.Errorf("expected error code CONFLICT, got %q", errResp.Error.Code)
+	}
+}
+
 // ── Types ────────────────────────────────────────────────────────────────
 
 type errorEnvelope struct {

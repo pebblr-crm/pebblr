@@ -63,7 +63,8 @@ export function PlannerPage() {
   const { data, isLoading } = useActivities({ dateFrom, dateTo, limit: 200 })
   const activities = data?.items ?? []
 
-  const { data: recoveryBalance } = useRecoveryBalance({ dateFrom, dateTo })
+  const recoveryEnabled = config?.recovery?.weekend_activity_flag === true
+  const { data: recoveryBalance } = useRecoveryBalance({ dateFrom, dateTo }, recoveryEnabled)
 
   function prevPeriod() {
     if (viewMode === 'month') {
@@ -239,8 +240,8 @@ export function PlannerPage() {
               </div>
             </div>
 
-            {/* Recovery balance */}
-            {recoveryBalance && recoveryBalance.earned > 0 && (
+            {/* Recovery balance — only shown when recovery is configured */}
+            {recoveryEnabled && recoveryBalance && recoveryBalance.earned > 0 && (
               <div className="bg-surface-container-lowest p-6 rounded-xl shadow-sm border border-slate-100">
                 <h4 className="font-headline font-bold text-primary mb-4 text-sm">Recovery Days</h4>
                 <div className="flex items-start gap-3 mb-3">

@@ -167,7 +167,7 @@ func activityTestConfig() *config.TenantConfig {
 
 func activityTestConfigWithRecovery() *config.TenantConfig {
 	cfg := activityTestConfig()
-	cfg.Rules.Recovery = &config.RecoveryRule{
+	cfg.Recovery = &config.RecoveryRule{
 		WeekendActivityFlag: true,
 		RecoveryWindowDays:  5,
 		RecoveryType:        "recovery",
