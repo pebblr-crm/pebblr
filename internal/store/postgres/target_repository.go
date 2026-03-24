@@ -9,7 +9,6 @@ import (
 	"time"
 
 	"github.com/jackc/pgx/v5"
-	"github.com/jackc/pgx/v5/pgxpool"
 	"github.com/pebblr/pebblr/internal/domain"
 	"github.com/pebblr/pebblr/internal/rbac"
 	"github.com/pebblr/pebblr/internal/store"
@@ -19,7 +18,7 @@ import (
 const errFmtMarshalTargetFields = "marshalling target fields: %w"
 
 type targetRepository struct {
-	pool *pgxpool.Pool
+	pool dbPool
 }
 
 const targetColumns = `

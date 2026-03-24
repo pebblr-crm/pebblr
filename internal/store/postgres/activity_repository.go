@@ -9,14 +9,13 @@ import (
 	"time"
 
 	"github.com/jackc/pgx/v5"
-	"github.com/jackc/pgx/v5/pgxpool"
 	"github.com/pebblr/pebblr/internal/domain"
 	"github.com/pebblr/pebblr/internal/rbac"
 	"github.com/pebblr/pebblr/internal/store"
 )
 
 type activityRepository struct {
-	pool *pgxpool.Pool
+	pool dbPool
 }
 
 const activityColumns = `

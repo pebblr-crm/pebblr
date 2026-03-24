@@ -5,12 +5,11 @@ import (
 	"encoding/json"
 	"fmt"
 
-	"github.com/jackc/pgx/v5/pgxpool"
 	"github.com/pebblr/pebblr/internal/domain"
 )
 
 type auditRepository struct {
-	pool *pgxpool.Pool
+	pool dbPool
 }
 
 func (r *auditRepository) Record(ctx context.Context, entry *domain.AuditEntry) error {

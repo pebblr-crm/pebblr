@@ -4,7 +4,6 @@ import (
 	"context"
 	"errors"
 
-	"github.com/jackc/pgx/v5/pgxpool"
 	"github.com/pebblr/pebblr/internal/domain"
 	"github.com/pebblr/pebblr/internal/store"
 )
@@ -15,7 +14,7 @@ import (
 var errNotImplemented = errors.New("team repository: not implemented")
 
 type teamRepository struct {
-	pool *pgxpool.Pool
+	pool dbPool
 }
 
 func (r *teamRepository) Get(_ context.Context, _ string) (*domain.Team, error) {
