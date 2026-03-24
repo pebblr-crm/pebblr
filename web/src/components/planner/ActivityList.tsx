@@ -1,5 +1,6 @@
 import { useState } from 'react'
 import { Link } from '@tanstack/react-router'
+import { useTranslation } from 'react-i18next'
 import { ChevronLeft, ChevronRight, Lock } from 'lucide-react'
 import { useActivities } from '../../services/activities'
 import { useConfig } from '../../services/config'
@@ -17,6 +18,7 @@ import type { Activity } from '@/types/activity'
 const PAGE_SIZE = 20
 
 export function ActivityList() {
+  const { t } = useTranslation()
   const { data: config } = useConfig()
   const [page, setPage] = useState(1)
   const [statusFilter, setStatusFilter] = useState('')
@@ -43,7 +45,7 @@ export function ActivityList() {
   if (isLoading) {
     return (
       <div className="flex items-center justify-center h-64">
-        <LoadingSpinner size="lg" label="Loading activities..." />
+        <LoadingSpinner size="lg" label={t('activityList.loadingActivities')} />
       </div>
     )
   }
@@ -58,7 +60,7 @@ export function ActivityList() {
           className="px-3 py-2 text-sm border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary"
           data-testid="status-filter"
         >
-          <option value="">All statuses</option>
+          <option value="">{t('activityList.allStatuses')}</option>
           {statuses.map((s) => (
             <option key={s.key} value={s.key}>{s.label}</option>
           ))}
@@ -69,20 +71,20 @@ export function ActivityList() {
           className="px-3 py-2 text-sm border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary"
           data-testid="type-filter"
         >
-          <option value="">All types</option>
+          <option value="">{t('activityList.allTypes')}</option>
           {types.map((t) => (
             <option key={t.key} value={t.key}>{t.label}</option>
           ))}
         </select>
         <span className="text-xs text-on-surface-variant ml-auto">
-          {total} {total === 1 ? 'activity' : 'activities'}
+          {t('activityList.activity', { count: total })}
         </span>
       </div>
 
       {/* Table (desktop) / Cards (mobile) */}
       {activities.length === 0 ? (
         <div className="text-center py-16 text-on-surface-variant text-sm">
-          No activities found.
+          {t('activityList.noActivities')}
         </div>
       ) : (
         <>
@@ -91,9 +93,9 @@ export function ActivityList() {
             <table className="w-full text-sm">
               <thead>
                 <tr className="border-b border-slate-100 text-left">
-                  <th className="px-4 py-3 text-xs font-bold uppercase tracking-widest text-slate-400">Activity</th>
-                  <th className="px-4 py-3 text-xs font-bold uppercase tracking-widest text-slate-400">Duration</th>
-                  <th className="px-4 py-3 text-xs font-bold uppercase tracking-widest text-slate-400">Status</th>
+                  <th className="px-4 py-3 text-xs font-bold uppercase tracking-widest text-slate-400">{t('activityList.activityCol')}</th>
+                  <th className="px-4 py-3 text-xs font-bold uppercase tracking-widest text-slate-400">{t('activityList.durationCol')}</th>
+                  <th className="px-4 py-3 text-xs font-bold uppercase tracking-widest text-slate-400">{t('activityList.statusCol')}</th>
                   <th className="px-4 py-3 text-xs font-bold uppercase tracking-widest text-slate-400 w-8"></th>
                 </tr>
               </thead>
@@ -126,7 +128,7 @@ export function ActivityList() {
             <ChevronLeft className="w-4 h-4" />
           </button>
           <span className="text-xs text-on-surface-variant">
-            Page {page} of {totalPages}
+            {t('common.page')} {page} {t('common.of')} {totalPages}
           </span>
           <button
             onClick={() => setPage((p) => Math.min(totalPages, p + 1))}

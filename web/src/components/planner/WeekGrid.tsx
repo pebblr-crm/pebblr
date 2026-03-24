@@ -1,4 +1,5 @@
 import { Link } from '@tanstack/react-router'
+import { useTranslation } from 'react-i18next'
 import type { Activity } from '@/types/activity'
 import type { TenantConfig } from '@/types/config'
 import { ActivityCard } from './ActivityCard'
@@ -10,9 +11,13 @@ interface WeekGridProps {
   config?: TenantConfig
 }
 
-const DAY_LABELS = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun']
+const DAY_LABEL_KEYS = [
+  'weekdays.mon', 'weekdays.tue', 'weekdays.wed', 'weekdays.thu',
+  'weekdays.fri', 'weekdays.sat', 'weekdays.sun',
+] as const
 
 export function WeekGrid({ activities, weekStart, config }: WeekGridProps) {
+  const { t } = useTranslation()
   const today = formatDate(new Date())
   const days = Array.from({ length: 7 }, (_, i) => addDays(weekStart, i))
 
@@ -29,7 +34,7 @@ export function WeekGrid({ activities, weekStart, config }: WeekGridProps) {
               {/* Day header */}
               <div className="px-2 py-1.5 border-b border-slate-100 text-center shrink-0">
                 <div className="text-[9px] font-bold text-on-surface-variant uppercase tracking-widest">
-                  {DAY_LABELS[i]}
+                  {t(DAY_LABEL_KEYS[i])}
                 </div>
                 <div
                   className={`text-sm font-bold ${

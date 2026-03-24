@@ -2,6 +2,7 @@ import { StrictMode } from 'react'
 import { createRoot } from 'react-dom/client'
 import { App } from './App'
 import { initAuth } from './services/auth'
+import './i18n'
 import './styles/global.css'
 import './styles/layout.css'
 

@@ -1,5 +1,6 @@
 import { createRoute, useNavigate } from '@tanstack/react-router'
 import { motion } from 'motion/react'
+import { useTranslation } from 'react-i18next'
 import { ArrowLeft } from 'lucide-react'
 import { Link } from '@tanstack/react-router'
 import { Route as rootRoute } from '../__root'
@@ -27,6 +28,7 @@ export const Route = createRoute({
 })
 
 export function NewActivityPage() {
+  const { t } = useTranslation()
   const navigate = useNavigate()
   const { date } = Route.useSearch()
   const { state: { from } } = usePlannerState()
@@ -35,10 +37,10 @@ export function NewActivityPage() {
   const { showToast } = useToast()
   const [serverErrors, setServerErrors] = useState<ValidationFieldError[]>([])
 
-  const backLabel = from === 'planner' ? 'Back to planner'
-    : from === 'daily' ? 'Back to daily view'
-    : from === 'map' ? 'Back to map planner'
-    : 'Back to dashboard'
+  const backLabel = from === 'planner' ? t('activityDetail.backToPlanner')
+    : from === 'daily' ? t('activityDetail.backToDaily')
+    : from === 'map' ? t('activityDetail.backToMap')
+    : t('activityDetail.backToDashboard')
   const backPath = from === 'daily' ? '/planner/daily' as const
     : from === 'map' ? '/planner/map' as const
     : from === 'planner' ? '/planner' as const
@@ -76,7 +78,7 @@ export function NewActivityPage() {
                 setServerErrors(apiErr.fields)
                 showToast(formatValidationToast(config, data.activityType, apiErr.fields))
               } else {
-                showToast(apiErr.message || 'Failed to create activity')
+                showToast(apiErr.message || t('activity.failedToCreate'))
               }
             },
           })

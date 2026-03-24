@@ -1,3 +1,4 @@
+import { useTranslation } from 'react-i18next'
 import type { CoverageResponse } from '@/types/dashboard'
 
 interface CoverageCardProps {
@@ -5,12 +6,13 @@ interface CoverageCardProps {
 }
 
 export function CoverageCard({ data }: CoverageCardProps) {
+  const { t } = useTranslation()
   const pct = Math.round(data.percentage)
 
   return (
     <div className="bg-surface-container-lowest p-6 rounded-xl shadow-sm border border-slate-50">
       <p className="text-[10px] font-bold text-on-surface-variant uppercase tracking-wider mb-2">
-        Target Coverage
+        {t('dashboardCards.targetCoverage')}
       </p>
       <div className="flex items-baseline space-x-2">
         <h2 className="text-3xl font-extrabold text-primary font-headline">{pct}%</h2>

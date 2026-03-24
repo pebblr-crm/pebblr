@@ -1,4 +1,5 @@
 import { Loader2, Check, AlertCircle } from 'lucide-react'
+import { useTranslation } from 'react-i18next'
 import type { SaveState } from '../hooks/useInlineActivityEditor'
 
 interface SaveStateIndicatorProps {
@@ -7,13 +8,15 @@ interface SaveStateIndicatorProps {
 }
 
 export function SaveStateIndicator({ saveState, onRetry }: SaveStateIndicatorProps) {
+  const { t } = useTranslation()
+
   if (saveState === 'idle') return null
 
   if (saveState === 'dirty') {
     return (
       <span className="inline-flex items-center gap-1 text-xs text-slate-400">
         <span className="w-1.5 h-1.5 rounded-full bg-slate-400 animate-pulse" />
-        Saving…
+        {t('saveState.saving')}
       </span>
     )
   }
@@ -22,7 +25,7 @@ export function SaveStateIndicator({ saveState, onRetry }: SaveStateIndicatorPro
     return (
       <span className="inline-flex items-center gap-1 text-xs text-slate-400">
         <Loader2 className="w-3 h-3 animate-spin" />
-        Saving…
+        {t('saveState.saving')}
       </span>
     )
   }
@@ -36,7 +39,7 @@ export function SaveStateIndicator({ saveState, onRetry }: SaveStateIndicatorPro
         data-testid="save-state-retry"
       >
         <AlertCircle className="w-3 h-3" />
-        Not saved — tap to retry
+        {t('saveState.notSaved')}
       </button>
     )
   }
@@ -46,10 +49,11 @@ export function SaveStateIndicator({ saveState, onRetry }: SaveStateIndicatorPro
 
 /** Flash the checkmark briefly after save succeeds. */
 export function SaveSuccessFlash() {
+  const { t } = useTranslation()
   return (
     <span className="inline-flex items-center gap-1 text-xs text-emerald-500">
       <Check className="w-3 h-3" />
-      Saved
+      {t('saveState.saved')}
     </span>
   )
 }

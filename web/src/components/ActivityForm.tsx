@@ -1,4 +1,5 @@
 import { useState, type FormEvent } from 'react'
+import { useTranslation } from 'react-i18next'
 import { useConfig } from '../services/config'
 import { useTeamMembers } from '../services/teams'
 import { useTargets } from '../services/targets'
@@ -24,12 +25,13 @@ interface ActivityFormProps {
 }
 
 export function ActivityForm(props: ActivityFormProps) {
+  const { t } = useTranslation()
   const { data: config, isLoading: configLoading } = useConfig()
 
   if (configLoading || !config) {
     return (
       <div className="flex items-center justify-center h-64">
-        <LoadingSpinner size="lg" label="Loading configuration..." />
+        <LoadingSpinner size="lg" label={t('activity.loadingConfig')} />
       </div>
     )
   }
@@ -50,6 +52,7 @@ function ActivityFormInner({
   serverErrors,
   config,
 }: InnerProps) {
+  const { t } = useTranslation()
   const initialStatus = initialData?.status
     ?? config.activities.statuses.find((s) => s.initial)?.key
     ?? ''
@@ -161,7 +164,7 @@ function ActivityFormInner({
               className={inputClass(error)}
               data-testid={`field-${fieldDef.key}`}
             >
-              <option value="">— Select —</option>
+              <option value="">{t('common.select')}</option>
               {opts.map((o) => (
                 <option key={o.key} value={o.key}>{o.label}</option>
               ))}
@@ -222,7 +225,7 @@ function ActivityFormInner({
                 className={inputClass(error)}
                 data-testid={`field-${fieldDef.key}`}
               >
-                <option value="">— Select —</option>
+                <option value="">{t('common.select')}</option>
                 {users.map((u) => (
                   <option key={u.id} value={u.id}>{u.name}</option>
                 ))}
@@ -273,14 +276,14 @@ function ActivityFormInner({
       {/* Core fields */}
       <div className="bg-surface-container-lowest p-8 rounded-xl shadow-[0px_24px_48px_rgba(25,28,30,0.06)]">
         <h2 className="text-lg font-bold text-on-surface mb-6 font-headline">
-          {isEditing ? 'Edit Activity' : 'New Activity'}
+          {isEditing ? t('activity.editTitle') : t('activity.newTitle')}
         </h2>
 
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
           {/* Activity type */}
           <div>
             <label className="block text-xs font-bold uppercase tracking-widest text-slate-400 mb-1">
-              Activity type <span className="text-error">*</span>
+              {t('activity.type')} <span className="text-error">*</span>
             </label>
             <select
               value={activityType}
@@ -294,7 +297,7 @@ function ActivityFormInner({
               data-testid="activity-type-select"
               required
             >
-              <option value="">— Select type —</option>
+              <option value="">{t('activity.selectType')}</option>
               {activityTypes.map((t) => (
                 <option key={t.key} value={t.key}>{t.label}</option>
               ))}
@@ -308,7 +311,7 @@ function ActivityFormInner({
           {isEditing && (
             <div>
               <label className="block text-xs font-bold uppercase tracking-widest text-slate-400 mb-1">
-                Status <span className="text-error">*</span>
+                {t('activity.status')} <span className="text-error">*</span>
               </label>
               <select
                 value={status}
@@ -318,7 +321,7 @@ function ActivityFormInner({
                 data-testid="status-select"
                 required
               >
-                <option value="">— Select status —</option>
+                <option value="">{t('activity.selectStatus')}</option>
                 {statuses.map((s) => (
                   <option key={s.key} value={s.key}>{s.label}</option>
                 ))}
@@ -329,7 +332,7 @@ function ActivityFormInner({
           {/* Due date */}
           <div>
             <label className="block text-xs font-bold uppercase tracking-widest text-slate-400 mb-1">
-              Date <span className="text-error">*</span>
+              {t('activity.date')} <span className="text-error">*</span>
             </label>
             <input
               type="date"
@@ -349,7 +352,7 @@ function ActivityFormInner({
           {hasDuration && (
             <div>
               <label className="block text-xs font-bold uppercase tracking-widest text-slate-400 mb-1">
-                Duration <span className="text-error">*</span>
+                {t('activity.duration')} <span className="text-error">*</span>
               </label>
               <select
                 value={duration}
@@ -359,7 +362,7 @@ function ActivityFormInner({
                 data-testid="duration-select"
                 required
               >
-                <option value="">— Select duration —</option>
+                <option value="">{t('activity.selectDuration')}</option>
                 {durations.map((d) => (
                   <option key={d.key} value={d.key}>{d.label}</option>
                 ))}
@@ -371,11 +374,11 @@ function ActivityFormInner({
           {isFieldActivity && (
             <div className="sm:col-span-2">
               <label className="block text-xs font-bold uppercase tracking-widest text-slate-400 mb-1">
-                Target <span className="text-error">*</span>
+                {t('activity.target')} <span className="text-error">*</span>
               </label>
               <input
                 type="text"
-                placeholder="Search targets..."
+                placeholder={t('activity.searchTargets')}
                 value={targetSearch}
                 onChange={(e) => setTargetSearch(e.target.value)}
                 disabled={isLocked}
@@ -405,7 +408,7 @@ function ActivityFormInner({
               )}
               {targetId && (
                 <p className="text-xs text-slate-500 mt-1">
-                  Selected: {targetsResult?.items.find((t) => t.id === targetId)?.name ?? targetId}
+                  {t('activity.selected', { name: targetsResult?.items.find((tgt) => tgt.id === targetId)?.name ?? targetId })}
                 </p>
               )}
               {getFieldError('targetId') && (
@@ -421,7 +424,7 @@ function ActivityFormInner({
       {selectedType && selectedType.fields.filter((f) => !CORE_WIDGET_FIELDS.has(f.key)).length > 0 && (
         <div className="bg-surface-container-lowest p-8 rounded-xl shadow-[0px_24px_48px_rgba(25,28,30,0.06)]">
           <h2 className="text-lg font-bold text-on-surface mb-6 font-headline">
-            {selectedType.label} Details
+            {t('activity.detailsLabel', { type: selectedType.label })}
           </h2>
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
             {selectedType.fields
@@ -439,14 +442,14 @@ function ActivityFormInner({
           className="px-6 py-3 bg-primary text-white rounded-xl font-headline text-sm font-bold hover:bg-primary/90 transition-colors disabled:opacity-50"
           data-testid="submit-button"
         >
-          {isSubmitting ? 'Saving...' : isEditing ? 'Update Activity' : 'Create Activity'}
+          {isSubmitting ? t('activity.saving') : isEditing ? t('activity.update') : t('activity.create')}
         </button>
         <button
           type="button"
           onClick={onCancel}
           className="px-6 py-3 text-slate-500 rounded-xl font-headline text-sm font-medium hover:bg-slate-50 transition-colors"
         >
-          Cancel
+          {t('common.cancel')}
         </button>
       </div>
     </form>

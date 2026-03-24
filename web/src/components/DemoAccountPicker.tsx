@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react'
 import { LogIn, Shield, Users, UserCheck } from 'lucide-react'
+import { useTranslation } from 'react-i18next'
 import type { Role } from '@/types/user'
 
 interface DemoAccount {
@@ -14,10 +15,10 @@ interface DemoAccountPickerProps {
   onSelect: (userId: string) => Promise<void>
 }
 
-const roleConfig: Record<Role, { label: string; icon: typeof Shield; color: string; bg: string }> = {
-  admin: { label: 'Admin', icon: Shield, color: 'text-red-600', bg: 'bg-red-50' },
-  manager: { label: 'Manager', icon: Users, color: 'text-amber-600', bg: 'bg-amber-50' },
-  rep: { label: 'Rep', icon: UserCheck, color: 'text-blue-600', bg: 'bg-blue-50' },
+const roleConfig: Record<Role, { tKey: string; icon: typeof Shield; color: string; bg: string }> = {
+  admin: { tKey: 'demo.admin', icon: Shield, color: 'text-red-600', bg: 'bg-red-50' },
+  manager: { tKey: 'demo.manager', icon: Users, color: 'text-amber-600', bg: 'bg-amber-50' },
+  rep: { tKey: 'demo.rep', icon: UserCheck, color: 'text-blue-600', bg: 'bg-blue-50' },
 }
 
 function getInitials(name: string): string {
@@ -30,6 +31,7 @@ function getInitials(name: string): string {
 }
 
 export function DemoAccountPicker({ onSelect }: DemoAccountPickerProps) {
+  const { t } = useTranslation()
   const [accounts, setAccounts] = useState<DemoAccount[]>([])
   const [loading, setLoading] = useState(true)
   const [selecting, setSelecting] = useState<string | null>(null)
@@ -52,7 +54,7 @@ export function DemoAccountPicker({ onSelect }: DemoAccountPickerProps) {
     try {
       await onSelect(userId)
     } catch (e) {
-      setError(e instanceof Error ? e.message : 'Failed to sign in')
+      setError(e instanceof Error ? e.message : t('demo.failedToSignIn'))
       setSelecting(null)
     }
   }
@@ -65,7 +67,7 @@ export function DemoAccountPicker({ onSelect }: DemoAccountPickerProps) {
             Pebblr
           </div>
           <p className="text-on-surface-variant text-sm">
-            Choose an account to explore the demo
+            {t('demo.chooseAccount')}
           </p>
         </div>
 
@@ -117,7 +119,7 @@ export function DemoAccountPicker({ onSelect }: DemoAccountPickerProps) {
                   {/* Role badge */}
                   <div className={`flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-xs font-medium ${config.bg} ${config.color} shrink-0`}>
                     <Icon className="w-3.5 h-3.5" />
-                    {config.label}
+                    {t(config.tKey)}
                   </div>
 
                   {/* Arrow / spinner */}
@@ -135,7 +137,7 @@ export function DemoAccountPicker({ onSelect }: DemoAccountPickerProps) {
         )}
 
         <p className="text-center text-xs text-on-surface-variant mt-8">
-          This is a demo environment with sample data.
+          {t('demo.demoEnvironment')}
         </p>
       </div>
     </div>

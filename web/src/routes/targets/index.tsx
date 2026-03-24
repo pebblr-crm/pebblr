@@ -1,6 +1,7 @@
 import { useState, useMemo } from 'react'
 import { createRoute, Link } from '@tanstack/react-router'
 import { motion } from 'motion/react'
+import { useTranslation } from 'react-i18next'
 import { Target, Download, ChevronLeft, ChevronRight, MapPin } from 'lucide-react'
 import { Route as rootRoute } from '../__root'
 import { LoadingSpinner } from '../../components/LoadingSpinner'
@@ -68,6 +69,7 @@ function FrequencyBadge({ freq }: { freq?: { compliance: number; visitCount: num
 }
 
 export function TargetsPage() {
+  const { t } = useTranslation()
   const [page, setPage] = useState(1)
   const [typeFilter, setTypeFilter] = useState('')
 
@@ -106,7 +108,7 @@ export function TargetsPage() {
 
   const accountTypes = config?.accounts.types ?? []
   const typeOptions: { value: string; label: string }[] = [
-    { value: '', label: 'All types' },
+    { value: '', label: t('targets.allTypes') },
     ...accountTypes.map((t) => ({ value: t.key, label: t.label })),
   ]
 
@@ -167,10 +169,10 @@ export function TargetsPage() {
       <div className="flex flex-col sm:flex-row sm:justify-between sm:items-end gap-4">
         <div>
           <h1 className="text-2xl sm:text-4xl font-extrabold tracking-tight text-primary leading-tight font-headline">
-            Targets
+            {t('targets.title')}
           </h1>
           <p className="text-on-surface-variant mt-1 font-medium text-sm sm:text-base">
-            Managing {total.toLocaleString()} targets across all regions.
+            {t('targets.subtitle', { count: total.toLocaleString() })}
           </p>
         </div>
         <div className="flex gap-3 items-center">
@@ -190,7 +192,7 @@ export function TargetsPage() {
           </select>
           <button className="px-5 py-2.5 bg-primary text-white rounded-xl text-sm font-semibold flex items-center gap-2 shadow-sm hover:opacity-90 transition-opacity">
             <Download className="w-4 h-4" />
-            Export CSV
+            {t('common.export')}
           </button>
         </div>
       </div>
@@ -204,7 +206,7 @@ export function TargetsPage() {
             </div>
           </div>
           <div className="mt-4">
-            <div className="text-sm font-medium text-slate-500">Total Targets</div>
+            <div className="text-sm font-medium text-slate-500">{t('targets.totalTargets')}</div>
             <div className="text-3xl font-extrabold font-headline mt-1">{total}</div>
           </div>
         </div>
@@ -229,11 +231,11 @@ export function TargetsPage() {
       {/* Main Content */}
       {isLoading ? (
         <div className="flex items-center justify-center h-64">
-          <LoadingSpinner size="lg" label="Loading targets..." />
+          <LoadingSpinner size="lg" label={t('targets.loading')} />
         </div>
       ) : isError ? (
         <div data-testid="error-state" className="p-8 text-center text-error">
-          {error instanceof Error ? error.message : 'Failed to load targets. Please try again.'}
+          {error instanceof Error ? error.message : t('error.failedToLoadTargets')}
         </div>
       ) : (
         <>
@@ -244,10 +246,10 @@ export function TargetsPage() {
                 <thead>
                   <tr className="bg-surface-container-low/50">
                     <th className="px-6 py-4 text-[11px] font-bold uppercase tracking-widest text-slate-400">
-                      Name
+                      {t('targets.name')}
                     </th>
                     <th className="px-6 py-4 text-[11px] font-bold uppercase tracking-widest text-slate-400">
-                      Type
+                      {t('targets.type')}
                     </th>
                     {dynamicColumns.map((col) => (
                       <th key={col.key} className="px-6 py-4 text-[11px] font-bold uppercase tracking-widest text-slate-400">
@@ -256,11 +258,11 @@ export function TargetsPage() {
                     ))}
                     {!typeFilter && (
                       <th className="px-6 py-4 text-[11px] font-bold uppercase tracking-widest text-slate-400">
-                        Location
+                        {t('targets.location')}
                       </th>
                     )}
                     <th className="px-6 py-4 text-[11px] font-bold uppercase tracking-widest text-slate-400">
-                      Frequency
+                      {t('targets.frequency')}
                     </th>
                   </tr>
                 </thead>
@@ -322,8 +324,8 @@ export function TargetsPage() {
               {targets.length === 0 && (
                 <div data-testid="empty-state" className="px-6 py-12 text-center text-on-surface-variant">
                   {typeFilter
-                    ? `No targets of type "${typeFilter}".`
-                    : 'No targets found.'}
+                    ? t('targets.noTargetsOfType', { type: typeFilter })
+                    : t('targets.noTargets')}
                 </div>
               )}
 
@@ -334,8 +336,8 @@ export function TargetsPage() {
               >
                 <span data-testid="result-count" className="text-xs font-medium text-slate-400">
                   {total > 0
-                    ? `${(page - 1) * PAGE_SIZE + 1}–${Math.min(page * PAGE_SIZE, total)} of ${total}`
-                    : '0 results'}
+                    ? `${(page - 1) * PAGE_SIZE + 1}–${Math.min(page * PAGE_SIZE, total)} ${t('common.of')} ${total}`
+                    : t('common.noResults')}
                 </span>
                 <div className="flex gap-2">
                   <button
@@ -369,7 +371,7 @@ export function TargetsPage() {
                   </button>
                 </div>
                 <span data-testid="page-indicator" className="text-xs font-medium text-slate-400">
-                  Page {page} of {totalPages}
+                  {t('common.page')} {page} {t('common.of')} {totalPages}
                 </span>
               </div>
             </div>
