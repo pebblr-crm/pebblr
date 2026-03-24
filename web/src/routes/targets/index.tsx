@@ -77,16 +77,18 @@ function FrequencyBadge({ freq }: { freq?: { compliance: number; visitCount: num
   )
 }
 
-function LocationCell({ fields }: { fields: Record<string, unknown> }) {
-  if (!fields['city']) {
+function LocationCell({ fields }: { readonly fields: Record<string, unknown> }) {
+  const city = fields['city']
+  const county = fields['county']
+  if (!city) {
     return <span className="text-sm text-slate-300">—</span>
   }
   return (
     <div className="flex items-center gap-2">
       <MapPin className="w-4 h-4 text-slate-300" />
       <span className="text-sm text-slate-600">
-        {String(fields['city'])}
-        {fields['county'] ? `, ${String(fields['county'])}` : ''}
+        {String(city)}
+        {county ? `, ${String(county)}` : ''}
       </span>
     </div>
   )
@@ -265,22 +267,22 @@ export function TargetsPage() {
 }
 
 interface TargetsMainContentProps {
-  isLoading: boolean
-  isError: boolean
-  error: Error | null
-  targets: Array<{ id: string; name: string; targetType: string; fields: Record<string, unknown> }>
-  total: number
-  typeFilter: string
-  dynamicColumns: Array<{ key: string; label: string }>
-  accountTypes: Array<{ key: string; label: string }>
-  frequencyMap: Map<string, { compliance: number; visitCount: number; required: number }>
-  getFieldDisplay: (targetType: string, fieldKey: string, value: unknown) => string
-  page: number
-  totalPages: number
-  hasPrev: boolean
-  hasNext: boolean
-  visiblePages: number[]
-  setPage: (page: number | ((p: number) => number)) => void
+  readonly isLoading: boolean
+  readonly isError: boolean
+  readonly error: Error | null
+  readonly targets: Array<{ id: string; name: string; targetType: string; fields: Record<string, unknown> }>
+  readonly total: number
+  readonly typeFilter: string
+  readonly dynamicColumns: Array<{ key: string; label: string }>
+  readonly accountTypes: Array<{ key: string; label: string }>
+  readonly frequencyMap: Map<string, { compliance: number; visitCount: number; required: number }>
+  readonly getFieldDisplay: (targetType: string, fieldKey: string, value: unknown) => string
+  readonly page: number
+  readonly totalPages: number
+  readonly hasPrev: boolean
+  readonly hasNext: boolean
+  readonly visiblePages: number[]
+  readonly setPage: (page: number | ((p: number) => number)) => void
 }
 
 function TargetsMainContent({
@@ -420,12 +422,12 @@ function TargetsMainContent({
 }
 
 interface TargetRowProps {
-  target: { id: string; name: string; targetType: string; fields: Record<string, unknown> }
-  typeFilter: string
-  dynamicColumns: Array<{ key: string; label: string }>
-  accountTypes: Array<{ key: string; label: string }>
-  frequencyMap: Map<string, { compliance: number; visitCount: number; required: number }>
-  getFieldDisplay: (targetType: string, fieldKey: string, value: unknown) => string
+  readonly target: { id: string; name: string; targetType: string; fields: Record<string, unknown> }
+  readonly typeFilter: string
+  readonly dynamicColumns: Array<{ key: string; label: string }>
+  readonly accountTypes: Array<{ key: string; label: string }>
+  readonly frequencyMap: Map<string, { compliance: number; visitCount: number; required: number }>
+  readonly getFieldDisplay: (targetType: string, fieldKey: string, value: unknown) => string
 }
 
 function TargetRow({ target, typeFilter, dynamicColumns, accountTypes, frequencyMap, getFieldDisplay }: TargetRowProps) {

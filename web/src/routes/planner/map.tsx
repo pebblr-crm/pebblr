@@ -94,15 +94,15 @@ function getMarkerStateColor(
 }
 
 interface TargetMarkerProps {
-  target: Target
-  isSelected: boolean
-  isAssigned: boolean
-  isCadenced: boolean
-  cadenceLocked: boolean
-  isHovered: boolean
-  compliance: number | undefined
-  onToggle: () => void
-  onHoverChange: (hovered: boolean) => void
+  readonly target: Target
+  readonly isSelected: boolean
+  readonly isAssigned: boolean
+  readonly isCadenced: boolean
+  readonly cadenceLocked: boolean
+  readonly isHovered: boolean
+  readonly compliance: number | undefined
+  readonly onToggle: () => void
+  readonly onHoverChange: (hovered: boolean) => void
 }
 
 function TargetMarker({
@@ -123,7 +123,9 @@ function TargetMarker({
   const lat = target.fields.lat as number
   const lng = target.fields.lng as number
 
-  const title = `${target.name}${compliance != null ? ` (${Math.round(compliance)}% compliance)` : ''}${isCadenced ? ' (recently visited)' : ''}`
+  const complianceLabel = compliance != null ? ` (${Math.round(compliance)}% compliance)` : ''
+  const cadenceLabel = isCadenced ? ' (recently visited)' : ''
+  const title = `${target.name}${complianceLabel}${cadenceLabel}`
 
   return (
     <AdvancedMarker
