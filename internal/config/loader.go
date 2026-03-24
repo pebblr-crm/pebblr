@@ -36,20 +36,36 @@ func validateConfig(cfg *TenantConfig) error {
 		return fmt.Errorf("tenant.name is required")
 	}
 
-	// Must have at least one status.
-	if len(cfg.Activities.Statuses) == 0 {
-		return fmt.Errorf("activities.statuses must not be empty")
+	statusKeys, err := validateStatuses(cfg)
+	if err != nil {
+		return err
 	}
 
-	// Exactly one initial status.
+	if err := validateStatusTransitions(cfg, statusKeys); err != nil {
+		return err
+	}
+
+	if err := validateAccountTypes(cfg); err != nil {
+		return err
+	}
+
+	return validateActivityTypes(cfg)
+}
+
+// validateStatuses checks that statuses are well-formed and returns the set of known status keys.
+func validateStatuses(cfg *TenantConfig) (map[string]bool, error) {
+	if len(cfg.Activities.Statuses) == 0 {
+		return nil, fmt.Errorf("activities.statuses must not be empty")
+	}
+
 	initialCount := 0
 	statusKeys := make(map[string]bool)
 	for _, s := range cfg.Activities.Statuses {
 		if s.Key == "" {
-			return fmt.Errorf("status key must not be empty")
+			return nil, fmt.Errorf("status key must not be empty")
 		}
 		if statusKeys[s.Key] {
-			return fmt.Errorf("duplicate status key: %q", s.Key)
+			return nil, fmt.Errorf("duplicate status key: %q", s.Key)
 		}
 		statusKeys[s.Key] = true
 		if s.Initial {
@@ -57,10 +73,13 @@ func validateConfig(cfg *TenantConfig) error {
 		}
 	}
 	if initialCount != 1 {
-		return fmt.Errorf("exactly one status must be marked initial, found %d", initialCount)
+		return nil, fmt.Errorf("exactly one status must be marked initial, found %d", initialCount)
 	}
+	return statusKeys, nil
+}
 
-	// Status transitions reference valid statuses.
+// validateStatusTransitions checks that all transition references point to known statuses.
+func validateStatusTransitions(cfg *TenantConfig, statusKeys map[string]bool) error {
 	for from, targets := range cfg.Activities.StatusTransitions {
 		if !statusKeys[from] {
 			return fmt.Errorf("status_transitions references unknown status %q", from)
@@ -71,8 +90,11 @@ func validateConfig(cfg *TenantConfig) error {
 			}
 		}
 	}
+	return nil
+}
 
-	// Validate account types.
+// validateAccountTypes checks that all account types have valid keys and fields.
+func validateAccountTypes(cfg *TenantConfig) error {
 	for _, at := range cfg.Accounts.Types {
 		if at.Key == "" {
 			return fmt.Errorf("account type key must not be empty")
@@ -81,44 +103,56 @@ func validateConfig(cfg *TenantConfig) error {
 			return err
 		}
 	}
+	return nil
+}
 
-	// Validate activity types.
+// validateActivityTypes checks that all activity types are well-formed.
+func validateActivityTypes(cfg *TenantConfig) error {
 	actTypeKeys := make(map[string]bool)
 	for i := range cfg.Activities.Types {
 		at := &cfg.Activities.Types[i]
-		if at.Key == "" {
-			return fmt.Errorf("activity type key must not be empty")
-		}
-		if actTypeKeys[at.Key] {
-			return fmt.Errorf("duplicate activity type key: %q", at.Key)
-		}
-		actTypeKeys[at.Key] = true
-
-		if at.Category != "field" && at.Category != "non_field" {
-			return fmt.Errorf("activity type %q: category must be \"field\" or \"non_field\", got %q", at.Key, at.Category)
-		}
-
-		if err := validateFieldConfigs(cfg, at.Fields, "activities.types["+at.Key+"]"); err != nil {
+		if err := validateSingleActivityType(cfg, at, actTypeKeys); err != nil {
 			return err
 		}
+	}
+	return nil
+}
 
-		// submit_required fields must exist in the type's fields.
-		fieldKeys := make(map[string]bool)
-		for _, f := range at.Fields {
-			fieldKeys[f.Key] = true
-		}
-		for _, sr := range at.SubmitRequired {
-			if !fieldKeys[sr] {
-				return fmt.Errorf("activity type %q: submit_required references unknown field %q", at.Key, sr)
-			}
-		}
+// validateSingleActivityType validates one activity type entry.
+func validateSingleActivityType(cfg *TenantConfig, at *ActivityTypeConfig, seen map[string]bool) error {
+	if at.Key == "" {
+		return fmt.Errorf("activity type key must not be empty")
+	}
+	if seen[at.Key] {
+		return fmt.Errorf("duplicate activity type key: %q", at.Key)
+	}
+	seen[at.Key] = true
 
-		// title_field must reference an existing field.
-		if at.TitleField != "" && !fieldKeys[at.TitleField] {
-			return fmt.Errorf("activity type %q: title_field references unknown field %q", at.Key, at.TitleField)
-		}
+	if at.Category != "field" && at.Category != "non_field" {
+		return fmt.Errorf("activity type %q: category must be \"field\" or \"non_field\", got %q", at.Key, at.Category)
 	}
 
+	if err := validateFieldConfigs(cfg, at.Fields, "activities.types["+at.Key+"]"); err != nil {
+		return err
+	}
+
+	return validateActivityTypeFieldRefs(at)
+}
+
+// validateActivityTypeFieldRefs checks submit_required and title_field references.
+func validateActivityTypeFieldRefs(at *ActivityTypeConfig) error {
+	fieldKeys := make(map[string]bool)
+	for _, f := range at.Fields {
+		fieldKeys[f.Key] = true
+	}
+	for _, sr := range at.SubmitRequired {
+		if !fieldKeys[sr] {
+			return fmt.Errorf("activity type %q: submit_required references unknown field %q", at.Key, sr)
+		}
+	}
+	if at.TitleField != "" && !fieldKeys[at.TitleField] {
+		return fmt.Errorf("activity type %q: title_field references unknown field %q", at.Key, at.TitleField)
+	}
 	return nil
 }
 

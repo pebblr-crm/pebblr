@@ -11,6 +11,14 @@ import (
 	"github.com/pebblr/pebblr/internal/domain"
 )
 
+const (
+	testKey           = "test-key"
+	testTokenPath     = "/demo/token"
+	testContentType   = "Content-Type"
+	testContentJSON   = "application/json"
+	errExpected400Fmt = "expected 400, got %d"
+)
+
 // stubUserLister is a test double for UserLister.
 type stubUserLister struct {
 	users []*domain.User
@@ -33,7 +41,7 @@ func testUsers() *stubUserLister {
 func TestListAccounts(t *testing.T) {
 	t.Parallel()
 
-	a, _ := New([]byte("test-key"))
+	a, _ := New([]byte(testKey))
 	h := NewHandler(a, testUsers())
 
 	req := httptest.NewRequest(http.MethodGet, "/demo/accounts", http.NoBody)
@@ -63,12 +71,12 @@ func TestListAccounts(t *testing.T) {
 func TestIssueToken_ValidUser(t *testing.T) {
 	t.Parallel()
 
-	a, _ := New([]byte("test-key"))
+	a, _ := New([]byte(testKey))
 	h := NewHandler(a, testUsers())
 
 	body := `{"user_id":"u-rep"}`
-	req := httptest.NewRequest(http.MethodPost, "/demo/token", strings.NewReader(body))
-	req.Header.Set("Content-Type", "application/json")
+	req := httptest.NewRequest(http.MethodPost, testTokenPath, strings.NewReader(body))
+	req.Header.Set(testContentType, testContentJSON)
 	rec := httptest.NewRecorder()
 
 	h.IssueToken(rec, req)
@@ -95,63 +103,63 @@ func TestIssueToken_ValidUser(t *testing.T) {
 func TestIssueToken_UnknownUser(t *testing.T) {
 	t.Parallel()
 
-	a, _ := New([]byte("test-key"))
+	a, _ := New([]byte(testKey))
 	h := NewHandler(a, testUsers())
 
 	body := `{"user_id":"nonexistent"}`
-	req := httptest.NewRequest(http.MethodPost, "/demo/token", strings.NewReader(body))
-	req.Header.Set("Content-Type", "application/json")
+	req := httptest.NewRequest(http.MethodPost, testTokenPath, strings.NewReader(body))
+	req.Header.Set(testContentType, testContentJSON)
 	rec := httptest.NewRecorder()
 
 	h.IssueToken(rec, req)
 
 	if rec.Code != http.StatusBadRequest {
-		t.Fatalf("expected 400, got %d", rec.Code)
+		t.Fatalf(errExpected400Fmt, rec.Code)
 	}
 }
 
 func TestIssueToken_MissingUserID(t *testing.T) {
 	t.Parallel()
 
-	a, _ := New([]byte("test-key"))
+	a, _ := New([]byte(testKey))
 	h := NewHandler(a, testUsers())
 
 	body := `{}`
-	req := httptest.NewRequest(http.MethodPost, "/demo/token", strings.NewReader(body))
+	req := httptest.NewRequest(http.MethodPost, testTokenPath, strings.NewReader(body))
 	rec := httptest.NewRecorder()
 
 	h.IssueToken(rec, req)
 
 	if rec.Code != http.StatusBadRequest {
-		t.Fatalf("expected 400, got %d", rec.Code)
+		t.Fatalf(errExpected400Fmt, rec.Code)
 	}
 }
 
 func TestIssueToken_InvalidBody(t *testing.T) {
 	t.Parallel()
 
-	a, _ := New([]byte("test-key"))
+	a, _ := New([]byte(testKey))
 	h := NewHandler(a, testUsers())
 
-	req := httptest.NewRequest(http.MethodPost, "/demo/token", strings.NewReader("not json"))
+	req := httptest.NewRequest(http.MethodPost, testTokenPath, strings.NewReader("not json"))
 	rec := httptest.NewRecorder()
 
 	h.IssueToken(rec, req)
 
 	if rec.Code != http.StatusBadRequest {
-		t.Fatalf("expected 400, got %d", rec.Code)
+		t.Fatalf(errExpected400Fmt, rec.Code)
 	}
 }
 
 func TestIssueToken_RoundTrip(t *testing.T) {
 	t.Parallel()
 
-	a, _ := New([]byte("test-key"))
+	a, _ := New([]byte(testKey))
 	h := NewHandler(a, testUsers())
 
 	body := `{"user_id":"u-mgr"}`
-	req := httptest.NewRequest(http.MethodPost, "/demo/token", strings.NewReader(body))
-	req.Header.Set("Content-Type", "application/json")
+	req := httptest.NewRequest(http.MethodPost, testTokenPath, strings.NewReader(body))
+	req.Header.Set(testContentType, testContentJSON)
 	rec := httptest.NewRecorder()
 	h.IssueToken(rec, req)
 

@@ -13,6 +13,8 @@ import (
 	"github.com/pebblr/pebblr/internal/store"
 )
 
+const errGettingTarget = "getting target: %w"
+
 // TargetService handles target business logic with RBAC enforcement.
 type TargetService struct {
 	targets  store.TargetRepository
@@ -70,7 +72,7 @@ func (s *TargetService) Create(ctx context.Context, actor *domain.User, target *
 func (s *TargetService) Get(ctx context.Context, actor *domain.User, id string) (*domain.Target, error) {
 	target, err := s.targets.Get(ctx, id)
 	if err != nil {
-		return nil, fmt.Errorf("getting target: %w", err)
+		return nil, fmt.Errorf(errGettingTarget, err)
 	}
 	if !s.enforcer.CanViewTarget(ctx, actor, target) {
 		return nil, ErrForbidden
@@ -93,7 +95,7 @@ func (s *TargetService) List(ctx context.Context, actor *domain.User, filter sto
 func (s *TargetService) Update(ctx context.Context, actor *domain.User, target *domain.Target) (*domain.Target, error) {
 	existing, err := s.targets.Get(ctx, target.ID)
 	if err != nil {
-		return nil, fmt.Errorf("getting target: %w", err)
+		return nil, fmt.Errorf(errGettingTarget, err)
 	}
 	if !s.enforcer.CanUpdateTarget(ctx, actor, existing) {
 		return nil, ErrForbidden
@@ -121,7 +123,7 @@ func (s *TargetService) Assign(ctx context.Context, actor *domain.User, targetID
 
 	existing, err := s.targets.Get(ctx, targetID)
 	if err != nil {
-		return nil, fmt.Errorf("getting target: %w", err)
+		return nil, fmt.Errorf(errGettingTarget, err)
 	}
 	if !s.enforcer.CanUpdateTarget(ctx, actor, existing) {
 		return nil, ErrForbidden

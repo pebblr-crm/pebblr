@@ -21,9 +21,12 @@ import (
 )
 
 const (
-	defaultNamespace = "pebblr-e2e"
-	defaultService   = "svc/pebblr-e2e"
-	servicePort      = "8080"
+	defaultNamespace  = "pebblr-e2e"
+	defaultService    = "svc/pebblr-e2e"
+	servicePort       = "8080"
+	errExpected200    = "expected 200, got %d: %s"
+	configEndpoint    = "/api/v1/config"
+	errDecodingConfig = "decoding config: %v"
 	// Must match the jwt-secret created by scripts/cluster-db.sh.
 	defaultToken = "local-jwt-secret-not-for-production"
 )
@@ -188,7 +191,7 @@ func TestHealthEndpoint(t *testing.T) {
 
 	if resp.StatusCode != http.StatusOK {
 		body := readBody(t, resp)
-		t.Fatalf("expected 200, got %d: %s", resp.StatusCode, body)
+		t.Fatalf(errExpected200, resp.StatusCode, body)
 	}
 
 	var result map[string]string
@@ -312,7 +315,7 @@ func TestActivityListReturnsOK(t *testing.T) {
 // ── Config Endpoint Tests ────────────────────────────────────────────────
 
 func TestConfigEndpointReturnsOK(t *testing.T) {
-	resp := apiRequest(t, "GET", "/api/v1/config", "")
+	resp := apiRequest(t, "GET", configEndpoint, "")
 	body := readBody(t, resp)
 
 	if resp.StatusCode != http.StatusOK {
@@ -335,7 +338,7 @@ func TestConfigEndpointReturnsOK(t *testing.T) {
 }
 
 func TestConfigEndpointRequiresAuth(t *testing.T) {
-	resp := doRequest(t, "GET", "/api/v1/config", "", nil)
+	resp := doRequest(t, "GET", configEndpoint, "", nil)
 	body := readBody(t, resp)
 
 	if resp.StatusCode != http.StatusUnauthorized {
@@ -378,16 +381,16 @@ func TestErrorResponseFormat(t *testing.T) {
 // ── Recovery Config E2E Tests ─────────────────────────────────────────────
 
 func TestConfigEndpointExposesRecovery(t *testing.T) {
-	resp := apiRequest(t, "GET", "/api/v1/config", "")
+	resp := apiRequest(t, "GET", configEndpoint, "")
 	body := readBody(t, resp)
 
 	if resp.StatusCode != http.StatusOK {
-		t.Fatalf("expected 200, got %d: %s", resp.StatusCode, body)
+		t.Fatalf(errExpected200, resp.StatusCode, body)
 	}
 
 	var cfg map[string]any
 	if err := json.Unmarshal([]byte(body), &cfg); err != nil {
-		t.Fatalf("decoding config: %v", err)
+		t.Fatalf(errDecodingConfig, err)
 	}
 
 	recovery, ok := cfg["recovery"]
@@ -423,12 +426,12 @@ func TestConfigEndpointExposesRecovery(t *testing.T) {
 
 func TestRecoveryBalanceEndpointWhenConfigured(t *testing.T) {
 	// First check if recovery is configured for this tenant.
-	configResp := apiRequest(t, "GET", "/api/v1/config", "")
+	configResp := apiRequest(t, "GET", configEndpoint, "")
 	configBody := readBody(t, configResp)
 
 	var cfg map[string]any
 	if err := json.Unmarshal([]byte(configBody), &cfg); err != nil {
-		t.Fatalf("decoding config: %v", err)
+		t.Fatalf(errDecodingConfig, err)
 	}
 
 	recovery, hasRecovery := cfg["recovery"]
@@ -443,7 +446,7 @@ func TestRecoveryBalanceEndpointWhenConfigured(t *testing.T) {
 	body := readBody(t, resp)
 
 	if resp.StatusCode != http.StatusOK {
-		t.Fatalf("expected 200, got %d: %s", resp.StatusCode, body)
+		t.Fatalf(errExpected200, resp.StatusCode, body)
 	}
 
 	var balance map[string]any
@@ -468,12 +471,12 @@ func TestRecoveryBalanceEndpointWhenConfigured(t *testing.T) {
 
 func TestRecoveryActivityWithoutBalance_Returns409(t *testing.T) {
 	// Check if recovery is configured.
-	configResp := apiRequest(t, "GET", "/api/v1/config", "")
+	configResp := apiRequest(t, "GET", configEndpoint, "")
 	configBody := readBody(t, configResp)
 
 	var cfg map[string]any
 	if err := json.Unmarshal([]byte(configBody), &cfg); err != nil {
-		t.Fatalf("decoding config: %v", err)
+		t.Fatalf(errDecodingConfig, err)
 	}
 
 	recovery, hasRecovery := cfg["recovery"]

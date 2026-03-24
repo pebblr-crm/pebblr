@@ -11,6 +11,8 @@ import (
 	"github.com/pebblr/pebblr/internal/store"
 )
 
+const dateFormat = "2006-01-02"
+
 // ErrSubmitted indicates that the activity is already submitted and locked.
 var ErrSubmitted = fmt.Errorf("activity is submitted and locked")
 
@@ -407,23 +409,13 @@ type CloneWeekResult struct {
 // CloneWeek duplicates all activities from sourceWeekStart (Mon) to targetWeekStart (Mon),
 // preserving the weekday offset, resetting status to initial, and generating new IDs.
 func (s *ActivityService) CloneWeek(ctx context.Context, actor *domain.User, sourceWeekStart, targetWeekStart time.Time) (*CloneWeekResult, error) {
-	// Validate: both must be Mondays.
-	if sourceWeekStart.Weekday() != time.Monday {
-		return nil, fmt.Errorf("sourceWeekStart must be a Monday: %w", ErrInvalidInput)
-	}
-	if targetWeekStart.Weekday() != time.Monday {
-		return nil, fmt.Errorf("targetWeekStart must be a Monday: %w", ErrInvalidInput)
+	if err := validateCloneWeekInputs(sourceWeekStart, targetWeekStart); err != nil {
+		return nil, err
 	}
 
 	sourceEnd := sourceWeekStart.AddDate(0, 0, 4) // Friday
 	targetEnd := targetWeekStart.AddDate(0, 0, 4)
 
-	// Validate: target week must not be the same as source.
-	if sourceWeekStart.Equal(targetWeekStart) {
-		return nil, fmt.Errorf("target week must differ from source week: %w", ErrInvalidInput)
-	}
-
-	// List source week activities.
 	scope := s.enforcer.ScopeActivityQuery(ctx, actor)
 	sourcePage, err := s.activities.List(ctx, scope, store.ActivityFilter{
 		DateFrom: &sourceWeekStart,
@@ -437,33 +429,58 @@ func (s *ActivityService) CloneWeek(ctx context.Context, actor *domain.User, sou
 		return nil, fmt.Errorf("source week has no activities: %w", ErrInvalidInput)
 	}
 
-	// Check existing activities in target week to avoid duplicates.
+	existingTargets, err := s.buildExistingTargetIndex(ctx, scope, targetWeekStart, targetEnd)
+	if err != nil {
+		return nil, err
+	}
+
+	return s.cloneActivities(ctx, actor, sourcePage.Activities, existingTargets, targetWeekStart.Sub(sourceWeekStart))
+}
+
+// validateCloneWeekInputs checks that source and target weeks are valid Mondays and differ.
+func validateCloneWeekInputs(sourceWeekStart, targetWeekStart time.Time) error {
+	if sourceWeekStart.Weekday() != time.Monday {
+		return fmt.Errorf("sourceWeekStart must be a Monday: %w", ErrInvalidInput)
+	}
+	if targetWeekStart.Weekday() != time.Monday {
+		return fmt.Errorf("targetWeekStart must be a Monday: %w", ErrInvalidInput)
+	}
+	if sourceWeekStart.Equal(targetWeekStart) {
+		return fmt.Errorf("target week must differ from source week: %w", ErrInvalidInput)
+	}
+	return nil
+}
+
+// buildExistingTargetIndex returns a date→targetID→exists map for the target week.
+func (s *ActivityService) buildExistingTargetIndex(ctx context.Context, scope rbac.ActivityScope, from, to time.Time) (map[string]map[string]bool, error) {
 	targetPage, err := s.activities.List(ctx, scope, store.ActivityFilter{
-		DateFrom: &targetWeekStart,
-		DateTo:   &targetEnd,
+		DateFrom: &from,
+		DateTo:   &to,
 	}, 1, 200)
 	if err != nil {
 		return nil, fmt.Errorf("listing target week activities: %w", err)
 	}
-	existingTargets := make(map[string]map[string]bool) // date → targetID → exists
+	index := make(map[string]map[string]bool)
 	for _, a := range targetPage.Activities {
-		dateStr := a.DueDate.Format("2006-01-02")
-		if existingTargets[dateStr] == nil {
-			existingTargets[dateStr] = make(map[string]bool)
+		dateStr := a.DueDate.Format(dateFormat)
+		if index[dateStr] == nil {
+			index[dateStr] = make(map[string]bool)
 		}
 		if a.TargetID != "" {
-			existingTargets[dateStr][a.TargetID] = true
+			index[dateStr][a.TargetID] = true
 		}
 	}
+	return index, nil
+}
 
+// cloneActivities creates clones for each source activity, skipping duplicates.
+func (s *ActivityService) cloneActivities(ctx context.Context, actor *domain.User, sources []*domain.Activity, existingTargets map[string]map[string]bool, dayOffset time.Duration) (*CloneWeekResult, error) {
 	result := &CloneWeekResult{}
-	dayOffset := targetWeekStart.Sub(sourceWeekStart)
 
-	for _, src := range sourcePage.Activities {
+	for _, src := range sources {
 		newDueDate := src.DueDate.Add(dayOffset)
-		newDateStr := newDueDate.Format("2006-01-02")
+		newDateStr := newDueDate.Format(dateFormat)
 
-		// Skip if same target already exists on the target date.
 		if src.TargetID != "" && existingTargets[newDateStr][src.TargetID] {
 			result.Skipped++
 			continue
@@ -482,7 +499,6 @@ func (s *ActivityService) CloneWeek(ctx context.Context, actor *domain.User, sou
 		}
 
 		if _, err := s.Create(ctx, actor, clone); err != nil {
-			// Skip activities that fail validation (e.g. blocked day, max per day).
 			result.Skipped++
 			continue
 		}
@@ -634,36 +650,20 @@ func (s *ActivityService) fieldActivityTypes() []string {
 // when the actor has available recovery balance and the activity date falls within
 // a valid claim window.
 func (s *ActivityService) checkRecoveryBalance(ctx context.Context, actor *domain.User, activity *domain.Activity) error {
-	if s.cfg == nil || s.cfg.Recovery == nil || !s.cfg.Recovery.WeekendActivityFlag {
-		return nil
-	}
-	if activity.ActivityType != s.cfg.Recovery.RecoveryType {
-		return nil
-	}
-	if s.dashboard == nil {
+	if !s.isRecoveryActivity(activity) {
 		return nil
 	}
 
 	scope := s.enforcer.ScopeActivityQuery(ctx, actor)
 	recoveryRule := s.cfg.Recovery
 
-	// Use a broad filter that covers the possible earning period.
-	// Weekend activities could be up to recovery_window_days business days before the due date.
 	lookback := time.Duration(recoveryRule.RecoveryWindowDays*2+7) * 24 * time.Hour
 	filter := store.DashboardFilter{
 		DateFrom: activity.DueDate.Add(-lookback),
 		DateTo:   activity.DueDate,
 	}
 
-	// Get field activity types.
-	var fieldTypes []string
-	for i := range s.cfg.Activities.Types {
-		if s.cfg.Activities.Types[i].Category == "field" {
-			fieldTypes = append(fieldTypes, s.cfg.Activities.Types[i].Key)
-		}
-	}
-
-	weekendActivities, err := s.dashboard.WeekendFieldActivities(ctx, scope, fieldTypes, filter)
+	weekendActivities, err := s.dashboard.WeekendFieldActivities(ctx, scope, s.fieldActivityTypes(), filter)
 	if err != nil {
 		return fmt.Errorf("checking recovery balance: %w", err)
 	}
@@ -673,38 +673,57 @@ func (s *ActivityService) checkRecoveryBalance(ctx context.Context, actor *domai
 		return fmt.Errorf("checking recovery balance: %w", err)
 	}
 
-	// Check that the activity's due date falls within at least one unclaimed claim window.
+	if hasUnclaimedWindow(activity.DueDate, weekendActivities, recoveryDates, recoveryRule.RecoveryWindowDays) {
+		return nil
+	}
+	return ErrNoRecoveryBalance
+}
+
+// isRecoveryActivity returns true if the activity is a recovery-type activity
+// and recovery balance checking is applicable.
+func (s *ActivityService) isRecoveryActivity(activity *domain.Activity) bool {
+	if s.cfg == nil || s.cfg.Recovery == nil || !s.cfg.Recovery.WeekendActivityFlag {
+		return false
+	}
+	if activity.ActivityType != s.cfg.Recovery.RecoveryType {
+		return false
+	}
+	return s.dashboard != nil
+}
+
+// hasUnclaimedWindow checks whether the given dueDate falls within at least one
+// unclaimed recovery claim window among the weekend activities.
+func hasUnclaimedWindow(dueDate time.Time, weekendActivities []store.WeekendActivity, recoveryDates []time.Time, windowDays int) bool {
 	takenSet := make(map[string]bool)
 	for _, rd := range recoveryDates {
-		takenSet[rd.Format("2006-01-02")] = true
+		takenSet[rd.Format(dateFormat)] = true
 	}
 
-	dueDate := activity.DueDate
 	for _, wa := range weekendActivities {
 		claimFrom := nextBusinessDay(wa.DueDate)
-		claimBy := addBusinessDays(claimFrom, recoveryRule.RecoveryWindowDays-1)
+		claimBy := addBusinessDays(claimFrom, windowDays-1)
 
 		if dueDate.Before(claimFrom) || dueDate.After(claimBy) {
 			continue
 		}
 
-		// Check if this window is already claimed by an existing recovery activity.
-		alreadyClaimed := false
-		for _, rd := range recoveryDates {
-			rdKey := rd.Format("2006-01-02")
-			if !rd.Before(claimFrom) && !rd.After(claimBy) && !takenSet[rdKey+"_used"] {
-				alreadyClaimed = true
-				takenSet[rdKey+"_used"] = true
-				break
-			}
-		}
-
-		if !alreadyClaimed {
-			return nil // Found a valid, unclaimed window — allow creation.
+		if !isWindowClaimed(claimFrom, claimBy, recoveryDates, takenSet) {
+			return true
 		}
 	}
+	return false
+}
 
-	return ErrNoRecoveryBalance
+// isWindowClaimed checks if a claim window already has a recovery activity claimed against it.
+func isWindowClaimed(claimFrom, claimBy time.Time, recoveryDates []time.Time, takenSet map[string]bool) bool {
+	for _, rd := range recoveryDates {
+		rdKey := rd.Format(dateFormat)
+		if !rd.Before(claimFrom) && !rd.After(claimBy) && !takenSet[rdKey+"_used"] {
+			takenSet[rdKey+"_used"] = true
+			return true
+		}
+	}
+	return false
 }
 
 // checkTargetAccess verifies that the actor can view the referenced target.

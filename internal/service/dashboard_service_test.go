@@ -11,6 +11,8 @@ import (
 	"github.com/pebblr/pebblr/internal/store"
 )
 
+const testDashErrUnexpected = "unexpected error: %v"
+
 // --- stub dashboard repo ---
 
 type stubDashboardRepo struct {
@@ -87,7 +89,7 @@ func TestDashboard_ActivityStats_GroupsByCategory(t *testing.T) {
 
 	resp, err := svc.ActivityStats(context.Background(), adminUser(), marchFilter())
 	if err != nil {
-		t.Fatalf("unexpected error: %v", err)
+		t.Fatalf(testDashErrUnexpected, err)
 	}
 
 	if resp.Total != 8 {
@@ -117,7 +119,7 @@ func TestDashboard_ActivityStats_RepScopedByRBAC(t *testing.T) {
 
 	resp, err := svc.ActivityStats(context.Background(), repUser(), marchFilter())
 	if err != nil {
-		t.Fatalf("unexpected error: %v", err)
+		t.Fatalf(testDashErrUnexpected, err)
 	}
 	if resp.Total != 2 {
 		t.Errorf("rep should get scoped results, got total = %d", resp.Total)
@@ -138,7 +140,7 @@ func TestDashboard_Coverage_CalculatesPercentage(t *testing.T) {
 
 	resp, err := svc.Coverage(context.Background(), adminUser(), marchFilter())
 	if err != nil {
-		t.Fatalf("unexpected error: %v", err)
+		t.Fatalf(testDashErrUnexpected, err)
 	}
 
 	if resp.TotalTargets != 20 {
@@ -164,7 +166,7 @@ func TestDashboard_Coverage_ZeroTargets(t *testing.T) {
 
 	resp, err := svc.Coverage(context.Background(), adminUser(), marchFilter())
 	if err != nil {
-		t.Fatalf("unexpected error: %v", err)
+		t.Fatalf(testDashErrUnexpected, err)
 	}
 
 	if resp.Percentage != 0 {
@@ -187,7 +189,7 @@ func TestDashboard_Frequency_WithConfigRules(t *testing.T) {
 
 	resp, err := svc.Frequency(context.Background(), adminUser(), marchFilter())
 	if err != nil {
-		t.Fatalf("unexpected error: %v", err)
+		t.Fatalf(testDashErrUnexpected, err)
 	}
 
 	if len(resp.Items) != 3 {
@@ -236,7 +238,7 @@ func TestDashboard_Frequency_MultiMonth(t *testing.T) {
 
 	resp, err := svc.Frequency(context.Background(), adminUser(), filter)
 	if err != nil {
-		t.Fatalf("unexpected error: %v", err)
+		t.Fatalf(testDashErrUnexpected, err)
 	}
 
 	// 10 targets * 4 required * 3 months = 120 expected, 40 actual ≈ 33.33%
@@ -258,7 +260,7 @@ func TestDashboard_Frequency_NoFrequencyRule(t *testing.T) {
 
 	resp, err := svc.Frequency(context.Background(), adminUser(), marchFilter())
 	if err != nil {
-		t.Fatalf("unexpected error: %v", err)
+		t.Fatalf(testDashErrUnexpected, err)
 	}
 
 	// No frequency rule for "x" means required=0, compliance=0
@@ -284,7 +286,7 @@ func TestDashboard_Recovery_EarnedFromWeekend(t *testing.T) {
 
 	resp, err := svc.RecoveryBalance(context.Background(), adminUser(), marchFilter())
 	if err != nil {
-		t.Fatalf("unexpected error: %v", err)
+		t.Fatalf(testDashErrUnexpected, err)
 	}
 	if resp.Earned != 1 {
 		t.Errorf("earned = %d, want 1", resp.Earned)
@@ -320,7 +322,7 @@ func TestDashboard_Recovery_ClaimedReducesBalance(t *testing.T) {
 
 	resp, err := svc.RecoveryBalance(context.Background(), adminUser(), marchFilter())
 	if err != nil {
-		t.Fatalf("unexpected error: %v", err)
+		t.Fatalf(testDashErrUnexpected, err)
 	}
 	if resp.Earned != 1 {
 		t.Errorf("earned = %d, want 1", resp.Earned)
@@ -351,7 +353,7 @@ func TestDashboard_Recovery_NoConfigReturnsEmpty(t *testing.T) {
 
 	resp, err := svc.RecoveryBalance(context.Background(), adminUser(), marchFilter())
 	if err != nil {
-		t.Fatalf("unexpected error: %v", err)
+		t.Fatalf(testDashErrUnexpected, err)
 	}
 	if resp.Earned != 0 {
 		t.Errorf("earned = %d, want 0", resp.Earned)
@@ -372,7 +374,7 @@ func TestDashboard_Recovery_MultipleWeekends(t *testing.T) {
 
 	resp, err := svc.RecoveryBalance(context.Background(), adminUser(), marchFilter())
 	if err != nil {
-		t.Fatalf("unexpected error: %v", err)
+		t.Fatalf(testDashErrUnexpected, err)
 	}
 	if resp.Earned != 3 {
 		t.Errorf("earned = %d, want 3", resp.Earned)

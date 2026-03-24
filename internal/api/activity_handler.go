@@ -113,7 +113,7 @@ type validationErrorResponse struct {
 func mapActivityServiceError(w http.ResponseWriter, err error) {
 	var ve *service.ValidationErrors
 	if errors.As(err, &ve) {
-		w.Header().Set("Content-Type", "application/json")
+		w.Header().Set(headerContentType, contentTypeJSON)
 		w.WriteHeader(http.StatusUnprocessableEntity)
 		if encErr := json.NewEncoder(w).Encode(validationErrorResponse{
 			Error:  errorDetail{Code: "VALIDATION_ERROR", Message: "validation failed"},
@@ -147,7 +147,7 @@ func mapActivityServiceError(w http.ResponseWriter, err error) {
 	case errors.Is(err, service.ErrNoRecoveryBalance):
 		writeError(w, http.StatusConflict, "CONFLICT", "no recovery day balance available")
 	default:
-		writeError(w, http.StatusInternalServerError, "INTERNAL_ERROR", "an unexpected error occurred")
+		writeError(w, http.StatusInternalServerError, "INTERNAL_ERROR", errUnexpected)
 	}
 }
 
@@ -155,7 +155,7 @@ func mapActivityServiceError(w http.ResponseWriter, err error) {
 func (h *ActivityHandler) List(w http.ResponseWriter, r *http.Request) {
 	actor, err := rbac.UserFromContext(r.Context())
 	if err != nil {
-		writeError(w, http.StatusUnauthorized, "UNAUTHORIZED", "missing authenticated user")
+		writeError(w, http.StatusUnauthorized, "UNAUTHORIZED", errMissingUser)
 		return
 	}
 
@@ -185,12 +185,12 @@ func (h *ActivityHandler) List(w http.ResponseWriter, r *http.Request) {
 		filter.TeamID = &v
 	}
 	if v := r.URL.Query().Get("dateFrom"); v != "" {
-		if t, err := time.Parse("2006-01-02", v); err == nil {
+		if t, err := time.Parse(dateFormat, v); err == nil {
 			filter.DateFrom = &t
 		}
 	}
 	if v := r.URL.Query().Get("dateTo"); v != "" {
-		if t, err := time.Parse("2006-01-02", v); err == nil {
+		if t, err := time.Parse(dateFormat, v); err == nil {
 			filter.DateTo = &t
 		}
 	}
@@ -207,7 +207,7 @@ func (h *ActivityHandler) List(w http.ResponseWriter, r *http.Request) {
 	}
 	prepareActivities(activities...)
 
-	w.Header().Set("Content-Type", "application/json")
+	w.Header().Set(headerContentType, contentTypeJSON)
 	w.WriteHeader(http.StatusOK)
 	writeJSON(w, r, activityListResponse{
 		Items: activities,
@@ -217,33 +217,28 @@ func (h *ActivityHandler) List(w http.ResponseWriter, r *http.Request) {
 	})
 }
 
-// Create handles POST /api/v1/activities
-func (h *ActivityHandler) Create(w http.ResponseWriter, r *http.Request) {
-	actor, err := rbac.UserFromContext(r.Context())
-	if err != nil {
-		writeError(w, http.StatusUnauthorized, "UNAUTHORIZED", "missing authenticated user")
-		return
-	}
-
+// decodeActivityRequest decodes, validates, and converts an activity request body
+// into a domain.Activity. Returns nil and writes an error response if validation fails.
+func decodeActivityRequest(w http.ResponseWriter, r *http.Request) *domain.Activity {
 	var req activityRequest
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-		writeError(w, http.StatusBadRequest, "BAD_REQUEST", "invalid request body")
-		return
+		writeError(w, http.StatusBadRequest, "BAD_REQUEST", errInvalidRequestBody)
+		return nil
 	}
 
 	if req.ActivityType == "" {
 		writeError(w, http.StatusBadRequest, "BAD_REQUEST", "activityType is required")
-		return
+		return nil
 	}
 	if req.DueDate == "" {
 		writeError(w, http.StatusBadRequest, "BAD_REQUEST", "dueDate is required")
-		return
+		return nil
 	}
 
-	dueDate, err := time.Parse("2006-01-02", req.DueDate)
+	dueDate, err := time.Parse(dateFormat, req.DueDate)
 	if err != nil {
 		writeError(w, http.StatusBadRequest, "BAD_REQUEST", "dueDate must be in YYYY-MM-DD format")
-		return
+		return nil
 	}
 
 	fields := req.Fields
@@ -251,7 +246,7 @@ func (h *ActivityHandler) Create(w http.ResponseWriter, r *http.Request) {
 		fields = map[string]any{}
 	}
 
-	activity := &domain.Activity{
+	return &domain.Activity{
 		ActivityType:  req.ActivityType,
 		Label:         req.Label,
 		Status:        req.Status,
@@ -262,6 +257,20 @@ func (h *ActivityHandler) Create(w http.ResponseWriter, r *http.Request) {
 		TargetID:      req.TargetID,
 		JointVisitUID: hoistJointVisitUID(fields),
 	}
+}
+
+// Create handles POST /api/v1/activities
+func (h *ActivityHandler) Create(w http.ResponseWriter, r *http.Request) {
+	actor, err := rbac.UserFromContext(r.Context())
+	if err != nil {
+		writeError(w, http.StatusUnauthorized, "UNAUTHORIZED", errMissingUser)
+		return
+	}
+
+	activity := decodeActivityRequest(w, r)
+	if activity == nil {
+		return
+	}
 
 	created, err := h.svc.Create(r.Context(), actor, activity)
 	if err != nil {
@@ -270,7 +279,7 @@ func (h *ActivityHandler) Create(w http.ResponseWriter, r *http.Request) {
 	}
 
 	prepareActivities(created)
-	w.Header().Set("Content-Type", "application/json")
+	w.Header().Set(headerContentType, contentTypeJSON)
 	w.WriteHeader(http.StatusCreated)
 	writeJSON(w, r, activityResponse{Activity: created})
 }
@@ -279,7 +288,7 @@ func (h *ActivityHandler) Create(w http.ResponseWriter, r *http.Request) {
 func (h *ActivityHandler) Get(w http.ResponseWriter, r *http.Request) {
 	actor, err := rbac.UserFromContext(r.Context())
 	if err != nil {
-		writeError(w, http.StatusUnauthorized, "UNAUTHORIZED", "missing authenticated user")
+		writeError(w, http.StatusUnauthorized, "UNAUTHORIZED", errMissingUser)
 		return
 	}
 
@@ -291,7 +300,7 @@ func (h *ActivityHandler) Get(w http.ResponseWriter, r *http.Request) {
 	}
 
 	prepareActivities(activity)
-	w.Header().Set("Content-Type", "application/json")
+	w.Header().Set(headerContentType, contentTypeJSON)
 	w.WriteHeader(http.StatusOK)
 	writeJSON(w, r, activityResponse{Activity: activity})
 }
@@ -300,48 +309,15 @@ func (h *ActivityHandler) Get(w http.ResponseWriter, r *http.Request) {
 func (h *ActivityHandler) Update(w http.ResponseWriter, r *http.Request) {
 	actor, err := rbac.UserFromContext(r.Context())
 	if err != nil {
-		writeError(w, http.StatusUnauthorized, "UNAUTHORIZED", "missing authenticated user")
+		writeError(w, http.StatusUnauthorized, "UNAUTHORIZED", errMissingUser)
 		return
 	}
 
 	id := chi.URLParam(r, "id")
 
-	var req activityRequest
-	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-		writeError(w, http.StatusBadRequest, "BAD_REQUEST", "invalid request body")
+	activity := decodeActivityRequest(w, r)
+	if activity == nil {
 		return
-	}
-
-	if req.ActivityType == "" {
-		writeError(w, http.StatusBadRequest, "BAD_REQUEST", "activityType is required")
-		return
-	}
-	if req.DueDate == "" {
-		writeError(w, http.StatusBadRequest, "BAD_REQUEST", "dueDate is required")
-		return
-	}
-
-	dueDate, err := time.Parse("2006-01-02", req.DueDate)
-	if err != nil {
-		writeError(w, http.StatusBadRequest, "BAD_REQUEST", "dueDate must be in YYYY-MM-DD format")
-		return
-	}
-
-	fields := req.Fields
-	if fields == nil {
-		fields = map[string]any{}
-	}
-
-	activity := &domain.Activity{
-		ActivityType:  req.ActivityType,
-		Label:         req.Label,
-		Status:        req.Status,
-		DueDate:       dueDate,
-		Duration:      req.Duration,
-		Routing:       req.Routing,
-		Fields:        fields,
-		TargetID:      req.TargetID,
-		JointVisitUID: hoistJointVisitUID(fields),
 	}
 
 	updated, err := h.svc.Update(r.Context(), actor, id, activity)
@@ -351,7 +327,7 @@ func (h *ActivityHandler) Update(w http.ResponseWriter, r *http.Request) {
 	}
 
 	prepareActivities(updated)
-	w.Header().Set("Content-Type", "application/json")
+	w.Header().Set(headerContentType, contentTypeJSON)
 	w.WriteHeader(http.StatusOK)
 	writeJSON(w, r, activityResponse{Activity: updated})
 }
@@ -360,7 +336,7 @@ func (h *ActivityHandler) Update(w http.ResponseWriter, r *http.Request) {
 func (h *ActivityHandler) Delete(w http.ResponseWriter, r *http.Request) {
 	actor, err := rbac.UserFromContext(r.Context())
 	if err != nil {
-		writeError(w, http.StatusUnauthorized, "UNAUTHORIZED", "missing authenticated user")
+		writeError(w, http.StatusUnauthorized, "UNAUTHORIZED", errMissingUser)
 		return
 	}
 
@@ -377,7 +353,7 @@ func (h *ActivityHandler) Delete(w http.ResponseWriter, r *http.Request) {
 func (h *ActivityHandler) Submit(w http.ResponseWriter, r *http.Request) {
 	actor, err := rbac.UserFromContext(r.Context())
 	if err != nil {
-		writeError(w, http.StatusUnauthorized, "UNAUTHORIZED", "missing authenticated user")
+		writeError(w, http.StatusUnauthorized, "UNAUTHORIZED", errMissingUser)
 		return
 	}
 
@@ -389,7 +365,7 @@ func (h *ActivityHandler) Submit(w http.ResponseWriter, r *http.Request) {
 	}
 
 	prepareActivities(activity)
-	w.Header().Set("Content-Type", "application/json")
+	w.Header().Set(headerContentType, contentTypeJSON)
 	w.WriteHeader(http.StatusOK)
 	writeJSON(w, r, activityResponse{Activity: activity})
 }
@@ -400,7 +376,7 @@ func (h *ActivityHandler) Submit(w http.ResponseWriter, r *http.Request) {
 func (h *ActivityHandler) Patch(w http.ResponseWriter, r *http.Request) {
 	actor, err := rbac.UserFromContext(r.Context())
 	if err != nil {
-		writeError(w, http.StatusUnauthorized, "UNAUTHORIZED", "missing authenticated user")
+		writeError(w, http.StatusUnauthorized, "UNAUTHORIZED", errMissingUser)
 		return
 	}
 
@@ -408,7 +384,7 @@ func (h *ActivityHandler) Patch(w http.ResponseWriter, r *http.Request) {
 
 	var raw map[string]json.RawMessage
 	if err := json.NewDecoder(r.Body).Decode(&raw); err != nil {
-		writeError(w, http.StatusBadRequest, "BAD_REQUEST", "invalid request body")
+		writeError(w, http.StatusBadRequest, "BAD_REQUEST", errInvalidRequestBody)
 		return
 	}
 
@@ -438,7 +414,7 @@ func (h *ActivityHandler) Patch(w http.ResponseWriter, r *http.Request) {
 				writeError(w, http.StatusBadRequest, "BAD_REQUEST", "invalid dueDate value")
 				return
 			}
-			t, err := time.Parse("2006-01-02", ds)
+			t, err := time.Parse(dateFormat, ds)
 			if err != nil {
 				writeError(w, http.StatusBadRequest, "BAD_REQUEST", "dueDate must be in YYYY-MM-DD format")
 				return
@@ -516,7 +492,7 @@ func (h *ActivityHandler) Patch(w http.ResponseWriter, r *http.Request) {
 	}
 
 	prepareActivities(updated)
-	w.Header().Set("Content-Type", "application/json")
+	w.Header().Set(headerContentType, contentTypeJSON)
 	w.WriteHeader(http.StatusOK)
 	writeJSON(w, r, activityResponse{Activity: updated})
 }
@@ -526,7 +502,7 @@ func (h *ActivityHandler) Patch(w http.ResponseWriter, r *http.Request) {
 func (h *ActivityHandler) BatchCreate(w http.ResponseWriter, r *http.Request) {
 	actor, err := rbac.UserFromContext(r.Context())
 	if err != nil {
-		writeError(w, http.StatusUnauthorized, "UNAUTHORIZED", "missing authenticated user")
+		writeError(w, http.StatusUnauthorized, "UNAUTHORIZED", errMissingUser)
 		return
 	}
 
@@ -537,7 +513,7 @@ func (h *ActivityHandler) BatchCreate(w http.ResponseWriter, r *http.Request) {
 		} `json:"items"`
 	}
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-		writeError(w, http.StatusBadRequest, "BAD_REQUEST", "invalid request body")
+		writeError(w, http.StatusBadRequest, "BAD_REQUEST", errInvalidRequestBody)
 		return
 	}
 	if len(req.Items) == 0 {
@@ -549,7 +525,7 @@ func (h *ActivityHandler) BatchCreate(w http.ResponseWriter, r *http.Request) {
 	var batchErrors []map[string]string
 
 	for _, item := range req.Items {
-		dueDate, err := time.Parse("2006-01-02", item.DueDate)
+		dueDate, err := time.Parse(dateFormat, item.DueDate)
 		if err != nil {
 			batchErrors = append(batchErrors, map[string]string{"targetId": item.TargetID, "error": "invalid date format"})
 			continue
@@ -574,7 +550,7 @@ func (h *ActivityHandler) BatchCreate(w http.ResponseWriter, r *http.Request) {
 		created = []*domain.Activity{}
 	}
 
-	w.Header().Set("Content-Type", "application/json")
+	w.Header().Set(headerContentType, contentTypeJSON)
 	status := http.StatusCreated
 	if len(batchErrors) > 0 && len(created) == 0 {
 		status = http.StatusBadRequest
@@ -592,7 +568,7 @@ func (h *ActivityHandler) BatchCreate(w http.ResponseWriter, r *http.Request) {
 func (h *ActivityHandler) CloneWeek(w http.ResponseWriter, r *http.Request) {
 	actor, err := rbac.UserFromContext(r.Context())
 	if err != nil {
-		writeError(w, http.StatusUnauthorized, "UNAUTHORIZED", "missing authenticated user")
+		writeError(w, http.StatusUnauthorized, "UNAUTHORIZED", errMissingUser)
 		return
 	}
 
@@ -601,16 +577,16 @@ func (h *ActivityHandler) CloneWeek(w http.ResponseWriter, r *http.Request) {
 		TargetWeekStart string `json:"targetWeekStart"`
 	}
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-		writeError(w, http.StatusBadRequest, "BAD_REQUEST", "invalid request body")
+		writeError(w, http.StatusBadRequest, "BAD_REQUEST", errInvalidRequestBody)
 		return
 	}
 
-	source, err := time.Parse("2006-01-02", req.SourceWeekStart)
+	source, err := time.Parse(dateFormat, req.SourceWeekStart)
 	if err != nil {
 		writeError(w, http.StatusBadRequest, "BAD_REQUEST", "sourceWeekStart must be YYYY-MM-DD")
 		return
 	}
-	target, err := time.Parse("2006-01-02", req.TargetWeekStart)
+	target, err := time.Parse(dateFormat, req.TargetWeekStart)
 	if err != nil {
 		writeError(w, http.StatusBadRequest, "BAD_REQUEST", "targetWeekStart must be YYYY-MM-DD")
 		return
@@ -622,7 +598,7 @@ func (h *ActivityHandler) CloneWeek(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	w.Header().Set("Content-Type", "application/json")
+	w.Header().Set(headerContentType, contentTypeJSON)
 	w.WriteHeader(http.StatusCreated)
 	_ = json.NewEncoder(w).Encode(result)
 }
@@ -631,7 +607,7 @@ func (h *ActivityHandler) CloneWeek(w http.ResponseWriter, r *http.Request) {
 func (h *ActivityHandler) PatchStatus(w http.ResponseWriter, r *http.Request) {
 	actor, err := rbac.UserFromContext(r.Context())
 	if err != nil {
-		writeError(w, http.StatusUnauthorized, "UNAUTHORIZED", "missing authenticated user")
+		writeError(w, http.StatusUnauthorized, "UNAUTHORIZED", errMissingUser)
 		return
 	}
 
@@ -639,7 +615,7 @@ func (h *ActivityHandler) PatchStatus(w http.ResponseWriter, r *http.Request) {
 
 	var req statusPatchRequest
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-		writeError(w, http.StatusBadRequest, "BAD_REQUEST", "invalid request body")
+		writeError(w, http.StatusBadRequest, "BAD_REQUEST", errInvalidRequestBody)
 		return
 	}
 
@@ -655,7 +631,7 @@ func (h *ActivityHandler) PatchStatus(w http.ResponseWriter, r *http.Request) {
 	}
 
 	prepareActivities(activity)
-	w.Header().Set("Content-Type", "application/json")
+	w.Header().Set(headerContentType, contentTypeJSON)
 	w.WriteHeader(http.StatusOK)
 	writeJSON(w, r, activityResponse{Activity: activity})
 }

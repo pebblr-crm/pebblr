@@ -13,6 +13,17 @@ import (
 	"github.com/pebblr/pebblr/internal/store"
 )
 
+const (
+	testFlowTeamAlpha  = "team-alpha"
+	testFlowTeamBeta   = "team-beta"
+	testFlowTarget1    = "t-flow-1"
+	testFlowReassign   = "t-reassign"
+	testFlowCross      = "t-cross"
+	testFlowActUpdate  = "act-update"
+	testFlowActPatch   = "act-patch"
+	testFlowAdmin      = "t-admin"
+)
+
 // ── Multi-user target registry ──────────────────────────────────────────────
 // These stubs maintain a map of targets so we can simulate multiple users
 // interacting with the same target pool.
@@ -71,27 +82,27 @@ func (r *targetRegistry) FrequencyStatus(_ context.Context, _ rbac.TargetScope, 
 // ── Users ───────────────────────────────────────────────────────────────────
 
 func repA() *domain.User {
-	return &domain.User{ID: "rep-a", Name: "Alice (Rep)", Role: domain.RoleRep, TeamIDs: []string{"team-alpha"}}
+	return &domain.User{ID: "rep-a", Name: "Alice (Rep)", Role: domain.RoleRep, TeamIDs: []string{testFlowTeamAlpha}}
 }
 
 func repB() *domain.User {
-	return &domain.User{ID: "rep-b", Name: "Bob (Rep)", Role: domain.RoleRep, TeamIDs: []string{"team-alpha"}}
+	return &domain.User{ID: "rep-b", Name: "Bob (Rep)", Role: domain.RoleRep, TeamIDs: []string{testFlowTeamAlpha}}
 }
 
 func repC() *domain.User {
-	return &domain.User{ID: "rep-c", Name: "Charlie (Rep)", Role: domain.RoleRep, TeamIDs: []string{"team-beta"}}
+	return &domain.User{ID: "rep-c", Name: "Charlie (Rep)", Role: domain.RoleRep, TeamIDs: []string{testFlowTeamBeta}}
 }
 
 func mgrAlpha() *domain.User {
-	return &domain.User{ID: "mgr-alpha", Name: "Manager Alpha", Role: domain.RoleManager, TeamIDs: []string{"team-alpha"}}
+	return &domain.User{ID: "mgr-alpha", Name: "Manager Alpha", Role: domain.RoleManager, TeamIDs: []string{testFlowTeamAlpha}}
 }
 
 func mgrBeta() *domain.User {
-	return &domain.User{ID: "mgr-beta", Name: "Manager Beta", Role: domain.RoleManager, TeamIDs: []string{"team-beta"}}
+	return &domain.User{ID: "mgr-beta", Name: "Manager Beta", Role: domain.RoleManager, TeamIDs: []string{testFlowTeamBeta}}
 }
 
 func admin() *domain.User {
-	return &domain.User{ID: "admin-x", Name: "Admin", Role: domain.RoleAdmin, TeamIDs: []string{"team-alpha", "team-beta"}}
+	return &domain.User{ID: "admin-x", Name: "Admin", Role: domain.RoleAdmin, TeamIDs: []string{testFlowTeamAlpha, testFlowTeamBeta}}
 }
 
 func flowUserRepo() *stubUserRepo {
@@ -122,8 +133,8 @@ func TestFlow_DualVisitLifecycle(t *testing.T) {
 
 	// Target initially assigned to Rep A on team-alpha.
 	target := &domain.Target{
-		ID: "t-flow-1", TargetType: "doctor", Name: "Dr. Lifecycle",
-		AssigneeID: "rep-a", TeamID: "team-alpha",
+		ID: testFlowTarget1, TargetType: "doctor", Name: "Dr. Lifecycle",
+		AssigneeID: "rep-a", TeamID: testFlowTeamAlpha,
 		Fields: map[string]any{"city": "Bucharest"},
 	}
 	targetReg := newTargetRegistry(target)
@@ -135,7 +146,7 @@ func TestFlow_DualVisitLifecycle(t *testing.T) {
 		enforcer, flowConfig())
 
 	// ── Step 1: Admin assigns target to Rep A (already assigned, but verify the endpoint works).
-	assigned, err := targetSvc.Assign(ctx, admin(), "t-flow-1", "rep-a", "team-alpha")
+	assigned, err := targetSvc.Assign(ctx, admin(), testFlowTarget1, "rep-a", testFlowTeamAlpha)
 	if err != nil {
 		t.Fatalf("step 1: admin assign failed: %v", err)
 	}
@@ -149,7 +160,7 @@ func TestFlow_DualVisitLifecycle(t *testing.T) {
 		DueDate:       time.Date(2026, 4, 1, 0, 0, 0, 0, time.UTC),
 		Duration:      "full_day",
 		Fields:        map[string]any{},
-		TargetID:      "t-flow-1",
+		TargetID:      testFlowTarget1,
 		JointVisitUID: "rep-b",
 	}
 	created, err := actSvc.Create(ctx, repA(), activity)
@@ -180,7 +191,7 @@ func TestFlow_DualVisitLifecycle(t *testing.T) {
 	}
 
 	// ── Step 6: Rep B can see the target name through the activity response.
-	if created.TargetID != "t-flow-1" {
+	if created.TargetID != testFlowTarget1 {
 		t.Error("step 6: activity should carry the target ID for response enrichment")
 	}
 }
@@ -197,7 +208,7 @@ func TestFlow_RepBlockedOnOtherRepsTarget(t *testing.T) {
 	// Target assigned to Rep A.
 	target := &domain.Target{
 		ID: "t-flow-2", TargetType: "doctor", Name: "Dr. OffLimits",
-		AssigneeID: "rep-a", TeamID: "team-alpha",
+		AssigneeID: "rep-a", TeamID: testFlowTeamAlpha,
 		Fields: map[string]any{},
 	}
 	targetReg := newTargetRegistry(target)
@@ -237,12 +248,12 @@ func TestFlow_ManagerTeamBoundary(t *testing.T) {
 
 	alphaTarget := &domain.Target{
 		ID: "t-alpha", TargetType: "doctor", Name: "Dr. Alpha",
-		AssigneeID: "rep-a", TeamID: "team-alpha",
+		AssigneeID: "rep-a", TeamID: testFlowTeamAlpha,
 		Fields: map[string]any{},
 	}
 	betaTarget := &domain.Target{
 		ID: "t-beta", TargetType: "doctor", Name: "Dr. Beta",
-		AssigneeID: "rep-c", TeamID: "team-beta",
+		AssigneeID: "rep-c", TeamID: testFlowTeamBeta,
 		Fields: map[string]any{},
 	}
 	targetReg := newTargetRegistry(alphaTarget, betaTarget)
@@ -295,8 +306,8 @@ func TestFlow_ReassignmentRevokesOldRepAccess(t *testing.T) {
 
 	// Target starts assigned to Rep A.
 	target := &domain.Target{
-		ID: "t-reassign", TargetType: "doctor", Name: "Dr. Reassign",
-		AssigneeID: "rep-a", TeamID: "team-alpha",
+		ID: testFlowReassign, TargetType: "doctor", Name: "Dr. Reassign",
+		AssigneeID: "rep-a", TeamID: testFlowTeamAlpha,
 		Fields: map[string]any{},
 	}
 	targetReg := newTargetRegistry(target)
@@ -313,7 +324,7 @@ func TestFlow_ReassignmentRevokesOldRepAccess(t *testing.T) {
 		DueDate:      time.Date(2026, 4, 1, 0, 0, 0, 0, time.UTC),
 		Duration:     "full_day",
 		Fields:       map[string]any{},
-		TargetID:     "t-reassign",
+		TargetID:     testFlowReassign,
 	}
 	_, err := actSvc.Create(ctx, repA(), activity)
 	if err != nil {
@@ -321,7 +332,7 @@ func TestFlow_ReassignmentRevokesOldRepAccess(t *testing.T) {
 	}
 
 	// ── Step 2: Admin reassigns the target to Rep B.
-	updated, err := targetSvc.Assign(ctx, admin(), "t-reassign", "rep-b", "team-alpha")
+	updated, err := targetSvc.Assign(ctx, admin(), testFlowReassign, "rep-b", testFlowTeamAlpha)
 	if err != nil {
 		t.Fatalf("step 2: admin reassign failed: %v", err)
 	}
@@ -332,7 +343,7 @@ func TestFlow_ReassignmentRevokesOldRepAccess(t *testing.T) {
 	// Verify audit was recorded for the reassignment.
 	foundAssign := false
 	for _, e := range auditRepo.entries {
-		if e.EventType == "assigned" && e.EntityID == "t-reassign" {
+		if e.EventType == "assigned" && e.EntityID == testFlowReassign {
 			oldVal, _ := e.OldValue["assigneeId"].(string)
 			newVal, _ := e.NewValue["assigneeId"].(string)
 			if oldVal == "rep-a" && newVal == "rep-b" {
@@ -350,7 +361,7 @@ func TestFlow_ReassignmentRevokesOldRepAccess(t *testing.T) {
 		DueDate:      time.Date(2026, 4, 2, 0, 0, 0, 0, time.UTC),
 		Duration:     "full_day",
 		Fields:       map[string]any{},
-		TargetID:     "t-reassign",
+		TargetID:     testFlowReassign,
 	}
 	_, err = actSvc.Create(ctx, repA(), activity2)
 	if !errors.Is(err, service.ErrTargetNotAccessible) {
@@ -376,8 +387,8 @@ func TestFlow_CrossTeamReassignment(t *testing.T) {
 	auditRepo := &stubAuditRepo{}
 
 	target := &domain.Target{
-		ID: "t-cross", TargetType: "pharmacy", Name: "Central Pharmacy",
-		AssigneeID: "rep-a", TeamID: "team-alpha",
+		ID: testFlowCross, TargetType: "pharmacy", Name: "Central Pharmacy",
+		AssigneeID: "rep-a", TeamID: testFlowTeamAlpha,
 		Fields: map[string]any{},
 	}
 	targetReg := newTargetRegistry(target)
@@ -402,7 +413,7 @@ func TestFlow_CrossTeamReassignment(t *testing.T) {
 		DueDate:      time.Date(2026, 4, 1, 0, 0, 0, 0, time.UTC),
 		Duration:     "full_day",
 		Fields:       map[string]any{},
-		TargetID:     "t-cross",
+		TargetID:     testFlowCross,
 	}
 	_, err := actSvc.Create(ctx, mgrAlpha(), activity)
 	if err != nil {
@@ -414,7 +425,7 @@ func TestFlow_CrossTeamReassignment(t *testing.T) {
 		DueDate:      time.Date(2026, 4, 2, 0, 0, 0, 0, time.UTC),
 		Duration:     "full_day",
 		Fields:       map[string]any{},
-		TargetID:     "t-cross",
+		TargetID:     testFlowCross,
 	}
 	_, err = actSvc.Create(ctx, mgrBeta(), activity2)
 	if !errors.Is(err, service.ErrTargetNotAccessible) {
@@ -422,7 +433,7 @@ func TestFlow_CrossTeamReassignment(t *testing.T) {
 	}
 
 	// ── Admin reassigns to Rep C on team-beta.
-	_, err = targetSvc.Assign(ctx, admin(), "t-cross", "rep-c", "team-beta")
+	_, err = targetSvc.Assign(ctx, admin(), testFlowCross, "rep-c", testFlowTeamBeta)
 	if err != nil {
 		t.Fatalf("reassign failed: %v", err)
 	}
@@ -433,7 +444,7 @@ func TestFlow_CrossTeamReassignment(t *testing.T) {
 		DueDate:      time.Date(2026, 4, 3, 0, 0, 0, 0, time.UTC),
 		Duration:     "full_day",
 		Fields:       map[string]any{},
-		TargetID:     "t-cross",
+		TargetID:     testFlowCross,
 	}
 	_, err = actSvc.Create(ctx, mgrAlpha(), activity3)
 	if !errors.Is(err, service.ErrTargetNotAccessible) {
@@ -451,7 +462,7 @@ func TestFlow_CrossTeamReassignment(t *testing.T) {
 		DueDate:      time.Date(2026, 4, 4, 0, 0, 0, 0, time.UTC),
 		Duration:     "full_day",
 		Fields:       map[string]any{},
-		TargetID:     "t-cross",
+		TargetID:     testFlowCross,
 	}
 	_, err = actSvc.Create(ctx, repC(), activity4)
 	if err != nil {
@@ -470,7 +481,7 @@ func TestFlow_ManagerAssignWithinTeam_RepCannotAssign(t *testing.T) {
 
 	target := &domain.Target{
 		ID: "t-mgr", TargetType: "doctor", Name: "Dr. Team",
-		AssigneeID: "rep-a", TeamID: "team-alpha",
+		AssigneeID: "rep-a", TeamID: testFlowTeamAlpha,
 		Fields: map[string]any{},
 	}
 	targetReg := newTargetRegistry(target)
@@ -513,21 +524,21 @@ func TestFlow_ActivityUpdateTargetChange(t *testing.T) {
 
 	ownTarget := &domain.Target{
 		ID: "t-own", TargetType: "doctor", Name: "Dr. Own",
-		AssigneeID: "rep-a", TeamID: "team-alpha",
+		AssigneeID: "rep-a", TeamID: testFlowTeamAlpha,
 		Fields: map[string]any{},
 	}
 	otherTarget := &domain.Target{
 		ID: "t-other", TargetType: "doctor", Name: "Dr. Other",
-		AssigneeID: "rep-b", TeamID: "team-alpha",
+		AssigneeID: "rep-b", TeamID: testFlowTeamAlpha,
 		Fields: map[string]any{},
 	}
 	targetReg := newTargetRegistry(ownTarget, otherTarget)
 
 	existing := &domain.Activity{
-		ID: "act-update", ActivityType: "visit", Status: "planificat",
+		ID: testFlowActUpdate, ActivityType: "visit", Status: "planificat",
 		DueDate: time.Date(2026, 4, 1, 0, 0, 0, 0, time.UTC),
 		Duration: "full_day", Fields: map[string]any{},
-		TargetID: "t-own", CreatorID: "rep-a", TeamID: "team-alpha",
+		TargetID: "t-own", CreatorID: "rep-a", TeamID: testFlowTeamAlpha,
 	}
 	actRepo := &stubActivityRepo{activity: existing}
 
@@ -537,7 +548,7 @@ func TestFlow_ActivityUpdateTargetChange(t *testing.T) {
 	// Rep A tries to change targetId to t-other (Rep B's target) → blocked.
 	updated := *existing
 	updated.TargetID = "t-other"
-	_, err := actSvc.Update(ctx, repA(), "act-update", &updated)
+	_, err := actSvc.Update(ctx, repA(), testFlowActUpdate, &updated)
 	if !errors.Is(err, service.ErrTargetNotAccessible) {
 		t.Errorf("expected ErrTargetNotAccessible on target change, got %v", err)
 	}
@@ -545,7 +556,7 @@ func TestFlow_ActivityUpdateTargetChange(t *testing.T) {
 	// Rep A can keep the same target → should succeed.
 	same := *existing
 	same.TargetID = "t-own"
-	_, err = actSvc.Update(ctx, repA(), "act-update", &same)
+	_, err = actSvc.Update(ctx, repA(), testFlowActUpdate, &same)
 	if err != nil {
 		t.Fatalf("keeping same target should succeed, got: %v", err)
 	}
@@ -562,21 +573,21 @@ func TestFlow_PartialUpdateTargetChange(t *testing.T) {
 
 	ownTarget := &domain.Target{
 		ID: "t-patch-own", TargetType: "doctor", Name: "Dr. Own",
-		AssigneeID: "rep-a", TeamID: "team-alpha",
+		AssigneeID: "rep-a", TeamID: testFlowTeamAlpha,
 		Fields: map[string]any{},
 	}
 	otherTarget := &domain.Target{
 		ID: "t-patch-other", TargetType: "doctor", Name: "Dr. Other",
-		AssigneeID: "rep-b", TeamID: "team-alpha",
+		AssigneeID: "rep-b", TeamID: testFlowTeamAlpha,
 		Fields: map[string]any{},
 	}
 	targetReg := newTargetRegistry(ownTarget, otherTarget)
 
 	existing := &domain.Activity{
-		ID: "act-patch", ActivityType: "visit", Status: "planificat",
+		ID: testFlowActPatch, ActivityType: "visit", Status: "planificat",
 		DueDate: time.Date(2026, 4, 1, 0, 0, 0, 0, time.UTC),
 		Duration: "full_day", Fields: map[string]any{},
-		TargetID: "t-patch-own", CreatorID: "rep-a", TeamID: "team-alpha",
+		TargetID: "t-patch-own", CreatorID: "rep-a", TeamID: testFlowTeamAlpha,
 	}
 	actRepo := &stubActivityRepo{activity: existing}
 
@@ -586,7 +597,7 @@ func TestFlow_PartialUpdateTargetChange(t *testing.T) {
 	// PATCH targetId to another rep's target → blocked.
 	otherID := "t-patch-other"
 	patch := &domain.ActivityPatch{TargetID: &otherID}
-	_, err := actSvc.PartialUpdate(ctx, repA(), "act-patch", patch)
+	_, err := actSvc.PartialUpdate(ctx, repA(), testFlowActPatch, patch)
 	if !errors.Is(err, service.ErrTargetNotAccessible) {
 		t.Errorf("expected ErrTargetNotAccessible on patch target change, got %v", err)
 	}
@@ -594,7 +605,7 @@ func TestFlow_PartialUpdateTargetChange(t *testing.T) {
 	// PATCH without targetId → should succeed (no target change).
 	statusPatch := "planificat"
 	noTargetPatch := &domain.ActivityPatch{Status: &statusPatch}
-	_, err = actSvc.PartialUpdate(ctx, repA(), "act-patch", noTargetPatch)
+	_, err = actSvc.PartialUpdate(ctx, repA(), testFlowActPatch, noTargetPatch)
 	if err != nil {
 		t.Fatalf("patch without target change should succeed, got: %v", err)
 	}
@@ -612,8 +623,8 @@ func TestFlow_AdminBypassesTargetAccess(t *testing.T) {
 	// Target on team-beta, assigned to Rep C — admin should still be able to
 	// create activities and assign regardless.
 	target := &domain.Target{
-		ID: "t-admin", TargetType: "doctor", Name: "Dr. Admin",
-		AssigneeID: "rep-c", TeamID: "team-beta",
+		ID: testFlowAdmin, TargetType: "doctor", Name: "Dr. Admin",
+		AssigneeID: "rep-c", TeamID: testFlowTeamBeta,
 		Fields: map[string]any{},
 	}
 	targetReg := newTargetRegistry(target)
@@ -630,7 +641,7 @@ func TestFlow_AdminBypassesTargetAccess(t *testing.T) {
 		DueDate:      time.Date(2026, 4, 1, 0, 0, 0, 0, time.UTC),
 		Duration:     "full_day",
 		Fields:       map[string]any{},
-		TargetID:     "t-admin",
+		TargetID:     testFlowAdmin,
 	}
 	_, err := actSvc.Create(ctx, admin(), activity)
 	if err != nil {
@@ -638,14 +649,14 @@ func TestFlow_AdminBypassesTargetAccess(t *testing.T) {
 	}
 
 	// Admin reassigns target from team-beta/rep-c to team-alpha/rep-a.
-	updated, err := targetSvc.Assign(ctx, admin(), "t-admin", "rep-a", "team-alpha")
+	updated, err := targetSvc.Assign(ctx, admin(), testFlowAdmin, "rep-a", testFlowTeamAlpha)
 	if err != nil {
 		t.Fatalf("admin should assign any target, got: %v", err)
 	}
 	if updated.AssigneeID != "rep-a" {
 		t.Errorf("expected rep-a, got %s", updated.AssigneeID)
 	}
-	if updated.TeamID != "team-alpha" {
+	if updated.TeamID != testFlowTeamAlpha {
 		t.Errorf("expected team-alpha, got %s", updated.TeamID)
 	}
 
@@ -655,7 +666,7 @@ func TestFlow_AdminBypassesTargetAccess(t *testing.T) {
 		DueDate:      time.Date(2026, 4, 2, 0, 0, 0, 0, time.UTC),
 		Duration:     "full_day",
 		Fields:       map[string]any{},
-		TargetID:     "t-admin",
+		TargetID:     testFlowAdmin,
 	}
 	_, err = actSvc.Create(ctx, admin(), activity2)
 	if err != nil {

@@ -89,7 +89,7 @@ export function useCreateTarget(): UseMutationResult<Target, Error, CreateTarget
   return useMutation({
     mutationFn: createTarget,
     onSuccess: () => {
-      void queryClient.invalidateQueries({ queryKey: targetKeys.lists() })
+      queryClient.invalidateQueries({ queryKey: targetKeys.lists() }).catch(() => {})
     },
   })
 }
@@ -100,7 +100,7 @@ export function useUpdateTarget(): UseMutationResult<Target, Error, UpdateTarget
     mutationFn: updateTarget,
     onSuccess: (updated) => {
       queryClient.setQueryData(targetKeys.detail(updated.id), updated)
-      void queryClient.invalidateQueries({ queryKey: targetKeys.lists() })
+      queryClient.invalidateQueries({ queryKey: targetKeys.lists() }).catch(() => {})
     },
   })
 }
@@ -111,7 +111,7 @@ export function useAssignTarget(): UseMutationResult<Target, Error, AssignTarget
     mutationFn: assignTarget,
     onSuccess: (updated) => {
       queryClient.setQueryData(targetKeys.detail(updated.id), updated)
-      void queryClient.invalidateQueries({ queryKey: targetKeys.lists() })
+      queryClient.invalidateQueries({ queryKey: targetKeys.lists() }).catch(() => {})
     },
   })
 }
