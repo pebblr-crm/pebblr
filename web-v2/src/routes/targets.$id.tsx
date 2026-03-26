@@ -1,4 +1,4 @@
-import { useMemo, useRef, useCallback } from 'react'
+import { useMemo } from 'react'
 import { createRoute, useParams } from '@tanstack/react-router'
 import { Route as rootRoute } from './__root'
 import { useTarget } from '@/hooks/useTargets'
@@ -11,7 +11,6 @@ import { Spinner } from '@/components/ui/Spinner'
 import { MapContainer } from '@/components/map/MapContainer'
 import { TargetMarker } from '@/components/map/TargetMarker'
 import { ArrowLeft, MapPin, Phone, Calendar, Clock } from 'lucide-react'
-import type maplibregl from 'maplibre-gl'
 
 function str(v: unknown): string {
   return typeof v === 'string' ? v : ''
@@ -40,7 +39,6 @@ function TargetDetailPage() {
   const { data: target, isLoading } = useTarget(id)
   const { data: activityData } = useActivities({ targetId: id, limit: 50 })
   const { data: config } = useConfig()
-  const mapRef = useRef<maplibregl.Map | null>(null)
 
   const activities = useMemo(() => activityData?.items ?? [], [activityData])
   const classification = (target?.fields?.classification as string) ?? 'C'
@@ -51,10 +49,6 @@ function TargetDetailPage() {
     () => config?.accounts.types.find((t) => t.key === target?.targetType),
     [config, target],
   )
-
-  const handleMapReady = useCallback((map: maplibregl.Map) => {
-    mapRef.current = map
-  }, [])
 
   if (isLoading || !target) return <Spinner />
 
@@ -171,15 +165,16 @@ function TargetDetailPage() {
               className="h-full"
               center={[lng as number, lat as number]}
               zoom={14}
-              onMapReady={handleMapReady}
             >
-              <TargetMarker
-                map={mapRef.current}
-                lat={lat as number}
-                lng={lng as number}
-                name={target.name}
-                priority={classification}
-              />
+              {(map) => (
+                <TargetMarker
+                  map={map}
+                  lat={lat as number}
+                  lng={lng as number}
+                  name={target.name}
+                  priority={classification}
+                />
+              )}
             </MapContainer>
           ) : (
             <div className="flex h-full items-center justify-center bg-slate-100 text-sm text-slate-400">

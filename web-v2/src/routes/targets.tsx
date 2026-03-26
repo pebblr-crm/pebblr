@@ -1,4 +1,4 @@
-import { useState, useMemo, useCallback, useRef } from 'react'
+import { useState, useMemo } from 'react'
 import { createRoute } from '@tanstack/react-router'
 import { createColumnHelper } from '@tanstack/react-table'
 import { Route as rootRoute } from './__root'
@@ -11,7 +11,6 @@ import { MapContainer } from '@/components/map/MapContainer'
 import { TargetMarker } from '@/components/map/TargetMarker'
 import { Search, Filter } from 'lucide-react'
 import type { Target } from '@/types/target'
-import type maplibregl from 'maplibre-gl'
 
 export const Route = createRoute({
   getParentRoute: () => rootRoute,
@@ -50,8 +49,6 @@ function TargetsPage() {
   const [typeFilter, setTypeFilter] = useState('')
   const { data, isLoading } = useTargets({ q: search || undefined, type: typeFilter || undefined, limit: 200 })
   const { data: freqData } = useTargetFrequencyStatus()
-  const mapInstanceRef = useRef<maplibregl.Map | null>(null)
-
   const targets = useMemo(() => data?.items ?? [], [data])
 
   const freqMap = useMemo(() => {
@@ -104,10 +101,6 @@ function TargetsPage() {
     [targets],
   )
 
-  const handleMapReady = useCallback((map: maplibregl.Map) => {
-    mapInstanceRef.current = map
-  }, [])
-
   if (isLoading) return <Spinner />
 
   return (
@@ -154,17 +147,19 @@ function TargetsPage() {
 
       {/* Map sidebar */}
       <div className="hidden w-96 border-l border-slate-200 lg:block">
-        <MapContainer className="h-full" onMapReady={handleMapReady}>
-          {geoTargets.map((t) => (
-            <TargetMarker
-              key={t.id}
-              map={mapInstanceRef.current}
-              lat={getLat(t.fields)!}
-              lng={getLng(t.fields)!}
-              name={t.name}
-              priority={getClassification(t.fields)}
-            />
-          ))}
+        <MapContainer className="h-full">
+          {(map) =>
+            geoTargets.map((t) => (
+              <TargetMarker
+                key={t.id}
+                map={map}
+                lat={getLat(t.fields)!}
+                lng={getLng(t.fields)!}
+                name={t.name}
+                priority={getClassification(t.fields)}
+              />
+            ))
+          }
         </MapContainer>
       </div>
     </div>

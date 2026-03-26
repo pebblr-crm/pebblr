@@ -1,4 +1,4 @@
-import { useState, useMemo, useCallback, useRef } from 'react'
+import { useState, useMemo, useCallback } from 'react'
 import { createRoute, useParams } from '@tanstack/react-router'
 import { Route as rootRoute } from './__root'
 import { useActivities } from '@/hooks/useActivities'
@@ -12,7 +12,6 @@ import { Badge } from '@/components/ui/Badge'
 import { Button } from '@/components/ui/Button'
 import { Spinner } from '@/components/ui/Spinner'
 import { ArrowLeft, ChevronLeft, ChevronRight, Info } from 'lucide-react'
-import type maplibregl from 'maplibre-gl'
 
 export const Route = createRoute({
   getParentRoute: () => rootRoute,
@@ -56,7 +55,6 @@ function getClassification(fields: Record<string, unknown>): string {
 function RepDrillDownPage() {
   const { id: repId } = useParams({ from: '/reps/$id' })
   const [weekStart, setWeekStart] = useState(() => getMonday(new Date()))
-  const mapRef = useRef<maplibregl.Map | null>(null)
 
   const weekEnd = useMemo(() => addDays(weekStart, 4), [weekStart])
   const dateFrom = formatDate(weekStart)
@@ -81,10 +79,6 @@ function RepDrillDownPage() {
 
   const prevWeek = useCallback(() => setWeekStart((w) => addDays(w, -7)), [])
   const nextWeek = useCallback(() => setWeekStart((w) => addDays(w, 7)), [])
-
-  const handleMapReady = useCallback((map: maplibregl.Map) => {
-    mapRef.current = map
-  }, [])
 
   const completedCount = stats?.byStatus?.realizat ?? 0
   const completionRate = stats?.total ? Math.round((completedCount / stats.total) * 100) : 0
@@ -143,17 +137,19 @@ function RepDrillDownPage() {
       {/* Map + Calendar */}
       <div className="flex flex-1 min-h-0">
         <div className="w-1/2 border-r border-slate-200">
-          <MapContainer className="h-full" onMapReady={handleMapReady}>
-            {geoTargets.map((t) => (
-              <TargetMarker
-                key={t.id}
-                map={mapRef.current}
-                lat={getLat(t.fields)!}
-                lng={getLng(t.fields)!}
-                name={t.name}
-                priority={getClassification(t.fields)}
-              />
-            ))}
+          <MapContainer className="h-full">
+            {(map) =>
+              geoTargets.map((t) => (
+                <TargetMarker
+                  key={t.id}
+                  map={map}
+                  lat={getLat(t.fields)!}
+                  lng={getLng(t.fields)!}
+                  name={t.name}
+                  priority={getClassification(t.fields)}
+                />
+              ))
+            }
           </MapContainer>
         </div>
         <div className="w-1/2 overflow-auto p-4">

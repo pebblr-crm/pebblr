@@ -1,3 +1,4 @@
+import { useState, useEffect, useCallback } from 'react'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { createRouter, RouterProvider } from '@tanstack/react-router'
 import { AuthProvider } from '@/auth/provider'
@@ -50,8 +51,32 @@ const queryClient = new QueryClient({
   },
 })
 
+interface DemoAccount {
+  id: string
+  name: string
+  email: string
+  role: string
+}
+
 function DemoGate({ children }: { children: React.ReactNode }) {
   const { user, isDemoMode, demoLogin } = useAuth()
+  const [accounts, setAccounts] = useState<DemoAccount[]>([])
+
+  useEffect(() => {
+    if (!isDemoMode) return
+    fetch('/demo/accounts')
+      .then((r) => r.json())
+      .then((data: { accounts: DemoAccount[] }) => setAccounts(data.accounts))
+      .catch(() => {})
+  }, [isDemoMode])
+
+  const handleLogin = useCallback(
+    async (userId: string) => {
+      await demoLogin(userId)
+      queryClient.clear()
+    },
+    [demoLogin],
+  )
 
   if (isDemoMode && !user) {
     return (
@@ -60,15 +85,19 @@ function DemoGate({ children }: { children: React.ReactNode }) {
           <h2 className="text-lg font-semibold text-slate-900">Pebblr v2 Demo</h2>
           <p className="mt-1 text-sm text-slate-500">Select a demo account to continue.</p>
           <div className="mt-4 space-y-2">
-            {['admin-1', 'manager-1', 'rep-1'].map((id) => (
+            {accounts.map((acct) => (
               <button
-                key={id}
-                onClick={() => demoLogin(id)}
-                className="w-full rounded-lg border border-slate-200 px-4 py-2 text-left text-sm hover:bg-slate-50"
+                key={acct.id}
+                onClick={() => handleLogin(acct.id)}
+                className="w-full rounded-lg border border-slate-200 px-4 py-2.5 text-left hover:bg-slate-50"
               >
-                {id}
+                <div className="text-sm font-medium text-slate-900">{acct.name}</div>
+                <div className="text-xs text-slate-500">{acct.role} &middot; {acct.email}</div>
               </button>
             ))}
+            {accounts.length === 0 && (
+              <p className="text-sm text-slate-400">Loading accounts...</p>
+            )}
           </div>
         </div>
       </div>

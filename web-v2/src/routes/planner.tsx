@@ -1,4 +1,4 @@
-import { useState, useMemo, useCallback, useRef } from 'react'
+import { useState, useMemo, useCallback } from 'react'
 import { createRoute } from '@tanstack/react-router'
 import { Route as rootRoute } from './__root'
 import { useTargets } from '@/hooks/useTargets'
@@ -12,7 +12,6 @@ import { Button } from '@/components/ui/Button'
 import { Badge } from '@/components/ui/Badge'
 import { Spinner } from '@/components/ui/Spinner'
 import { ChevronLeft, ChevronRight, Copy, CalendarDays } from 'lucide-react'
-import type maplibregl from 'maplibre-gl'
 
 export const Route = createRoute({
   getParentRoute: () => rootRoute,
@@ -55,7 +54,6 @@ function getClassification(fields: Record<string, unknown>): string {
 
 function PlannerPage() {
   const [weekStart, setWeekStart] = useState(() => getMonday(new Date()))
-  const mapInstanceRef = useRef<maplibregl.Map | null>(null)
 
   const weekEnd = useMemo(() => addDays(weekStart, 4), [weekStart])
   const dateFrom = formatDate(weekStart)
@@ -89,9 +87,6 @@ function PlannerPage() {
     cloneWeek.mutate({ sourceWeekStart: dateFrom, targetWeekStart: formatDate(target) })
   }, [cloneWeek, weekStart, dateFrom])
 
-  const handleMapReady = useCallback((map: maplibregl.Map) => {
-    mapInstanceRef.current = map
-  }, [])
 
   if (targetsLoading || activitiesLoading) return <Spinner />
 
@@ -153,17 +148,19 @@ function PlannerPage() {
       <div className="flex flex-1 min-h-0">
         {/* Map */}
         <div className="w-1/2 border-r border-slate-200">
-          <MapContainer className="h-full" onMapReady={handleMapReady}>
-            {geoTargets.map((t) => (
-              <TargetMarker
-                key={t.id}
-                map={mapInstanceRef.current}
-                lat={getLat(t.fields)!}
-                lng={getLng(t.fields)!}
-                name={t.name}
-                priority={getClassification(t.fields)}
-              />
-            ))}
+          <MapContainer className="h-full">
+            {(map) =>
+              geoTargets.map((t) => (
+                <TargetMarker
+                  key={t.id}
+                  map={map}
+                  lat={getLat(t.fields)!}
+                  lng={getLng(t.fields)!}
+                  name={t.name}
+                  priority={getClassification(t.fields)}
+                />
+              ))
+            }
           </MapContainer>
         </div>
 

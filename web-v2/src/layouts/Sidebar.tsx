@@ -1,4 +1,5 @@
 import { useTranslation } from 'react-i18next'
+import { useQueryClient } from '@tanstack/react-query'
 import { useAuth } from '@/auth/context'
 import {
   Map,
@@ -20,7 +21,13 @@ interface NavItem {
 
 export function Sidebar({ currentPath }: { currentPath: string }) {
   const { t } = useTranslation()
+  const queryClient = useQueryClient()
   const { role, isDemoMode, demoLogout } = useAuth()
+
+  const handleLogout = () => {
+    demoLogout()
+    queryClient.clear()
+  }
 
   const navItems: NavItem[] = [
     { label: t('nav.planner'), href: '/planner', icon: <Map size={20} />, roles: ['rep'] },
@@ -75,7 +82,7 @@ export function Sidebar({ currentPath }: { currentPath: string }) {
         </a>
         {isDemoMode && (
           <button
-            onClick={demoLogout}
+            onClick={handleLogout}
             className="flex w-full items-center gap-3 rounded-lg px-3 py-2 text-sm text-slate-500 hover:bg-slate-50"
           >
             <LogOut size={20} />

@@ -1,4 +1,4 @@
-import { useRef, useEffect, useState, type ReactNode } from 'react'
+import { useRef, useEffect, useState } from 'react'
 import maplibregl from 'maplibre-gl'
 import 'maplibre-gl/dist/maplibre-gl.css'
 
@@ -6,24 +6,23 @@ interface MapContainerProps {
   center?: [number, number]
   zoom?: number
   className?: string
-  children?: ReactNode
-  onMapReady?: (map: maplibregl.Map) => void
+  children?: (map: maplibregl.Map) => React.ReactNode
 }
 
 export function MapContainer({
   center = [26.1, 44.43], // Bucharest default
   zoom = 11,
   className = '',
-  onMapReady,
+  children,
 }: MapContainerProps) {
   const containerRef = useRef<HTMLDivElement>(null)
-  const mapRef = useRef<maplibregl.Map | null>(null)
-  const [ready, setReady] = useState(false)
+  const mapObjRef = useRef<maplibregl.Map | null>(null)
+  const [map, setMap] = useState<maplibregl.Map | null>(null)
 
   useEffect(() => {
-    if (!containerRef.current || mapRef.current) return
+    if (!containerRef.current || mapObjRef.current) return
 
-    const map = new maplibregl.Map({
+    const instance = new maplibregl.Map({
       container: containerRef.current,
       style: {
         version: 8,
@@ -41,17 +40,16 @@ export function MapContainer({
       zoom,
     })
 
-    map.addControl(new maplibregl.NavigationControl(), 'top-right')
+    instance.addControl(new maplibregl.NavigationControl(), 'top-right')
 
-    map.on('load', () => {
-      mapRef.current = map
-      setReady(true)
-      onMapReady?.(map)
+    instance.on('load', () => {
+      mapObjRef.current = instance
+      setMap(instance)
     })
 
     return () => {
-      map.remove()
-      mapRef.current = null
+      instance.remove()
+      mapObjRef.current = null
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
@@ -59,11 +57,12 @@ export function MapContainer({
   return (
     <div className={`relative ${className}`}>
       <div ref={containerRef} className="h-full w-full" />
-      {!ready && (
+      {!map && (
         <div className="absolute inset-0 flex items-center justify-center bg-slate-100">
           <span className="text-sm text-slate-500">Loading map...</span>
         </div>
       )}
+      {map && children?.(map)}
     </div>
   )
 }
