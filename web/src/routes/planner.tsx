@@ -229,7 +229,7 @@ function PlannerPage() {
       setDragTargetId(null)
       setSelectedTargetIds(new Set())
     }
-  }, [dragPending, dragActivityId, dragTargetId, selectedTargetIds, dayAssignments, patchActivity, showToast])
+  }, [dragPending, dragActivityId, dragTargetId, selectedTargetIds, dayAssignments, activities, patchActivity, showToast])
 
   const removeFromDay = useCallback((dateStr: string, targetId: string) => {
     setDayAssignments((prev) => {

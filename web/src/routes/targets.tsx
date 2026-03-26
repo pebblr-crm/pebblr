@@ -103,7 +103,7 @@ function TargetsPage() {
         },
       }),
     ],
-    [freqMap],
+    [freqMap, navigate],
   )
 
   const geoTargets = useMemo(
