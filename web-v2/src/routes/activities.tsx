@@ -214,11 +214,17 @@ function CreateActivityModal({ open, onClose }: { open: boolean; onClose: () => 
 
 // --- Activity Detail Modal ---
 
+const transitionColors: Record<string, string> = {
+  realizat: 'bg-emerald-600 text-white hover:bg-emerald-700',
+  anulat: 'bg-red-600 text-white hover:bg-red-700',
+}
+
 function ActivityDetailModal({ activityId, onClose }: { activityId: string | null; onClose: () => void }) {
   const { data: activity, isLoading } = useActivity(activityId ?? '')
   const { data: config } = useConfig()
   const patchStatus = usePatchActivityStatus()
   const submitActivity = useSubmitActivity()
+  const [feedback, setFeedback] = useState('')
 
   const transitions = useMemo(() => {
     if (!config || !activity) return []
@@ -242,37 +248,57 @@ function ActivityDetailModal({ activityId, onClose }: { activityId: string | nul
     ? 'Activity'
     : (activity.targetName ?? activity.label ?? activity.activityType)
 
-  const actionFooter = activity && (transitions.length > 0 || isSubmittable) ? (
-    <div className="flex flex-wrap gap-2">
-      {transitions.map((nextStatus) => {
-        const label = config?.activities.statuses.find((s) => s.key === nextStatus)?.label ?? nextStatus
-        const variant = nextStatus === 'realizat' ? 'primary' as const
-          : nextStatus === 'anulat' ? 'danger' as const
-          : 'secondary' as const
-        return (
-          <Button
-            key={nextStatus}
-            variant={variant}
-            size="lg"
-            disabled={patchStatus.isPending}
-            onClick={() => patchStatus.mutate({ id: activity.id, status: nextStatus })}
-            className="flex-1"
+  const handleTransition = (nextStatus: string) => {
+    if (!activity) return
+    const fields = feedback.trim() ? { notes: feedback.trim() } : undefined
+    patchStatus.mutate(
+      { id: activity.id, status: nextStatus, fields },
+      { onSuccess: () => { setFeedback(''); onClose() } },
+    )
+  }
+
+  const canAct = transitions.length > 0 || isSubmittable
+  const actionFooter = activity && canAct ? (
+    <div className="space-y-3">
+      <div>
+        <label className="mb-1.5 block text-sm font-medium text-slate-700">
+          Feedback <span className="text-slate-400">(optional)</span>
+        </label>
+        <textarea
+          value={feedback}
+          onChange={(e) => setFeedback(e.target.value)}
+          maxLength={250}
+          rows={2}
+          placeholder="How did the visit go?"
+          className="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm focus:border-teal-500 focus:outline-none focus:ring-1 focus:ring-teal-500"
+        />
+      </div>
+      <div className="flex gap-2">
+        {transitions.map((nextStatus) => {
+          const label = config?.activities.statuses.find((s) => s.key === nextStatus)?.label ?? nextStatus
+          const colorCls = transitionColors[nextStatus] ?? 'bg-slate-600 text-white hover:bg-slate-700'
+          return (
+            <button
+              key={nextStatus}
+              disabled={patchStatus.isPending}
+              onClick={() => handleTransition(nextStatus)}
+              className={`flex-1 rounded-lg px-4 py-2.5 text-sm font-medium shadow-sm transition-colors disabled:opacity-50 ${colorCls}`}
+            >
+              {label}
+            </button>
+          )
+        })}
+        {isSubmittable && (
+          <button
+            disabled={submitActivity.isPending}
+            onClick={() => submitActivity.mutate(activity.id)}
+            className="flex-1 inline-flex items-center justify-center gap-2 rounded-lg bg-teal-600 px-4 py-2.5 text-sm font-medium text-white shadow-sm transition-colors hover:bg-teal-700 disabled:opacity-50"
           >
-            {label}
-          </Button>
-        )
-      })}
-      {isSubmittable && (
-        <Button
-          size="lg"
-          disabled={submitActivity.isPending}
-          onClick={() => submitActivity.mutate(activity.id)}
-          className="flex-1"
-        >
-          <Send size={16} />
-          Submit
-        </Button>
-      )}
+            <Send size={16} />
+            Submit
+          </button>
+        )}
+      </div>
     </div>
   ) : undefined
 

@@ -51,8 +51,8 @@ export function useCreateActivity() {
 export function usePatchActivityStatus() {
   const qc = useQueryClient()
   return useMutation({
-    mutationFn: ({ id, status }: { id: string; status: string }) =>
-      api.patch<void>(`/activities/${id}/status`, { status }),
+    mutationFn: ({ id, status, fields }: { id: string; status: string; fields?: Record<string, unknown> }) =>
+      api.patch<void>(`/activities/${id}/status`, { status, fields }),
     onSuccess: () => qc.invalidateQueries({ queryKey: activityKeys.all }),
   })
 }
