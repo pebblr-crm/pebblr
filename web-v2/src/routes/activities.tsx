@@ -105,7 +105,21 @@ function CreateActivityModal({ open, onClose }: { open: boolean; onClose: () => 
   }
 
   return (
-    <Modal open={open} onClose={onClose} title="Log Activity">
+    <Modal
+      open={open}
+      onClose={onClose}
+      title="Log Activity"
+      footer={
+        <Button
+          onClick={handleSubmit}
+          disabled={createActivity.isPending || !activityType}
+          className="w-full"
+          size="lg"
+        >
+          {createActivity.isPending ? 'Submitting...' : 'Log Activity'}
+        </Button>
+      }
+    >
       <div className="space-y-5">
         <p className="text-xs text-slate-500">
           New activities start as {config?.activities.statuses.find((s) => s.initial)?.label ?? 'Planned'}.
@@ -193,13 +207,6 @@ function CreateActivityModal({ open, onClose }: { open: boolean; onClose: () => 
           </div>
         </label>
 
-        <Button
-          onClick={handleSubmit}
-          disabled={createActivity.isPending || !activityType}
-          className="w-full"
-        >
-          {createActivity.isPending ? 'Submitting...' : 'Log Activity'}
-        </Button>
       </div>
     </Modal>
   )
@@ -235,8 +242,42 @@ function ActivityDetailModal({ activityId, onClose }: { activityId: string | nul
     ? 'Activity'
     : (activity.targetName ?? activity.label ?? activity.activityType)
 
+  const actionFooter = activity && (transitions.length > 0 || isSubmittable) ? (
+    <div className="flex flex-wrap gap-2">
+      {transitions.map((nextStatus) => {
+        const label = config?.activities.statuses.find((s) => s.key === nextStatus)?.label ?? nextStatus
+        const variant = nextStatus === 'realizat' ? 'primary' as const
+          : nextStatus === 'anulat' ? 'danger' as const
+          : 'secondary' as const
+        return (
+          <Button
+            key={nextStatus}
+            variant={variant}
+            size="lg"
+            disabled={patchStatus.isPending}
+            onClick={() => patchStatus.mutate({ id: activity.id, status: nextStatus })}
+            className="flex-1"
+          >
+            {label}
+          </Button>
+        )
+      })}
+      {isSubmittable && (
+        <Button
+          size="lg"
+          disabled={submitActivity.isPending}
+          onClick={() => submitActivity.mutate(activity.id)}
+          className="flex-1"
+        >
+          <Send size={16} />
+          Submit
+        </Button>
+      )}
+    </div>
+  ) : undefined
+
   return (
-    <Modal open={!!activityId} onClose={onClose} title={title}>
+    <Modal open={!!activityId} onClose={onClose} title={title} footer={actionFooter}>
       {isLoading || !activity ? (
         <Spinner />
       ) : (
@@ -300,35 +341,6 @@ function ActivityDetailModal({ activityId, onClose }: { activityId: string | nul
             )}
           </dl>
 
-          {/* Actions */}
-          {(transitions.length > 0 || isSubmittable) && (
-            <div className="flex flex-wrap gap-2 border-t border-slate-100 pt-3">
-              {transitions.map((nextStatus) => {
-                const label = config?.activities.statuses.find((s) => s.key === nextStatus)?.label ?? nextStatus
-                return (
-                  <Button
-                    key={nextStatus}
-                    variant="secondary"
-                    size="sm"
-                    disabled={patchStatus.isPending}
-                    onClick={() => patchStatus.mutate({ id: activity.id, status: nextStatus })}
-                  >
-                    {label}
-                  </Button>
-                )
-              })}
-              {isSubmittable && (
-                <Button
-                  size="sm"
-                  disabled={submitActivity.isPending}
-                  onClick={() => submitActivity.mutate(activity.id)}
-                >
-                  <Send size={14} />
-                  Submit
-                </Button>
-              )}
-            </div>
-          )}
         </div>
       )}
     </Modal>
