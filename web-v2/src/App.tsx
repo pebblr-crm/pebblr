@@ -65,8 +65,11 @@ function DemoGate({ children }: { children: React.ReactNode }) {
   useEffect(() => {
     if (!isDemoMode) return
     fetch('/demo/accounts')
-      .then((r) => r.json())
-      .then((data: { accounts: DemoAccount[] }) => setAccounts(data.accounts))
+      .then((r) => {
+        if (!r.ok) return { accounts: [] as DemoAccount[] }
+        return r.json() as Promise<{ accounts: DemoAccount[] }>
+      })
+      .then((data) => setAccounts(Array.isArray(data.accounts) ? data.accounts : []))
       .catch(() => {})
   }, [isDemoMode])
 
