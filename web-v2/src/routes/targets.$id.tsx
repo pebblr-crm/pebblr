@@ -42,8 +42,8 @@ function TargetDetailPage() {
 
   const activities = useMemo(() => activityData?.items ?? [], [activityData])
   const classification = (target?.fields?.classification as string) ?? 'C'
-  const lat = typeof target?.fields?.latitude === 'number' ? target.fields.latitude : null
-  const lng = typeof target?.fields?.longitude === 'number' ? target.fields.longitude : null
+  const lat = typeof target?.fields?.lat === 'number' ? target.fields.lat : null
+  const lng = typeof target?.fields?.lng === 'number' ? target.fields.lng : null
 
   const accountType = useMemo(
     () => config?.accounts.types.find((t) => t.key === target?.targetType),

@@ -19,12 +19,12 @@ export const Route = createRoute({
 })
 
 function getLat(fields: Record<string, unknown>): number | null {
-  const v = fields.latitude
+  const v = fields.lat
   return typeof v === 'number' ? v : null
 }
 
 function getLng(fields: Record<string, unknown>): number | null {
-  const v = fields.longitude
+  const v = fields.lng
   return typeof v === 'number' ? v : null
 }
 
