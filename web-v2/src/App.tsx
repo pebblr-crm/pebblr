@@ -66,10 +66,10 @@ function DemoGate({ children }: { children: React.ReactNode }) {
     if (!isDemoMode) return
     fetch('/demo/accounts')
       .then((r) => {
-        if (!r.ok) return { accounts: [] as DemoAccount[] }
-        return r.json() as Promise<{ accounts: DemoAccount[] }>
+        if (!r.ok) return []
+        return r.json() as Promise<DemoAccount[]>
       })
-      .then((data) => setAccounts(Array.isArray(data.accounts) ? data.accounts : []))
+      .then((data) => setAccounts(Array.isArray(data) ? data : []))
       .catch(() => {})
   }, [isDemoMode])
 
