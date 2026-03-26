@@ -2,7 +2,7 @@
 # CI/CD pipelines call these targets only.
 
 .DEFAULT_GOAL := help
-.PHONY: help build test lint typecheck dev-api dev-web dev-web-v2 dev-db dev-db-stop dev-db-reset seed cluster-up cluster-deps deploy migrate validate-config clean helm-validate e2e e2e-teardown e2e-cluster e2e-db e2e-deploy e2e-web-v2 sonar
+.PHONY: help build test lint typecheck dev-api dev-web dev-web-v2 dev-db dev-db-stop dev-db-reset seed cluster-up cluster-deps deploy migrate validate-config clean helm-validate e2e e2e-teardown e2e-cluster e2e-db e2e-deploy e2e-web-v2 e2e-web-v2-integration sonar
 
 # ── Pinned versions ───────────────────────────────────────────────────────────
 ESO_VERSION           := 0.12.1
@@ -110,6 +110,9 @@ e2e: ## Run E2E tests against a running Kind cluster
 
 e2e-web-v2: ## Run Playwright E2E tests for web-v2 (starts Vite dev server automatically)
 	@cd $(WEB_V2_DIR) && bun run test:e2e
+
+e2e-web-v2-integration: ## Run Playwright integration tests for web-v2 against the Kind cluster
+	@scripts/e2e-web-v2.sh
 
 e2e-cluster: ## Create a lightweight Kind cluster for E2E (no cert-manager/ESO/Envoy)
 	$(AKS_GUARD)
