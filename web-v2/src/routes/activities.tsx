@@ -1,5 +1,5 @@
 import { useState, useMemo } from 'react'
-import { createRoute } from '@tanstack/react-router'
+import { createRoute, Link } from '@tanstack/react-router'
 import { Route as rootRoute } from './__root'
 import { useActivities } from '@/hooks/useActivities'
 import { useRecoveryBalance } from '@/hooks/useDashboard'
@@ -134,7 +134,12 @@ function ActivitiesPage() {
                 <div className="relative pl-6 space-y-3">
                   <div className="absolute left-2 top-2 bottom-2 w-px bg-slate-200" />
                   {dayActivities.map((activity) => (
-                    <div key={activity.id} className="relative rounded-lg border border-slate-200 bg-white p-4">
+                    <Link
+                      key={activity.id}
+                      to="/activities/$id"
+                      params={{ id: activity.id }}
+                      className="relative block rounded-lg border border-slate-200 bg-white p-4 transition-colors hover:border-slate-300 hover:bg-slate-50"
+                    >
                       <div className={`absolute -left-4 top-5 h-3 w-3 rounded-full border-2 border-white ${statusColor[activity.status] ?? 'bg-slate-400'}`} />
                       <div className="flex items-start justify-between">
                         <div>
@@ -162,7 +167,7 @@ function ActivitiesPage() {
                           ))}
                         </div>
                       )}
-                    </div>
+                    </Link>
                   ))}
                 </div>
               </div>
