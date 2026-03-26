@@ -1,5 +1,6 @@
 import { useState, useMemo, useRef } from 'react'
 import { X, GraduationCap, Briefcase, Palmtree, Users, Car } from 'lucide-react'
+import { formatDate, addDays } from '@/lib/dates'
 import type { Activity } from '@/types/activity'
 import type { Target } from '@/types/target'
 
@@ -28,16 +29,6 @@ interface WeekViewProps {
 }
 
 const DAY_NAMES = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri']
-
-function formatDate(d: Date): string {
-  return d.toISOString().slice(0, 10)
-}
-
-function addDays(d: Date, n: number): Date {
-  const result = new Date(d)
-  result.setDate(result.getDate() + n)
-  return result
-}
 
 const priorityBorder: Record<string, string> = {
   a: 'border-l-red-500',

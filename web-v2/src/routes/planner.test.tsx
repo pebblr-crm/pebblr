@@ -52,16 +52,31 @@ const mockCloneWeek = vi.fn()
 
 vi.mock('@/hooks/useTargets', () => ({
   useTargets: () => mockTargets(),
+  useTargetVisitStatus: () => ({ data: { items: [] } }),
 }))
 
 vi.mock('@/hooks/useActivities', () => ({
   useActivities: () => mockActivities(),
   useCloneWeek: () => ({ mutate: mockCloneWeek, isPending: false }),
+  useBatchCreateActivities: () => ({ mutate: vi.fn(), mutateAsync: vi.fn(), isPending: false }),
+  usePatchActivity: () => ({ mutate: vi.fn(), isPending: false }),
 }))
 
 vi.mock('@/hooks/useDashboard', () => ({
   useActivityStats: () => mockStats(),
   useCoverage: () => mockCoverage(),
+}))
+
+vi.mock('@/hooks/useConfig', () => ({
+  useConfig: () => ({ data: null }),
+}))
+
+vi.mock('@/components/activities/ActivityDetailModal', () => ({
+  ActivityDetailModal: () => null,
+}))
+
+vi.mock('@/components/ui/Toast', () => ({
+  useToast: () => ({ showToast: vi.fn(), ToastContainer: () => null }),
 }))
 
 // --- Stub TanStack Router ---------------------------------------------------------

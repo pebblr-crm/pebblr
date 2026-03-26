@@ -13,41 +13,18 @@ import { Modal } from '@/components/ui/Modal'
 import { MapContainer } from '@/components/map/MapContainer'
 import { TargetMarker } from '@/components/map/TargetMarker'
 import { ActivityDetailModal } from '@/components/activities/ActivityDetailModal'
+import { priorityLabel, priorityStyle, priorityDot, statusDot } from '@/lib/styles'
+import { str, daysAgo } from '@/lib/helpers'
 import {
   ArrowLeft, MapPin, ChevronRight,
   Building2, Stethoscope, AlertCircle, CalendarPlus,
 } from 'lucide-react'
-
-function str(v: unknown): string {
-  return typeof v === 'string' ? v : ''
-}
 
 export const Route = createRoute({
   getParentRoute: () => rootRoute,
   path: '/targets/$id',
   component: TargetDetailPage,
 })
-
-const priorityLabel: Record<string, string> = { a: 'Priority A', b: 'Priority B', c: 'Priority C' }
-const priorityStyle: Record<string, string> = {
-  a: 'bg-red-50 text-red-700 border-red-100',
-  b: 'bg-amber-50 text-amber-700 border-amber-100',
-  c: 'bg-slate-100 text-slate-600 border-slate-200',
-}
-const priorityDot: Record<string, string> = { a: 'bg-red-500', b: 'bg-amber-500', c: 'bg-slate-400' }
-
-const statusDot: Record<string, string> = {
-  realizat: 'bg-emerald-500',
-  completed: 'bg-emerald-500',
-  planificat: 'bg-blue-500',
-  planned: 'bg-blue-500',
-  anulat: 'bg-red-500',
-  cancelled: 'bg-red-500',
-}
-
-function daysAgo(dateStr: string): number {
-  return Math.floor((Date.now() - new Date(dateStr).getTime()) / (1000 * 60 * 60 * 24))
-}
 
 function TargetDetailPage() {
   const { id } = useParams({ from: '/targets/$id' })

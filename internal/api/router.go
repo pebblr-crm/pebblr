@@ -6,6 +6,7 @@ import (
 	"net/http"
 	"os"
 	"path/filepath"
+	"strings"
 
 	"github.com/go-chi/chi/v5"
 	chimiddleware "github.com/go-chi/chi/v5/middleware"
@@ -88,65 +89,41 @@ func mountOrStub(r chi.Router, pattern string, router http.Handler, stubs []stri
 	})
 }
 
+// routeSpec describes a resource route with its pattern, optional router constructor, and stub paths.
+type routeSpec struct {
+	pattern string
+	router  http.Handler
+	stubs   []string
+}
+
+// buildRouteSpecs creates the list of resource routes from the config.
+func buildRouteSpecs(cfg RouterConfig) []routeSpec {
+	return []routeSpec{
+		{"/targets", newRouterIfNotNil(cfg.TargetHandler, NewTargetRouter), []string{"/", "/{id}"}},
+		{"/activities", newRouterIfNotNil(cfg.ActivityHandler, NewActivityRouter), []string{"/", "/{id}", "/{id}/submit", "/{id}/status"}},
+		{"/dashboard", newRouterIfNotNil(cfg.DashboardHandler, NewDashboardRouter), []string{"/activities", "/coverage", "/frequency"}},
+		{"/users", newRouterIfNotNil(cfg.UserHandler, NewUserRouter), []string{"/", "/{id}"}},
+		{"/teams", newRouterIfNotNil(cfg.TeamHandler, NewTeamRouter), []string{"/", "/{id}"}},
+		{"/collections", newRouterIfNotNil(cfg.CollectionHandler, NewCollectionRouter), []string{"/", "/{id}"}},
+		{"/territories", newRouterIfNotNil(cfg.TerritoryHandler, NewTerritoryRouter), []string{"/", "/{id}"}},
+		{"/audit", newRouterIfNotNil(cfg.AuditHandler, NewAuditRouter), []string{"/", "/{id}/status"}},
+	}
+}
+
+// newRouterIfNotNil calls the constructor if the handler is non-nil, returning nil otherwise.
+func newRouterIfNotNil[T any](handler *T, constructor func(*T) http.Handler) http.Handler {
+	if handler == nil {
+		return nil
+	}
+	return constructor(handler)
+}
+
 // mountAPIRoutes registers all /api/v1 resource routes.
 func mountAPIRoutes(r chi.Router, cfg RouterConfig) {
-	// Target routes
-	var targetRouter http.Handler
-	if cfg.TargetHandler != nil {
-		targetRouter = NewTargetRouter(cfg.TargetHandler)
+	for _, spec := range buildRouteSpecs(cfg) {
+		mountOrStub(r, spec.pattern, spec.router, spec.stubs)
 	}
-	mountOrStub(r, "/targets", targetRouter, []string{"/", "/{id}"})
 
-	// Activity routes
-	var activityRouter http.Handler
-	if cfg.ActivityHandler != nil {
-		activityRouter = NewActivityRouter(cfg.ActivityHandler)
-	}
-	mountOrStub(r, "/activities", activityRouter, []string{"/", "/{id}", "/{id}/submit", "/{id}/status"})
-
-	// Dashboard routes
-	var dashboardRouter http.Handler
-	if cfg.DashboardHandler != nil {
-		dashboardRouter = NewDashboardRouter(cfg.DashboardHandler)
-	}
-	mountOrStub(r, "/dashboard", dashboardRouter, []string{"/activities", "/coverage", "/frequency"})
-
-	// User routes
-	var userRouter http.Handler
-	if cfg.UserHandler != nil {
-		userRouter = NewUserRouter(cfg.UserHandler)
-	}
-	mountOrStub(r, "/users", userRouter, []string{"/", "/{id}"})
-
-	// Team routes
-	var teamRouter http.Handler
-	if cfg.TeamHandler != nil {
-		teamRouter = NewTeamRouter(cfg.TeamHandler)
-	}
-	mountOrStub(r, "/teams", teamRouter, []string{"/", "/{id}"})
-
-	// Collection routes
-	var collectionRouter http.Handler
-	if cfg.CollectionHandler != nil {
-		collectionRouter = NewCollectionRouter(cfg.CollectionHandler)
-	}
-	mountOrStub(r, "/collections", collectionRouter, []string{"/", "/{id}"})
-
-	// Territory routes
-	var territoryRouter http.Handler
-	if cfg.TerritoryHandler != nil {
-		territoryRouter = NewTerritoryRouter(cfg.TerritoryHandler)
-	}
-	mountOrStub(r, "/territories", territoryRouter, []string{"/", "/{id}"})
-
-	// Audit routes
-	var auditRouter http.Handler
-	if cfg.AuditHandler != nil {
-		auditRouter = NewAuditRouter(cfg.AuditHandler)
-	}
-	mountOrStub(r, "/audit", auditRouter, []string{"/", "/{id}/status"})
-
-	// Config route
 	if cfg.ConfigHandler != nil {
 		r.Get("/config", cfg.ConfigHandler.Get)
 	} else {
@@ -164,8 +141,7 @@ func mountDualSPA(r *chi.Mux, v1DistPath, v2DistPath string) {
 		return
 	}
 
-	v1FS := http.Dir(v1DistPath)
-	v1Server := http.FileServer(v1FS)
+	v1Server := http.FileServer(http.Dir(v1DistPath))
 
 	var v2Server http.Handler
 	if v2DistPath != "" {
@@ -173,44 +149,79 @@ func mountDualSPA(r *chi.Mux, v1DistPath, v2DistPath string) {
 	}
 
 	r.NotFound(func(w http.ResponseWriter, req *http.Request) {
-		// Handle ?ui= query param: set cookie and redirect.
-		if uiParam := req.URL.Query().Get("ui"); uiParam == "v1" || uiParam == "v2" {
-			http.SetCookie(w, &http.Cookie{
-				Name:     uiCookieName,
-				Value:    uiParam,
-				Path:     "/",
-				MaxAge:   30 * 24 * 60 * 60, // 30 days
-				SameSite: http.SameSiteLaxMode,
-			})
-			q := req.URL.Query()
-			q.Del("ui")
-			dest := req.URL.Path
-			if encoded := q.Encode(); encoded != "" {
-				dest += "?" + encoded
-			}
-			http.Redirect(w, req, dest, http.StatusFound)
+		if handleUISwitch(w, req) {
 			return
 		}
-
-		// Decide which SPA to serve.
-		distPath := v1DistPath
-		fileServer := v1Server
-		if v2Server != nil {
-			if c, err := req.Cookie(uiCookieName); err == nil && c.Value == "v2" {
-				distPath = v2DistPath
-				fileServer = v2Server
-			}
-		}
-
-		// Try to serve a static file. Fall back to index.html for client-side routing.
-		path := filepath.Clean(req.URL.Path)
-		if _, err := fs.Stat(os.DirFS(distPath), path[1:]); err == nil {
-			fileServer.ServeHTTP(w, req)
-			return
-		}
-		req.URL.Path = "/"
-		fileServer.ServeHTTP(w, req)
+		distPath, fileServer := selectSPA(req, v1DistPath, v1Server, v2DistPath, v2Server)
+		serveSPA(w, req, distPath, fileServer)
 	})
+}
+
+// handleUISwitch checks for the ?ui= query parameter, sets the preference
+// cookie, and redirects. Returns true if a redirect was issued.
+func handleUISwitch(w http.ResponseWriter, req *http.Request) bool {
+	uiParam := req.URL.Query().Get("ui")
+	if uiParam != "v1" && uiParam != "v2" {
+		return false
+	}
+
+	http.SetCookie(w, &http.Cookie{
+		Name:     uiCookieName,
+		Value:    uiParam,
+		Path:     "/",
+		MaxAge:   30 * 24 * 60 * 60, // 30 days
+		SameSite: http.SameSiteLaxMode,
+		Secure:   true,
+		HttpOnly: true,
+	})
+
+	dest := sanitizeRedirectPath(req)
+	http.Redirect(w, req, dest, http.StatusFound)
+	return true
+}
+
+// sanitizeRedirectPath builds a safe, same-origin redirect target from the
+// request path, stripping the "ui" query parameter. Only relative paths
+// (starting with "/") are allowed; anything else falls back to "/".
+func sanitizeRedirectPath(req *http.Request) string {
+	path := req.URL.Path
+	if !strings.HasPrefix(path, "/") {
+		path = "/"
+	}
+	// Reject any path containing sequences that could be used for open redirects.
+	if strings.HasPrefix(path, "//") || strings.Contains(path, "://") {
+		path = "/"
+	}
+	path = filepath.Clean(path)
+
+	q := req.URL.Query()
+	q.Del("ui")
+	if encoded := q.Encode(); encoded != "" {
+		return path + "?" + encoded
+	}
+	return path
+}
+
+// selectSPA picks the file server and dist path based on the UI preference cookie.
+func selectSPA(req *http.Request, v1Dist string, v1Server http.Handler, v2Dist string, v2Server http.Handler) (string, http.Handler) {
+	if v2Server != nil {
+		if c, err := req.Cookie(uiCookieName); err == nil && c.Value == "v2" {
+			return v2Dist, v2Server
+		}
+	}
+	return v1Dist, v1Server
+}
+
+// serveSPA tries to serve a static file and falls back to index.html for
+// client-side routing.
+func serveSPA(w http.ResponseWriter, req *http.Request, distPath string, fileServer http.Handler) {
+	path := filepath.Clean(req.URL.Path)
+	if _, err := fs.Stat(os.DirFS(distPath), path[1:]); err == nil {
+		fileServer.ServeHTTP(w, req)
+		return
+	}
+	req.URL.Path = "/"
+	fileServer.ServeHTTP(w, req)
 }
 
 func healthHandler(w http.ResponseWriter, _ *http.Request) {

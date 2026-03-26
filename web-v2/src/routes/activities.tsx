@@ -12,24 +12,16 @@ import { Badge } from '@/components/ui/Badge'
 import { Button } from '@/components/ui/Button'
 import { Spinner } from '@/components/ui/Spinner'
 import { Modal } from '@/components/ui/Modal'
+import { statusVariant, priorityStyle } from '@/lib/styles'
+import { str } from '@/lib/helpers'
 import { Plus, Clock, AlertTriangle, Check, Stethoscope, Building2, Briefcase } from 'lucide-react'
 import type { Activity } from '@/types/activity'
-
-function str(v: unknown): string {
-  return typeof v === 'string' ? v : ''
-}
 
 export const Route = createRoute({
   getParentRoute: () => rootRoute,
   path: '/activities',
   component: ActivitiesPage,
 })
-
-const statusVariant: Record<string, 'primary' | 'success' | 'danger' | 'default'> = {
-  planificat: 'primary',
-  realizat: 'success',
-  anulat: 'danger',
-}
 
 
 function getWeekKey(dateStr: string): string {
@@ -77,12 +69,6 @@ const activityIcon: Record<string, typeof Stethoscope> = {
   training: Briefcase,
   team_meeting: Briefcase,
   business_travel: Briefcase,
-}
-
-const priorityStyle: Record<string, string> = {
-  a: 'bg-red-50 text-red-700 border border-red-100',
-  b: 'bg-amber-50 text-amber-700 border border-amber-100',
-  c: 'bg-slate-100 text-slate-600 border border-slate-200',
 }
 
 function getTargetPriority(a: Activity): string {

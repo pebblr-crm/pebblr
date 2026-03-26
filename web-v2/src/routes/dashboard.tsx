@@ -15,6 +15,7 @@ import { Badge } from '@/components/ui/Badge'
 import { Card } from '@/components/ui/Card'
 import { Spinner } from '@/components/ui/Spinner'
 import { Button } from '@/components/ui/Button'
+import { getMonday, addDays, formatDate } from '@/lib/dates'
 import { ChevronLeft, ChevronRight, CalendarDays, Users, CalendarRange } from 'lucide-react'
 import type { FrequencyItem } from '@/types/dashboard'
 import type { Activity } from '@/types/activity'
@@ -28,28 +29,6 @@ export const Route = createRoute({
 const freqColumnHelper = createColumnHelper<FrequencyItem>()
 
 /* ── Helpers ── */
-
-function getMonday(d: Date): Date {
-  const day = d.getDay()
-  const diff = d.getDate() - day + (day === 0 ? -6 : 1)
-  const monday = new Date(d)
-  monday.setDate(diff)
-  monday.setHours(0, 0, 0, 0)
-  return monday
-}
-
-function addDays(d: Date, n: number): Date {
-  const r = new Date(d)
-  r.setDate(r.getDate() + n)
-  return r
-}
-
-function formatDate(d: Date): string {
-  const y = d.getFullYear()
-  const m = String(d.getMonth() + 1).padStart(2, '0')
-  const day = String(d.getDate()).padStart(2, '0')
-  return `${y}-${m}-${day}`
-}
 
 function getMonthStart(d: Date): Date {
   return new Date(d.getFullYear(), d.getMonth(), 1)

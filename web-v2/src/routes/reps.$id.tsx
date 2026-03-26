@@ -11,6 +11,7 @@ import { StatCard } from '@/components/data/StatCard'
 import { Badge } from '@/components/ui/Badge'
 import { Button } from '@/components/ui/Button'
 import { Spinner } from '@/components/ui/Spinner'
+import { getMonday, addDays, formatDate } from '@/lib/dates'
 import { ArrowLeft, ChevronLeft, ChevronRight, Info } from 'lucide-react'
 
 export const Route = createRoute({
@@ -18,25 +19,6 @@ export const Route = createRoute({
   path: '/reps/$id',
   component: RepDrillDownPage,
 })
-
-function getMonday(d: Date): Date {
-  const day = d.getDay()
-  const diff = d.getDate() - day + (day === 0 ? -6 : 1)
-  const monday = new Date(d)
-  monday.setDate(diff)
-  monday.setHours(0, 0, 0, 0)
-  return monday
-}
-
-function addDays(d: Date, n: number): Date {
-  const r = new Date(d)
-  r.setDate(r.getDate() + n)
-  return r
-}
-
-function formatDate(d: Date): string {
-  return d.toISOString().slice(0, 10)
-}
 
 function getLat(fields: Record<string, unknown>): number | null {
   const v = fields.lat

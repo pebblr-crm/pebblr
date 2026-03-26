@@ -4,22 +4,9 @@ import { useConfig } from '@/hooks/useConfig'
 import { Badge } from '@/components/ui/Badge'
 import { Spinner } from '@/components/ui/Spinner'
 import { Modal } from '@/components/ui/Modal'
+import { statusVariant, transitionColors } from '@/lib/styles'
+import { str } from '@/lib/helpers'
 import { Send, ExternalLink, AlertCircle, Check } from 'lucide-react'
-
-function str(v: unknown): string {
-  return typeof v === 'string' ? v : ''
-}
-
-const statusVariant: Record<string, 'primary' | 'success' | 'danger' | 'default'> = {
-  planificat: 'primary',
-  realizat: 'success',
-  anulat: 'danger',
-}
-
-const transitionColors: Record<string, string> = {
-  realizat: 'bg-emerald-600 text-white hover:bg-emerald-700',
-  anulat: 'bg-red-600 text-white hover:bg-red-700',
-}
 
 interface ActivityDetailModalProps {
   activityId: string | null

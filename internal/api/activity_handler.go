@@ -472,17 +472,39 @@ func (h *ActivityHandler) Patch(w http.ResponseWriter, r *http.Request) {
 	writeJSON(w, r, activityResponse{Activity: updated})
 }
 
+// parsePatchStringField extracts a string field from raw JSON and assigns it to dest.
+// Returns an error message if parsing fails, empty string on success.
+func parsePatchStringField(raw map[string]json.RawMessage, key, label string, dest **string) string {
+	v, ok := raw[key]
+	if !ok {
+		return ""
+	}
+	s, errMsg := parseRawString(v)
+	if errMsg != "" {
+		return "invalid " + label + " value"
+	}
+	*dest = s
+	return ""
+}
+
 // buildActivityPatch constructs an ActivityPatch from the raw JSON map.
 // Returns the patch and an error message (empty if ok).
 func buildActivityPatch(raw map[string]json.RawMessage) (result *domain.ActivityPatch, errMsg string) {
 	patch := &domain.ActivityPatch{}
 
-	if v, ok := raw["status"]; ok {
-		s, errMsg := parseRawString(v)
-		if errMsg != "" {
-			return nil, "invalid status value"
+	stringFields := []struct {
+		key, label string
+		dest       **string
+	}{
+		{"status", "status", &patch.Status},
+		{"duration", "duration", &patch.Duration},
+		{"routing", "routing", &patch.Routing},
+		{"targetId", "targetId", &patch.TargetID},
+	}
+	for _, sf := range stringFields {
+		if errMsg := parsePatchStringField(raw, sf.key, sf.label, sf.dest); errMsg != "" {
+			return nil, errMsg
 		}
-		patch.Status = s
 	}
 
 	if v, ok := raw["dueDate"]; ok {
@@ -493,34 +515,10 @@ func buildActivityPatch(raw map[string]json.RawMessage) (result *domain.Activity
 		patch.DueDate = t
 	}
 
-	if v, ok := raw["duration"]; ok {
-		s, errMsg := parseRawString(v)
-		if errMsg != "" {
-			return nil, "invalid duration value"
-		}
-		patch.Duration = s
-	}
-
-	if v, ok := raw["routing"]; ok {
-		s, errMsg := parseRawString(v)
-		if errMsg != "" {
-			return nil, "invalid routing value"
-		}
-		patch.Routing = s
-	}
-
 	if v, ok := raw["fields"]; ok {
 		if errMsg := parsePatchFields(v, patch); errMsg != "" {
 			return nil, errMsg
 		}
-	}
-
-	if v, ok := raw["targetId"]; ok {
-		s, errMsg := parseRawString(v)
-		if errMsg != "" {
-			return nil, "invalid targetId value"
-		}
-		patch.TargetID = s
 	}
 
 	return patch, ""

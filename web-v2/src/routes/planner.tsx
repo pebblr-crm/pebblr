@@ -13,6 +13,9 @@ import { Spinner } from '@/components/ui/Spinner'
 import { Modal } from '@/components/ui/Modal'
 import { ActivityDetailModal } from '@/components/activities/ActivityDetailModal'
 import { useToast } from '@/components/ui/Toast'
+import { getMonday, addDays, formatDate } from '@/lib/dates'
+import { priorityDot } from '@/lib/styles'
+import { daysAgo } from '@/lib/helpers'
 import {
   ChevronLeft,
   ChevronRight,
@@ -34,25 +37,6 @@ export const Route = createRoute({
 
 /* ── Helpers ── */
 
-function getMonday(d: Date): Date {
-  const day = d.getDay()
-  const diff = d.getDate() - day + (day === 0 ? -6 : 1)
-  const monday = new Date(d)
-  monday.setDate(diff)
-  monday.setHours(0, 0, 0, 0)
-  return monday
-}
-
-function addDays(d: Date, n: number): Date {
-  const r = new Date(d)
-  r.setDate(r.getDate() + n)
-  return r
-}
-
-function formatDate(d: Date): string {
-  return d.toISOString().slice(0, 10)
-}
-
 function getLat(fields: Record<string, unknown>): number | null {
   const v = fields.lat
   return typeof v === 'number' ? v : null
@@ -67,17 +51,6 @@ function getClassification(fields: Record<string, unknown>): string {
   return ((fields.potential as string) ?? 'c').toLowerCase()
 }
 
-const priorityDot: Record<string, string> = {
-  a: 'bg-red-500',
-  b: 'bg-amber-500',
-  c: 'bg-slate-400',
-}
-
-function daysAgo(dateStr: string): number {
-  const d = new Date(dateStr)
-  const now = new Date()
-  return Math.floor((now.getTime() - d.getTime()) / (1000 * 60 * 60 * 24))
-}
 
 /* ── Main page ── */
 
