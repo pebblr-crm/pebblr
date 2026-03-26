@@ -30,13 +30,18 @@ build: ## Build Go binary and both React frontends
 	@cd $(WEB_V2_DIR) && bun install --frozen-lockfile && bun run build
 
 test: ## Run Go tests and both frontend tests
-	@go test ./... && cd $(WEB_DIR) && bun run test && cd ../$(WEB_V2_DIR) && bun run test
+	@go test ./...
+	@cd $(WEB_DIR) && bun run test
+	@cd $(WEB_V2_DIR) && bun run test
 
 lint: ## Run golangci-lint and ESLint on both frontends
-	@golangci-lint run ./... && cd $(WEB_DIR) && bun run lint && cd ../$(WEB_V2_DIR) && bun run lint
+	@golangci-lint run ./...
+	@cd $(WEB_DIR) && bun run lint
+	@cd $(WEB_V2_DIR) && bun run lint
 
 typecheck: ## Run tsc --noEmit in both frontends
-	@cd $(WEB_DIR) && bun run typecheck && cd ../$(WEB_V2_DIR) && bun run typecheck
+	@cd $(WEB_DIR) && bun run typecheck
+	@cd $(WEB_V2_DIR) && bun run typecheck
 
 dev-api: ## Run Go API server locally with hot reload
 	@air -c .air.toml || go run ./$(GO_CMD) serve

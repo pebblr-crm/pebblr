@@ -17,24 +17,24 @@ func setupSPADirs(t *testing.T) (v1Dir, v2Dir string) {
 	t.Helper()
 
 	v1Dir = t.TempDir()
-	if err := os.WriteFile(filepath.Join(v1Dir, "index.html"), []byte("v1-index"), 0644); err != nil {
+	if err := os.WriteFile(filepath.Join(v1Dir, "index.html"), []byte("v1-index"), 0o644); err != nil {
 		t.Fatal(err)
 	}
-	if err := os.MkdirAll(filepath.Join(v1Dir, "assets"), 0755); err != nil {
+	if err := os.MkdirAll(filepath.Join(v1Dir, "assets"), 0o755); err != nil {
 		t.Fatal(err)
 	}
-	if err := os.WriteFile(filepath.Join(v1Dir, "assets", "app.js"), []byte("v1-js"), 0644); err != nil {
+	if err := os.WriteFile(filepath.Join(v1Dir, "assets", "app.js"), []byte("v1-js"), 0o644); err != nil {
 		t.Fatal(err)
 	}
 
 	v2Dir = t.TempDir()
-	if err := os.WriteFile(filepath.Join(v2Dir, "index.html"), []byte("v2-index"), 0644); err != nil {
+	if err := os.WriteFile(filepath.Join(v2Dir, "index.html"), []byte("v2-index"), 0o644); err != nil {
 		t.Fatal(err)
 	}
-	if err := os.MkdirAll(filepath.Join(v2Dir, "assets"), 0755); err != nil {
+	if err := os.MkdirAll(filepath.Join(v2Dir, "assets"), 0o755); err != nil {
 		t.Fatal(err)
 	}
-	if err := os.WriteFile(filepath.Join(v2Dir, "assets", "app.js"), []byte("v2-js"), 0644); err != nil {
+	if err := os.WriteFile(filepath.Join(v2Dir, "assets", "app.js"), []byte("v2-js"), 0o644); err != nil {
 		t.Fatal(err)
 	}
 
