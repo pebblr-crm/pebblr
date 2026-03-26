@@ -101,6 +101,44 @@ test.describe('Demo account picker', () => {
     await expect(page.locator('text=Pebblr')).toBeVisible({ timeout: 10_000 })
   })
 
+  test('sidebar navigation does not reset to account picker', async ({ page }) => {
+    await page.goto('/')
+
+    // Login as admin
+    await expect(page.locator('text=Alex Admin')).toBeVisible()
+    await page.click('text=Alex Admin')
+
+    // Wait for app shell
+    await expect(page.locator('text=Pebblr')).toBeVisible({ timeout: 10_000 })
+
+    // Click through sidebar nav items — should NOT return to account picker
+    const sidebar = page.locator('aside')
+    for (const label of ['Targets', 'Activities', 'Dashboard']) {
+      await sidebar.locator(`text=${label}`).click()
+      // Should still see app shell, not account picker
+      await expect(page.locator('text=Select a demo account to continue.')).not.toBeVisible()
+      await expect(page.locator('text=Pebblr')).toBeVisible()
+    }
+  })
+
+  test('demo session survives page reload', async ({ page }) => {
+    await page.goto('/')
+
+    // Login as admin
+    await expect(page.locator('text=Alex Admin')).toBeVisible()
+    await page.click('text=Alex Admin')
+
+    // Wait for app shell
+    await expect(page.locator('text=Pebblr')).toBeVisible({ timeout: 10_000 })
+
+    // Full page reload — session should persist via sessionStorage
+    await page.reload()
+
+    // Should NOT show account picker
+    await expect(page.locator('text=Select a demo account to continue.')).not.toBeVisible({ timeout: 10_000 })
+    await expect(page.locator('text=Pebblr')).toBeVisible()
+  })
+
   test('handles /demo/accounts returning 500 gracefully', async ({ page }) => {
     // Override the accounts mock to return an error
     await page.route('**/demo/accounts', (route: Route) => {

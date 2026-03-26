@@ -1,4 +1,5 @@
 import { useTranslation } from 'react-i18next'
+import { Link } from '@tanstack/react-router'
 import { useQueryClient } from '@tanstack/react-query'
 import { useAuth } from '@/auth/context'
 import {
@@ -57,9 +58,9 @@ export function Sidebar({ currentPath }: { currentPath: string }) {
         {visibleItems.map((item) => {
           const active = currentPath.startsWith(item.href)
           return (
-            <a
+            <Link
               key={item.href}
-              href={item.href}
+              to={item.href}
               className={`flex items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium transition-colors ${
                 active
                   ? 'bg-teal-50 text-teal-700'
@@ -68,7 +69,7 @@ export function Sidebar({ currentPath }: { currentPath: string }) {
             >
               {item.icon}
               {item.label}
-            </a>
+            </Link>
           )
         })}
       </nav>

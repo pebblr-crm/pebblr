@@ -3,7 +3,36 @@ import { setTokenProvider } from '@/api/client'
 import { AuthContext } from './context'
 import type { AuthenticatedUser, Role } from '@/types/user'
 
+const DEMO_SESSION_KEY = 'pebblr_demo_user'
+
 let _currentUser: AuthenticatedUser | null = null
+
+function restoreDemoSession(): void {
+  try {
+    const stored = sessionStorage.getItem(DEMO_SESSION_KEY)
+    if (stored) {
+      _currentUser = JSON.parse(stored) as AuthenticatedUser
+    }
+  } catch {
+    // Ignore parse errors
+  }
+}
+
+function saveDemoSession(user: AuthenticatedUser): void {
+  try {
+    sessionStorage.setItem(DEMO_SESSION_KEY, JSON.stringify(user))
+  } catch {
+    // Ignore storage errors
+  }
+}
+
+function clearDemoSession(): void {
+  try {
+    sessionStorage.removeItem(DEMO_SESSION_KEY)
+  } catch {
+    // Ignore storage errors
+  }
+}
 
 function initStaticAuth(): void {
   const staticToken: string | undefined = import.meta.env.VITE_STATIC_TOKEN
@@ -27,6 +56,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     if (!isDemoMode) {
       initStaticAuth()
     } else {
+      restoreDemoSession()
       setTokenProvider(() => _currentUser?.accessToken ?? null)
     }
     return _currentUser
@@ -58,11 +88,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       accessToken: data.token,
       expiresAt: Date.now() + 24 * 60 * 60 * 1000,
     }
+    saveDemoSession(_currentUser)
     setUser(_currentUser)
   }, [])
 
   const demoLogout = useCallback(() => {
     _currentUser = null
+    clearDemoSession()
     setUser(null)
   }, [])
 
