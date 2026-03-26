@@ -104,20 +104,10 @@ func (s *TerritoryService) Delete(ctx context.Context, actor *domain.User, id st
 }
 
 func (s *TerritoryService) scopeFilter(actor *domain.User) store.TerritoryFilter {
-	switch actor.Role {
-	case domain.RoleAdmin:
-		return store.TerritoryFilter{}
-	case domain.RoleManager:
-		if len(actor.TeamIDs) > 0 {
-			return store.TerritoryFilter{TeamID: &actor.TeamIDs[0]}
-		}
-		return store.TerritoryFilter{}
-	default: // rep
-		if len(actor.TeamIDs) > 0 {
-			return store.TerritoryFilter{TeamID: &actor.TeamIDs[0]}
-		}
+	if actor.Role == domain.RoleAdmin || len(actor.TeamIDs) == 0 {
 		return store.TerritoryFilter{}
 	}
+	return store.TerritoryFilter{TeamID: &actor.TeamIDs[0]}
 }
 
 func (s *TerritoryService) canView(actor *domain.User, t *domain.Territory) bool {

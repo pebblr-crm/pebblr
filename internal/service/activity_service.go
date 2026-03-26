@@ -106,54 +106,7 @@ func (s *ActivityService) Create(ctx context.Context, actor *domain.User, activi
 		activity.TeamID = actor.TeamIDs[0]
 	}
 
-	if err := s.validateCore(activity); err != nil {
-		return nil, err
-	}
-
-	if s.cfg != nil {
-		if errs := config.ValidateActivity(s.cfg, activity.ActivityType, activity.Fields, "save"); len(errs) > 0 {
-			return nil, &ValidationErrors{Errors: errs}
-		}
-	}
-
-	// Business rule: validate joint visit user.
-	if err := s.checkJointVisitUser(ctx, activity.CreatorID, activity.JointVisitUID); err != nil {
-		return nil, err
-	}
-
-	// Business rule: target required for field activities.
-	if err := s.checkTargetRequired(activity); err != nil {
-		return nil, err
-	}
-
-	// Business rule: non-admin users may only target their accessible targets.
-	if err := s.checkTargetAccess(ctx, actor, activity.TargetID); err != nil {
-		return nil, err
-	}
-
-	// Business rule: no duplicate activity for the same target on the same date.
-	if activity.TargetID != "" {
-		exists, err := s.activities.ExistsForTargetOnDate(ctx, activity.CreatorID, activity.TargetID, activity.DueDate)
-		if err != nil {
-			return nil, fmt.Errorf("checking duplicate activity: %w", err)
-		}
-		if exists {
-			return nil, ErrDuplicateActivity
-		}
-	}
-
-	// Business rule: max activities per day.
-	if err := s.checkMaxActivitiesPerDay(ctx, activity.CreatorID, activity.DueDate); err != nil {
-		return nil, err
-	}
-
-	// Business rule: blocked days (vacation/holiday blocks field activities and vice versa).
-	if err := s.checkBlockedDay(ctx, activity.CreatorID, activity.DueDate, activity.ActivityType); err != nil {
-		return nil, err
-	}
-
-	// Business rule: recovery activities require available balance in a valid claim window.
-	if err := s.checkRecoveryBalance(ctx, actor, activity); err != nil {
+	if err := s.validateForCreate(ctx, actor, activity); err != nil {
 		return nil, err
 	}
 
@@ -171,6 +124,54 @@ func (s *ActivityService) Create(ctx context.Context, actor *domain.User, activi
 	})
 
 	return created, nil
+}
+
+// validateForCreate runs all validation and business rule checks for creating an activity.
+func (s *ActivityService) validateForCreate(ctx context.Context, actor *domain.User, activity *domain.Activity) error {
+	if err := s.validateCore(activity); err != nil {
+		return err
+	}
+
+	if s.cfg != nil {
+		if errs := config.ValidateActivity(s.cfg, activity.ActivityType, activity.Fields, "save"); len(errs) > 0 {
+			return &ValidationErrors{Errors: errs}
+		}
+	}
+
+	if err := s.checkJointVisitUser(ctx, activity.CreatorID, activity.JointVisitUID); err != nil {
+		return err
+	}
+	if err := s.checkTargetRequired(activity); err != nil {
+		return err
+	}
+	if err := s.checkTargetAccess(ctx, actor, activity.TargetID); err != nil {
+		return err
+	}
+	if err := s.checkDuplicateActivity(ctx, activity); err != nil {
+		return err
+	}
+	if err := s.checkMaxActivitiesPerDay(ctx, activity.CreatorID, activity.DueDate); err != nil {
+		return err
+	}
+	if err := s.checkBlockedDay(ctx, activity.CreatorID, activity.DueDate, activity.ActivityType); err != nil {
+		return err
+	}
+	return s.checkRecoveryBalance(ctx, actor, activity)
+}
+
+// checkDuplicateActivity ensures no activity for the same target on the same date exists.
+func (s *ActivityService) checkDuplicateActivity(ctx context.Context, activity *domain.Activity) error {
+	if activity.TargetID == "" {
+		return nil
+	}
+	exists, err := s.activities.ExistsForTargetOnDate(ctx, activity.CreatorID, activity.TargetID, activity.DueDate)
+	if err != nil {
+		return fmt.Errorf("checking duplicate activity: %w", err)
+	}
+	if exists {
+		return ErrDuplicateActivity
+	}
+	return nil
 }
 
 // Get retrieves an activity by ID with RBAC enforcement.
@@ -239,37 +240,13 @@ func (s *ActivityService) autoCompleteNonFieldActivities(ctx context.Context, ac
 
 // Update persists changes to an existing activity. Blocked if submitted.
 func (s *ActivityService) Update(ctx context.Context, actor *domain.User, id string, activity *domain.Activity) (*domain.Activity, error) {
-	existing, err := s.activities.Get(ctx, id)
+	existing, err := s.getEditableActivity(ctx, actor, id)
 	if err != nil {
-		return nil, fmt.Errorf(errFmtGettingActivity, err)
-	}
-	if !s.enforcer.CanUpdateActivity(ctx, actor, existing) {
-		return nil, ErrForbidden
-	}
-	if existing.IsSubmitted() {
-		return nil, ErrSubmitted
-	}
-
-	if err := s.validateCore(activity); err != nil {
 		return nil, err
 	}
 
-	if s.cfg != nil {
-		if errs := config.ValidateActivity(s.cfg, activity.ActivityType, activity.Fields, "save"); len(errs) > 0 {
-			return nil, &ValidationErrors{Errors: errs}
-		}
-	}
-
-	// Business rule: validate joint visit user.
-	if err := s.checkJointVisitUser(ctx, existing.CreatorID, activity.JointVisitUID); err != nil {
+	if err := s.validateForUpdate(ctx, actor, existing, activity); err != nil {
 		return nil, err
-	}
-
-	// Business rule: non-admin users may only target their accessible targets.
-	if activity.TargetID != existing.TargetID {
-		if err := s.checkTargetAccess(ctx, actor, activity.TargetID); err != nil {
-			return nil, err
-		}
 	}
 
 	// Preserve immutable fields from the existing record.
@@ -294,6 +271,43 @@ func (s *ActivityService) Update(ctx context.Context, actor *domain.User, id str
 	})
 
 	return updated, nil
+}
+
+// getEditableActivity retrieves an activity and checks that the actor can update it
+// and that it is not already submitted.
+func (s *ActivityService) getEditableActivity(ctx context.Context, actor *domain.User, id string) (*domain.Activity, error) {
+	existing, err := s.activities.Get(ctx, id)
+	if err != nil {
+		return nil, fmt.Errorf(errFmtGettingActivity, err)
+	}
+	if !s.enforcer.CanUpdateActivity(ctx, actor, existing) {
+		return nil, ErrForbidden
+	}
+	if existing.IsSubmitted() {
+		return nil, ErrSubmitted
+	}
+	return existing, nil
+}
+
+// validateForUpdate runs validation and business rule checks for updating an activity.
+func (s *ActivityService) validateForUpdate(ctx context.Context, actor *domain.User, existing, activity *domain.Activity) error {
+	if err := s.validateCore(activity); err != nil {
+		return err
+	}
+	if s.cfg != nil {
+		if errs := config.ValidateActivity(s.cfg, activity.ActivityType, activity.Fields, "save"); len(errs) > 0 {
+			return &ValidationErrors{Errors: errs}
+		}
+	}
+	if err := s.checkJointVisitUser(ctx, existing.CreatorID, activity.JointVisitUID); err != nil {
+		return err
+	}
+	if activity.TargetID != existing.TargetID {
+		if err := s.checkTargetAccess(ctx, actor, activity.TargetID); err != nil {
+			return err
+		}
+	}
+	return nil
 }
 
 // Delete soft-deletes an activity. Blocked if submitted.

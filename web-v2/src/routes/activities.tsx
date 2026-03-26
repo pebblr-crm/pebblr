@@ -12,24 +12,16 @@ import { Badge } from '@/components/ui/Badge'
 import { Button } from '@/components/ui/Button'
 import { Spinner } from '@/components/ui/Spinner'
 import { Modal } from '@/components/ui/Modal'
+import { statusVariant, priorityStyle } from '@/lib/styles'
+import { str } from '@/lib/helpers'
 import { Plus, Clock, AlertTriangle, Check, Stethoscope, Building2, Briefcase } from 'lucide-react'
 import type { Activity } from '@/types/activity'
-
-function str(v: unknown): string {
-  return typeof v === 'string' ? v : ''
-}
 
 export const Route = createRoute({
   getParentRoute: () => rootRoute,
   path: '/activities',
   component: ActivitiesPage,
 })
-
-const statusVariant: Record<string, 'primary' | 'success' | 'danger' | 'default'> = {
-  planificat: 'primary',
-  realizat: 'success',
-  anulat: 'danger',
-}
 
 
 function getWeekKey(dateStr: string): string {
@@ -77,12 +69,6 @@ const activityIcon: Record<string, typeof Stethoscope> = {
   training: Briefcase,
   team_meeting: Briefcase,
   business_travel: Briefcase,
-}
-
-const priorityStyle: Record<string, string> = {
-  a: 'bg-red-50 text-red-700 border border-red-100',
-  b: 'bg-amber-50 text-amber-700 border border-amber-100',
-  c: 'bg-slate-100 text-slate-600 border border-slate-200',
 }
 
 function getTargetPriority(a: Activity): string {
@@ -203,8 +189,9 @@ function CreateActivityModal({ open, onClose }: { open: boolean; onClose: () => 
       <div className="space-y-4">
         {/* Activity type */}
         <div>
-          <label className="mb-1.5 block text-sm font-medium text-slate-700">Activity Type</label>
+          <label htmlFor="field-activity-type" className="mb-1.5 block text-sm font-medium text-slate-700">Activity Type</label>
           <select
+            id="field-activity-type"
             value={activityType}
             onChange={(e) => handleTypeChange(e.target.value)}
             className={inputCls}
@@ -218,8 +205,9 @@ function CreateActivityModal({ open, onClose }: { open: boolean; onClose: () => 
 
         {/* Due date */}
         <div>
-          <label className="mb-1.5 block text-sm font-medium text-slate-700">Date</label>
+          <label htmlFor="field-due-date" className="mb-1.5 block text-sm font-medium text-slate-700">Date</label>
           <input
+            id="field-due-date"
             type="date"
             value={dueDate}
             onChange={(e) => setDueDate(e.target.value)}
@@ -231,8 +219,8 @@ function CreateActivityModal({ open, onClose }: { open: boolean; onClose: () => 
         {/* Duration (for types that have it) */}
         {hasDuration && (
           <div>
-            <label className="mb-1.5 block text-sm font-medium text-slate-700">Duration</label>
-            <select value={duration} onChange={(e) => setDuration(e.target.value)} className={inputCls}>
+            <label htmlFor="field-duration" className="mb-1.5 block text-sm font-medium text-slate-700">Duration</label>
+            <select id="field-duration" value={duration} onChange={(e) => setDuration(e.target.value)} className={inputCls}>
               <option value="">Select duration...</option>
               {durations.map((d) => (
                 <option key={d.key} value={d.key}>{d.label}</option>
@@ -244,8 +232,9 @@ function CreateActivityModal({ open, onClose }: { open: boolean; onClose: () => 
         {/* Target search (for field activities) */}
         {isFieldActivity && (
           <div>
-            <label className="mb-1.5 block text-sm font-medium text-slate-700">Target</label>
+            <label htmlFor="field-target" className="mb-1.5 block text-sm font-medium text-slate-700">Target</label>
             <input
+              id="field-target"
               type="text"
               value={targetSearch}
               onChange={(e) => { setTargetSearch(e.target.value); setTargetId('') }}
@@ -617,8 +606,8 @@ function ActivitiesPage() {
             <div className="lg:col-span-3 bg-white rounded-xl shadow-sm border border-slate-200 p-4">
               <div className="flex flex-wrap items-end gap-4">
                 <div className="flex-1 min-w-[160px]">
-                  <label className="block text-xs font-medium text-slate-500 mb-1">Activity Type</label>
-                  <select value={typeFilter} onChange={(e) => { setTypeFilter(e.target.value); setMobileCount(PAGE_SIZE) }} className={selectCls}>
+                  <label htmlFor="field-filter-type" className="block text-xs font-medium text-slate-500 mb-1">Activity Type</label>
+                  <select id="field-filter-type" value={typeFilter} onChange={(e) => { setTypeFilter(e.target.value); setMobileCount(PAGE_SIZE) }} className={selectCls}>
                     <option value="">All Types</option>
                     {allActivityTypes.map((t) => (
                       <option key={t.key} value={t.key}>{t.label}</option>
@@ -626,8 +615,8 @@ function ActivitiesPage() {
                   </select>
                 </div>
                 <div className="w-40">
-                  <label className="block text-xs font-medium text-slate-500 mb-1">Status</label>
-                  <select value={statusFilter} onChange={(e) => { setStatusFilter(e.target.value); setMobileCount(PAGE_SIZE) }} className={selectCls}>
+                  <label htmlFor="field-filter-status" className="block text-xs font-medium text-slate-500 mb-1">Status</label>
+                  <select id="field-filter-status" value={statusFilter} onChange={(e) => { setStatusFilter(e.target.value); setMobileCount(PAGE_SIZE) }} className={selectCls}>
                     <option value="">All</option>
                     {allStatuses.map((s) => (
                       <option key={s.key} value={s.key}>{s.label}</option>
@@ -636,8 +625,8 @@ function ActivitiesPage() {
                 </div>
                 {canFilterByRep && (
                   <div className="flex-1 min-w-[180px]">
-                    <label className="block text-xs font-medium text-slate-500 mb-1">Rep</label>
-                    <select value={repFilter} onChange={(e) => { setRepFilter(e.target.value); setMobileCount(PAGE_SIZE) }} className={selectCls}>
+                    <label htmlFor="field-filter-rep" className="block text-xs font-medium text-slate-500 mb-1">Rep</label>
+                    <select id="field-filter-rep" value={repFilter} onChange={(e) => { setRepFilter(e.target.value); setMobileCount(PAGE_SIZE) }} className={selectCls}>
                       <option value="">All Reps</option>
                       {repUsers.map((u) => (
                         <option key={u.id} value={u.id}>{u.name || u.displayName}</option>

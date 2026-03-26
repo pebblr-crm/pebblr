@@ -1,5 +1,6 @@
 import { useState, useMemo, useRef } from 'react'
 import { X, GraduationCap, Briefcase, Palmtree, Users, Car } from 'lucide-react'
+import { formatDate, addDays } from '@/lib/dates'
 import type { Activity } from '@/types/activity'
 import type { Target } from '@/types/target'
 
@@ -28,16 +29,6 @@ interface WeekViewProps {
 }
 
 const DAY_NAMES = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri']
-
-function formatDate(d: Date): string {
-  return d.toISOString().slice(0, 10)
-}
-
-function addDays(d: Date, n: number): Date {
-  const result = new Date(d)
-  result.setDate(result.getDate() + n)
-  return result
-}
 
 const priorityBorder: Record<string, string> = {
   a: 'border-l-red-500',
@@ -238,9 +229,12 @@ function DayColumn({
             <div
               key={activity.id}
               draggable
+              role="button"
+              tabIndex={0}
               onDragStart={() => onActivityDragStart?.(activity.id)}
               onDragEnd={() => onActivityDragEnd?.()}
               onClick={() => onActivityClick?.(activity)}
+              onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); onActivityClick?.(activity) } }}
               className={`bg-white p-2 rounded border-l-4 ${borderClass} shadow-sm text-sm cursor-grab hover:shadow-md transition-all ${
                 draggingActivityId === activity.id ? 'opacity-40 scale-95' : ''
               }`}
@@ -288,7 +282,10 @@ function DayColumn({
           return (
             <div
               key={blocker.id}
+              role="button"
+              tabIndex={0}
               onClick={() => onActivityClick?.(blocker)}
+              onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); onActivityClick?.(blocker) } }}
               className="rounded border border-slate-200 overflow-hidden cursor-pointer hover:border-slate-300 transition-colors relative flex-1 min-h-[70px]"
               style={{
                 backgroundImage: HATCH_PATTERN,

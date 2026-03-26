@@ -136,39 +136,52 @@ func (r *auditRepository) UpdateStatus(ctx context.Context, id, status, reviewer
 func scanAuditEntries(rows pgx.Rows) ([]*domain.AuditEntry, error) {
 	var entries []*domain.AuditEntry
 	for rows.Next() {
-		var e domain.AuditEntry
-		var oldJSON, newJSON []byte
-		var reviewedBy *string
-		if err := rows.Scan(
-			&e.ID, &e.EntityType, &e.EntityID, &e.EventType, &e.ActorID,
-			&oldJSON, &newJSON, &e.Status, &reviewedBy, &e.ReviewedAt, &e.CreatedAt,
-		); err != nil {
-			return nil, fmt.Errorf("scanning audit entry: %w", err)
+		e, err := scanOneAuditEntry(rows)
+		if err != nil {
+			return nil, err
 		}
-		if reviewedBy != nil {
-			e.ReviewedBy = *reviewedBy
-		}
-		if len(oldJSON) > 0 {
-			e.OldValue = make(map[string]any)
-			if err := json.Unmarshal(oldJSON, &e.OldValue); err != nil {
-				return nil, fmt.Errorf("unmarshalling audit old_value: %w", err)
-			}
-		}
-		if len(newJSON) > 0 {
-			e.NewValue = make(map[string]any)
-			if err := json.Unmarshal(newJSON, &e.NewValue); err != nil {
-				return nil, fmt.Errorf("unmarshalling audit new_value: %w", err)
-			}
-		}
-		entries = append(entries, &e)
+		entries = append(entries, e)
 	}
-	if errors.Is(rows.Err(), pgx.ErrNoRows) {
-		return entries, nil
-	}
-	if err := rows.Err(); err != nil {
+	if err := rows.Err(); err != nil && !errors.Is(err, pgx.ErrNoRows) {
 		return nil, fmt.Errorf("iterating audit log: %w", err)
 	}
 	return entries, nil
+}
+
+// scanOneAuditEntry scans a single row into a domain.AuditEntry.
+func scanOneAuditEntry(rows pgx.Rows) (*domain.AuditEntry, error) {
+	var e domain.AuditEntry
+	var oldJSON, newJSON []byte
+	var reviewedBy *string
+	if err := rows.Scan(
+		&e.ID, &e.EntityType, &e.EntityID, &e.EventType, &e.ActorID,
+		&oldJSON, &newJSON, &e.Status, &reviewedBy, &e.ReviewedAt, &e.CreatedAt,
+	); err != nil {
+		return nil, fmt.Errorf("scanning audit entry: %w", err)
+	}
+	if reviewedBy != nil {
+		e.ReviewedBy = *reviewedBy
+	}
+	var unmarshalErr error
+	if e.OldValue, unmarshalErr = unmarshalJSONValue(oldJSON, "old_value"); unmarshalErr != nil {
+		return nil, unmarshalErr
+	}
+	if e.NewValue, unmarshalErr = unmarshalJSONValue(newJSON, "new_value"); unmarshalErr != nil {
+		return nil, unmarshalErr
+	}
+	return &e, nil
+}
+
+// unmarshalJSONValue decodes a JSON byte slice into a map if non-empty.
+func unmarshalJSONValue(data []byte, label string) (map[string]any, error) {
+	if len(data) == 0 {
+		return nil, nil
+	}
+	m := make(map[string]any)
+	if err := json.Unmarshal(data, &m); err != nil {
+		return nil, fmt.Errorf("unmarshalling audit %s: %w", label, err)
+	}
+	return m, nil
 }
 
 // nullJSONIfNil returns nil if the map is nil (stores NULL in db), otherwise the marshalled JSON.
