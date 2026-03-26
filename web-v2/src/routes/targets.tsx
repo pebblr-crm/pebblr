@@ -86,7 +86,7 @@ function TargetsPage() {
         cell: (info) => {
           const v = info.getValue()
           if (v == null) return <span className="text-slate-400">-</span>
-          const pct = Math.round(v * 100)
+          const pct = Math.round(v)
           const color = pct >= 80 ? 'text-emerald-600' : pct >= 50 ? 'text-amber-600' : 'text-red-600'
           return <span className={`font-medium ${color}`}>{pct}%</span>
         },
