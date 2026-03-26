@@ -107,7 +107,7 @@ func serve(configPath, authProvider string) error {
 	configHandler := api.NewConfigHandler(tenantCfg)
 
 	webDistPath := os.Getenv("WEB_DIST_PATH")
-	webV2DistPath := os.Getenv("WEB_V2_DIST_PATH")
+	webLegacyDistPath := os.Getenv("WEB_LEGACY_DIST_PATH")
 
 	secretPath := os.Getenv("SECRET_MOUNT_PATH")
 	if secretPath == "" {
@@ -133,7 +133,7 @@ func serve(configPath, authProvider string) error {
 		AuditHandler:       auditHandler,
 		DemoHandler:        demoHandler,
 		WebDistPath:        webDistPath,
-		WebV2DistPath:      webV2DistPath,
+		WebLegacyDistPath:  webLegacyDistPath,
 	})
 
 	srv := &http.Server{

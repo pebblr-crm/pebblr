@@ -1,5 +1,3 @@
-/** Dashboard API response types — mirror the Go backend service responses. */
-
 export interface ActivityStatsResponse {
   byStatus: Record<string, number>
   byCategory: Record<string, number>

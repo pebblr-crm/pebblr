@@ -1,8 +1,3 @@
-/**
- * Target domain types — mirror the Go backend domain model.
- * Targets are entities that reps visit (doctors, pharmacies, etc.).
- */
-
 export interface Target {
   id: string
   targetType: string
@@ -23,27 +18,12 @@ export interface CreateTargetInput {
   teamId?: string
 }
 
-export interface UpdateTargetInput {
-  id: string
-  targetType: string
-  name: string
-  fields?: Record<string, unknown>
-  assigneeId?: string
-  teamId?: string
-}
-
 export interface TargetListParams {
   page?: number
   limit?: number
   type?: string
   assignee?: string
   q?: string
-}
-
-export interface AssignTargetInput {
-  id: string
-  assigneeId: string
-  teamId?: string
 }
 
 export interface TargetFrequencyItem {

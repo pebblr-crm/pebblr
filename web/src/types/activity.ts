@@ -1,8 +1,3 @@
-/**
- * Activity types — mirror the Go backend domain model.
- */
-
-/** Read-only snapshot of a target embedded in an activity response. */
 export interface TargetSummary {
   id: string
   targetType: string
@@ -35,15 +30,11 @@ export interface CreateActivityInput {
   label?: string
   status: string
   dueDate: string
-  duration: string
+  duration?: string
   routing?: string
   fields: Record<string, unknown>
   targetId?: string
   jointVisitUserId?: string
-}
-
-export interface UpdateActivityInput extends CreateActivityInput {
-  id: string
 }
 
 export interface ActivityListParams {
@@ -56,19 +47,4 @@ export interface ActivityListParams {
   teamId?: string
   dateFrom?: string
   dateTo?: string
-}
-
-export interface StatusPatchInput {
-  id: string
-  status: string
-}
-
-export interface ValidationFieldError {
-  field: string
-  message: string
-}
-
-export interface ActivityValidationError {
-  error: { code: string; message: string }
-  fields: ValidationFieldError[]
 }

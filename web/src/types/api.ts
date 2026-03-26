@@ -1,9 +1,3 @@
-
-
-/**
- * API error structure matching backend convention:
- * {"error": {"code": "NOT_FOUND", "message": "..."}}
- */
 export interface ApiErrorDetail {
   code: string
   message: string
@@ -34,9 +28,6 @@ export class ApiError extends Error {
   }
 }
 
-/**
- * Paginated list response wrapper for collection endpoints.
- */
 export interface PaginatedResponse<T> {
   items: T[]
   total: number
@@ -44,9 +35,6 @@ export interface PaginatedResponse<T> {
   limit: number
 }
 
-/**
- * Common query params for list endpoints.
- */
 export interface ListParams {
   page?: number
   limit?: number

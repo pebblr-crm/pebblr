@@ -2,7 +2,7 @@
 # CI/CD pipelines call these targets only.
 
 .DEFAULT_GOAL := help
-.PHONY: help build test lint typecheck dev-api dev-web dev-web-v2 dev-db dev-db-stop dev-db-reset seed cluster-up cluster-deps deploy migrate validate-config clean helm-validate e2e e2e-teardown e2e-cluster e2e-db e2e-deploy e2e-web-v2 e2e-web-v2-integration sonar
+.PHONY: help build test lint typecheck dev-api dev-web dev-web-legacy dev-db dev-db-stop dev-db-reset seed cluster-up cluster-deps deploy migrate validate-config clean helm-validate e2e e2e-teardown e2e-cluster e2e-db e2e-deploy e2e-web e2e-web-integration sonar
 
 # ── Pinned versions ───────────────────────────────────────────────────────────
 ESO_VERSION           := 0.12.1
@@ -11,8 +11,8 @@ CERT_MANAGER_VERSION  := v1.17.1
 
 # ── Paths ─────────────────────────────────────────────────────────────────────
 GO_CMD     := cmd/pebblr
-WEB_DIR    := web
-WEB_V2_DIR := web-v2
+WEB_DIR        := web
+WEB_LEGACY_DIR := web-legacy
 CLUSTER    := pebblr-local
 KIND_CFG := deploy/kind/kind-config.yaml
 
@@ -27,30 +27,30 @@ help: ## Show available targets
 build: ## Build Go binary and both React frontends
 	@go build -o bin/pebblr ./$(GO_CMD)
 	@cd $(WEB_DIR) && bun install --frozen-lockfile && bun run build
-	@cd $(WEB_V2_DIR) && bun install --frozen-lockfile && bun run build
+	@cd $(WEB_LEGACY_DIR) && bun install --frozen-lockfile && bun run build
 
 test: ## Run Go tests and both frontend tests
 	@go test ./...
 	@cd $(WEB_DIR) && bun run test
-	@cd $(WEB_V2_DIR) && bun run test
+	@cd $(WEB_LEGACY_DIR) && bun run test
 
 lint: ## Run golangci-lint and ESLint on both frontends
 	@golangci-lint run ./...
 	@cd $(WEB_DIR) && bun run lint
-	@cd $(WEB_V2_DIR) && bun run lint
+	@cd $(WEB_LEGACY_DIR) && bun run lint
 
 typecheck: ## Run tsc --noEmit in both frontends
 	@cd $(WEB_DIR) && bun run typecheck
-	@cd $(WEB_V2_DIR) && bun run typecheck
+	@cd $(WEB_LEGACY_DIR) && bun run typecheck
 
 dev-api: ## Run Go API server locally with hot reload
 	@air -c .air.toml || go run ./$(GO_CMD) serve
 
-dev-web: ## Run Vite dev server (v1)
+dev-web: ## Run Vite dev server
 	@cd $(WEB_DIR) && bun run dev
 
-dev-web-v2: ## Run Vite dev server (v2) on port 5174
-	@cd $(WEB_V2_DIR) && bun run dev
+dev-web-legacy: ## Run Vite dev server (legacy) on port 5173
+	@cd $(WEB_LEGACY_DIR) && bun run dev
 
 dev-db: ## Deploy on-cluster PostgreSQL, run migrations, and seed data (pebblr namespace)
 	$(AKS_GUARD)
@@ -108,11 +108,11 @@ e2e-teardown: ## Delete the Kind cluster used for E2E testing
 e2e: ## Run E2E tests against a running Kind cluster
 	@go test -v -tags=e2e -count=1 -timeout=10m ./e2e/...
 
-e2e-web-v2: ## Run Playwright E2E tests for web-v2 (starts Vite dev server automatically)
-	@cd $(WEB_V2_DIR) && bun run test:e2e
+e2e-web: ## Run Playwright E2E tests (starts Vite dev server automatically)
+	@cd $(WEB_DIR) && bun run test:e2e
 
-e2e-web-v2-integration: ## Run Playwright integration tests for web-v2 against the Kind cluster
-	@scripts/e2e-web-v2.sh
+e2e-web-integration: ## Run Playwright integration tests against the Kind cluster
+	@scripts/e2e-web.sh
 
 e2e-cluster: ## Create a lightweight Kind cluster for E2E (no cert-manager/ESO/Envoy)
 	$(AKS_GUARD)
@@ -136,4 +136,4 @@ sonar: ## Run SonarCloud analysis locally
 		-Dsonar.token=$${SONAR_TOKEN:?Set SONAR_TOKEN}
 
 clean: ## Clean build artifacts
-	@rm -rf bin/ web/dist/ web/node_modules/.vite web-v2/dist/ web-v2/node_modules/.vite
+	@rm -rf bin/ web/dist/ web/node_modules/.vite web-legacy/dist/ web-legacy/node_modules/.vite

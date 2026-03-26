@@ -28,7 +28,7 @@ jobs:
       - name: Install frontend dependencies
         run: |
           cd web && bun install --frozen-lockfile
-          cd ../web-v2 && bun install --frozen-lockfile
+          cd ../web-legacy && bun install --frozen-lockfile
 
       - name: Run tests
         run: make test
@@ -56,7 +56,7 @@ jobs:
       - name: Install frontend dependencies
         run: |
           cd web && bun install --frozen-lockfile
-          cd ../web-v2 && bun install --frozen-lockfile
+          cd ../web-legacy && bun install --frozen-lockfile
 
       - name: Run golangci-lint
         uses: golangci/golangci-lint-action@v9

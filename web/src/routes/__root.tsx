@@ -1,14 +1,21 @@
-import { createRootRoute, Outlet } from '@tanstack/react-router'
-import { Layout } from '../components/Layout'
+import { createRootRoute, Outlet, useRouterState } from '@tanstack/react-router'
+import { AppShell } from '@/layouts/AppShell'
 
 export const Route = createRootRoute({
-  component: RootComponent,
+  component: RootLayout,
 })
 
-function RootComponent() {
+function RootLayout() {
+  const { location } = useRouterState()
+  const isSignIn = location.pathname === '/sign-in'
+
+  if (isSignIn) {
+    return <Outlet />
+  }
+
   return (
-    <Layout>
+    <AppShell currentPath={location.pathname}>
       <Outlet />
-    </Layout>
+    </AppShell>
   )
 }

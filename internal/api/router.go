@@ -30,7 +30,7 @@ type RouterConfig struct {
 	AuditHandler       *AuditHandler
 	DemoHandler        *demo.Handler
 	WebDistPath        string
-	WebV2DistPath      string
+	WebLegacyDistPath  string
 }
 
 // NewRouter constructs and returns the application HTTP router.
@@ -59,7 +59,7 @@ func NewRouter(cfg RouterConfig) http.Handler {
 		mountAPIRoutes(r, cfg)
 	})
 
-	mountDualSPA(r, cfg.WebDistPath, cfg.WebV2DistPath)
+	mountDualSPA(r, cfg.WebDistPath, cfg.WebLegacyDistPath)
 
 	return r
 }
@@ -133,26 +133,28 @@ func mountAPIRoutes(r chi.Router, cfg RouterConfig) {
 
 const uiCookieName = "pebblr_ui"
 
-// mountDualSPA serves either the v1 or v2 frontend SPA based on the pebblr_ui cookie.
-// The ?ui=v2 or ?ui=v1 query parameter sets the cookie and redirects.
-// If v2DistPath is empty, only v1 is served regardless of cookie.
-func mountDualSPA(r *chi.Mux, v1DistPath, v2DistPath string) {
-	if v1DistPath == "" {
+// mountDualSPA serves the current frontend by default and the legacy frontend
+// when the pebblr_ui cookie is set to "legacy" (or the old "v1" value).
+// The ?ui=legacy (or ?ui=v1) query parameter switches to the legacy UI.
+// The ?ui=default (or ?ui=v2) query parameter switches back to the current UI.
+// If legacyDistPath is empty, only the current frontend is served.
+func mountDualSPA(r *chi.Mux, webDistPath, legacyDistPath string) {
+	if webDistPath == "" {
 		return
 	}
 
-	v1Server := http.FileServer(http.Dir(v1DistPath))
+	webServer := http.FileServer(http.Dir(webDistPath))
 
-	var v2Server http.Handler
-	if v2DistPath != "" {
-		v2Server = http.FileServer(http.Dir(v2DistPath))
+	var legacyServer http.Handler
+	if legacyDistPath != "" {
+		legacyServer = http.FileServer(http.Dir(legacyDistPath))
 	}
 
 	r.NotFound(func(w http.ResponseWriter, req *http.Request) {
 		if handleUISwitch(w, req) {
 			return
 		}
-		distPath, fileServer := selectSPA(req, v1DistPath, v1Server, v2DistPath, v2Server)
+		distPath, fileServer := selectSPA(req, webDistPath, webServer, legacyDistPath, legacyServer)
 		serveSPA(w, req, distPath, fileServer)
 	})
 }
@@ -161,13 +163,20 @@ func mountDualSPA(r *chi.Mux, v1DistPath, v2DistPath string) {
 // cookie, and redirects. Returns true if a redirect was issued.
 func handleUISwitch(w http.ResponseWriter, req *http.Request) bool {
 	uiParam := req.URL.Query().Get("ui")
-	if uiParam != "v1" && uiParam != "v2" {
+
+	var cookieValue string
+	switch uiParam {
+	case "legacy", "v1":
+		cookieValue = "legacy"
+	case "default", "v2":
+		cookieValue = "default"
+	default:
 		return false
 	}
 
 	http.SetCookie(w, &http.Cookie{
 		Name:     uiCookieName,
-		Value:    uiParam,
+		Value:    cookieValue,
 		Path:     "/",
 		MaxAge:   30 * 24 * 60 * 60, // 30 days
 		SameSite: http.SameSiteLaxMode,
@@ -203,13 +212,15 @@ func sanitizeRedirectPath(req *http.Request) string {
 }
 
 // selectSPA picks the file server and dist path based on the UI preference cookie.
-func selectSPA(req *http.Request, v1Dist string, v1Server http.Handler, v2Dist string, v2Server http.Handler) (string, http.Handler) {
-	if v2Server != nil {
-		if c, err := req.Cookie(uiCookieName); err == nil && c.Value == "v2" {
-			return v2Dist, v2Server
+// The current web frontend is served by default; legacy is served only when the
+// cookie is "legacy" or the old "v1" value.
+func selectSPA(req *http.Request, webDist string, webServer http.Handler, legacyDist string, legacyServer http.Handler) (string, http.Handler) {
+	if legacyServer != nil {
+		if c, err := req.Cookie(uiCookieName); err == nil && (c.Value == "legacy" || c.Value == "v1") {
+			return legacyDist, legacyServer
 		}
 	}
-	return v1Dist, v1Server
+	return webDist, webServer
 }
 
 // serveSPA tries to serve a static file and falls back to index.html for
