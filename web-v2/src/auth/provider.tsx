@@ -39,6 +39,7 @@ function initStaticAuth(): void {
   if (staticToken) {
     _currentUser = {
       id: 'static-dev-user',
+      name: 'Dev Admin',
       displayName: 'Dev Admin',
       email: 'admin@pebblr.dev',
       role: 'admin',
@@ -81,6 +82,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
     _currentUser = {
       id: data.account.id,
+      name: data.account.name,
       displayName: data.account.name,
       email: data.account.email,
       role: data.account.role as Role,

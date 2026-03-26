@@ -51,4 +51,8 @@ type ActivityRepository interface {
 	// HasActivityWithTypes reports whether the creator has any non-deleted activity
 	// on the given date whose activity_type is one of the provided types.
 	HasActivityWithTypes(ctx context.Context, creatorID string, date time.Time, types []string) (bool, error)
+
+	// ExistsForTargetOnDate reports whether a non-deleted activity already exists
+	// for the given creator, target, and date.
+	ExistsForTargetOnDate(ctx context.Context, creatorID, targetID string, date time.Time) (bool, error)
 }

@@ -65,6 +65,35 @@ export function useSubmitActivity() {
   })
 }
 
+export interface BatchCreateItem {
+  targetId: string
+  dueDate: string
+  fields?: Record<string, unknown>
+}
+
+interface BatchCreateResult {
+  created: Activity[]
+  errors: Array<{ targetId: string; error: string }>
+}
+
+export function useBatchCreateActivities() {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: (items: BatchCreateItem[]) =>
+      api.post<BatchCreateResult>('/activities/batch', { items }),
+    onSuccess: () => qc.invalidateQueries({ queryKey: activityKeys.lists() }),
+  })
+}
+
+export function usePatchActivity() {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: ({ id, ...body }: { id: string; dueDate?: string; status?: string; fields?: Record<string, unknown> }) =>
+      api.patch<void>(`/activities/${id}`, body),
+    onSuccess: () => qc.invalidateQueries({ queryKey: activityKeys.all }),
+  })
+}
+
 export function useCloneWeek() {
   const qc = useQueryClient()
   return useMutation({

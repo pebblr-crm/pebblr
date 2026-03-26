@@ -146,6 +146,8 @@ func mapActivityServiceError(w http.ResponseWriter, err error) {
 		writeError(w, http.StatusConflict, "CONFLICT", "set status to completed or cancelled before submitting")
 	case errors.Is(err, service.ErrNoRecoveryBalance):
 		writeError(w, http.StatusConflict, "CONFLICT", "no recovery day balance available")
+	case errors.Is(err, service.ErrDuplicateActivity):
+		writeError(w, http.StatusConflict, "DUPLICATE", "activity for this target on this date already exists")
 	default:
 		writeError(w, http.StatusInternalServerError, "INTERNAL_ERROR", errUnexpected)
 	}
@@ -535,8 +537,9 @@ func (h *ActivityHandler) BatchCreate(w http.ResponseWriter, r *http.Request) {
 
 	var req struct {
 		Items []struct {
-			TargetID string `json:"targetId"`
-			DueDate  string `json:"dueDate"`
+			TargetID string         `json:"targetId"`
+			DueDate  string         `json:"dueDate"`
+			Fields   map[string]any `json:"fields,omitempty"`
 		} `json:"items"`
 	}
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
@@ -557,11 +560,15 @@ func (h *ActivityHandler) BatchCreate(w http.ResponseWriter, r *http.Request) {
 			batchErrors = append(batchErrors, map[string]string{"targetId": item.TargetID, "error": "invalid date format"})
 			continue
 		}
+		fields := map[string]any{"visit_type": "f2f"}
+		for k, v := range item.Fields {
+			fields[k] = v
+		}
 		activity := &domain.Activity{
 			ActivityType: "visit",
 			Status:       "",
 			DueDate:      dueDate,
-			Fields:       map[string]any{"visit_type": "f2f"},
+			Fields:       fields,
 			TargetID:     item.TargetID,
 		}
 		result, err := h.svc.Create(r.Context(), actor, activity)

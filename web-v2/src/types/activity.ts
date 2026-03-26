@@ -30,7 +30,7 @@ export interface CreateActivityInput {
   label?: string
   status: string
   dueDate: string
-  duration: string
+  duration?: string
   routing?: string
   fields: Record<string, unknown>
   targetId?: string

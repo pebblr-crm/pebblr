@@ -28,14 +28,15 @@ const (
 // --- stub activity repo ---
 
 type stubActivityRepo struct {
-	activity             *domain.Activity
-	listActivities       []*domain.Activity
-	created              *domain.Activity
-	updated              *domain.Activity
-	getErr               error
-	saveErr              error
-	countByDate          int
-	hasActivityWithTypes bool
+	activity               *domain.Activity
+	listActivities         []*domain.Activity
+	created                *domain.Activity
+	updated                *domain.Activity
+	getErr                 error
+	saveErr                error
+	countByDate            int
+	hasActivityWithTypes   bool
+	existsForTargetOnDate  bool
 }
 
 func (r *stubActivityRepo) Get(_ context.Context, _ string) (*domain.Activity, error) {
@@ -87,6 +88,10 @@ func (r *stubActivityRepo) CountByDate(_ context.Context, _ string, _ time.Time)
 
 func (r *stubActivityRepo) HasActivityWithTypes(_ context.Context, _ string, _ time.Time, _ []string) (bool, error) {
 	return r.hasActivityWithTypes, nil
+}
+
+func (r *stubActivityRepo) ExistsForTargetOnDate(_ context.Context, _, _ string, _ time.Time) (bool, error) {
+	return r.existsForTargetOnDate, nil
 }
 
 // --- stub user repo ---

@@ -49,7 +49,7 @@ function getLng(fields: Record<string, unknown>): number | null {
 }
 
 function getClassification(fields: Record<string, unknown>): string {
-  return (fields.classification as string) ?? 'C'
+  return ((fields.potential as string) ?? 'c').toLowerCase()
 }
 
 function RepDrillDownPage() {

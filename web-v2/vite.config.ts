@@ -13,12 +13,14 @@ export default defineConfig({
     port: 5174,
     proxy: {
       '/api': {
-        target: 'http://pebblr.local:9090',
+        target: 'https://demo.pebblr.net',
         changeOrigin: true,
+        secure: true,
       },
       '/demo': {
-        target: 'http://pebblr.local:9090',
+        target: 'https://demo.pebblr.net',
         changeOrigin: true,
+        secure: true,
       },
     },
   },

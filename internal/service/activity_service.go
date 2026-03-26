@@ -3,6 +3,7 @@ package service
 import (
 	"context"
 	"fmt"
+	"log/slog"
 	"time"
 
 	"github.com/pebblr/pebblr/internal/config"
@@ -37,6 +38,9 @@ var ErrStatusNotSubmittable = fmt.Errorf("current status does not allow submissi
 
 // ErrNoRecoveryBalance indicates that no recovery day is available to claim.
 var ErrNoRecoveryBalance = fmt.Errorf("no recovery day balance available")
+
+// ErrDuplicateActivity indicates that an activity for this target on this date already exists.
+var ErrDuplicateActivity = fmt.Errorf("activity for this target on this date already exists")
 
 // ValidationErrors wraps a slice of config.FieldError for returning from the service layer.
 type ValidationErrors struct {
@@ -127,6 +131,17 @@ func (s *ActivityService) Create(ctx context.Context, actor *domain.User, activi
 		return nil, err
 	}
 
+	// Business rule: no duplicate activity for the same target on the same date.
+	if activity.TargetID != "" {
+		exists, err := s.activities.ExistsForTargetOnDate(ctx, activity.CreatorID, activity.TargetID, activity.DueDate)
+		if err != nil {
+			return nil, fmt.Errorf("checking duplicate activity: %w", err)
+		}
+		if exists {
+			return nil, ErrDuplicateActivity
+		}
+	}
+
 	// Business rule: max activities per day.
 	if err := s.checkMaxActivitiesPerDay(ctx, activity.CreatorID, activity.DueDate); err != nil {
 		return nil, err
@@ -171,13 +186,55 @@ func (s *ActivityService) Get(ctx context.Context, actor *domain.User, id string
 }
 
 // List returns a paginated list of activities scoped to the actor's permissions.
+// Non-field activities whose due date has passed are auto-completed.
 func (s *ActivityService) List(ctx context.Context, actor *domain.User, filter store.ActivityFilter, page, limit int) (*store.ActivityPage, error) {
 	scope := s.enforcer.ScopeActivityQuery(ctx, actor)
 	result, err := s.activities.List(ctx, scope, filter, page, limit)
 	if err != nil {
 		return nil, fmt.Errorf("listing activities: %w", err)
 	}
+	s.autoCompleteNonFieldActivities(ctx, result.Activities)
 	return result, nil
+}
+
+// autoCompleteNonFieldActivities transitions non-field activities whose due date
+// is in the past from the initial status to "completed". This is fire-and-forget
+// — errors are logged but don't block the response.
+func (s *ActivityService) autoCompleteNonFieldActivities(ctx context.Context, activities []*domain.Activity) {
+	if s.cfg == nil {
+		return
+	}
+	initialStatus := ""
+	for _, st := range s.cfg.Activities.Statuses {
+		if st.Initial {
+			initialStatus = st.Key
+			break
+		}
+	}
+	if initialStatus == "" {
+		return
+	}
+
+	nonFieldTypes := make(map[string]bool)
+	for _, at := range s.cfg.Activities.Types {
+		if at.Category == "non_field" {
+			nonFieldTypes[at.Key] = true
+		}
+	}
+
+	today := time.Now().Truncate(24 * time.Hour)
+	for _, a := range activities {
+		if !nonFieldTypes[a.ActivityType] || a.Status != initialStatus || a.SubmittedAt != nil {
+			continue
+		}
+		if !a.DueDate.Before(today) {
+			continue
+		}
+		a.Status = "completed"
+		if _, err := s.activities.Update(ctx, a); err != nil {
+			slog.Default().Warn("auto-complete non-field activity failed", "id", a.ID, "err", err)
+		}
+	}
 }
 
 // Update persists changes to an existing activity. Blocked if submitted.

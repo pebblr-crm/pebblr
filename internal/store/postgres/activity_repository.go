@@ -311,3 +311,21 @@ func (r *activityRepository) HasActivityWithTypes(ctx context.Context, creatorID
 	}
 	return exists, nil
 }
+
+func (r *activityRepository) ExistsForTargetOnDate(ctx context.Context, creatorID, targetID string, date time.Time) (bool, error) {
+	if targetID == "" {
+		return false, nil
+	}
+	var exists bool
+	err := r.pool.QueryRow(ctx,
+		`SELECT EXISTS(
+			SELECT 1 FROM activities
+			WHERE creator_id = $1::UUID AND target_id = $2::UUID AND due_date = $3 AND deleted_at IS NULL
+		)`,
+		creatorID, targetID, date,
+	).Scan(&exists)
+	if err != nil {
+		return false, fmt.Errorf("checking duplicate activity: %w", err)
+	}
+	return exists, nil
+}

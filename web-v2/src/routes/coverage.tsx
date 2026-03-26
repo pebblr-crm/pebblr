@@ -29,7 +29,7 @@ function getLng(fields: Record<string, unknown>): number | null {
 }
 
 function getClassification(fields: Record<string, unknown>): string {
-  return (fields.classification as string) ?? 'C'
+  return ((fields.potential as string) ?? 'c').toLowerCase()
 }
 
 function CoveragePage() {
@@ -108,7 +108,7 @@ function CoveragePage() {
       <div>
         <label className="mb-2 block text-xs font-medium text-slate-500 uppercase">Priority</label>
         <div className="flex gap-2">
-          {['A', 'B', 'C'].map((p) => (
+          {['a', 'b', 'c'].map((p) => (
             <button
               key={p}
               onClick={() => setPriorityFilter(priorityFilter === p ? '' : p)}
@@ -118,7 +118,7 @@ function CoveragePage() {
                   : 'border-slate-200 text-slate-600 hover:border-slate-300'
               }`}
             >
-              {p}
+              {p.toUpperCase()}
             </button>
           ))}
         </div>

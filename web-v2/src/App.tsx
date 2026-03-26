@@ -74,7 +74,8 @@ function DemoGate({ children }: { children: React.ReactNode }) {
   const handleLogin = useCallback(
     async (userId: string) => {
       await demoLogin(userId)
-      queryClient.clear()
+      queryClient.removeQueries()
+      await queryClient.invalidateQueries()
     },
     [demoLogin],
   )
