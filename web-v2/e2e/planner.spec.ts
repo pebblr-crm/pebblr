@@ -14,7 +14,7 @@ test.describe('Planner page', () => {
     await expect(page.locator('text=Clone Week')).toBeVisible()
 
     // Stats row should be visible
-    const statsRow = page.locator('.grid.grid-cols-4')
+    const statsRow = page.locator('.grid.grid-cols-2.md\\:grid-cols-4')
     await expect(statsRow.locator('text=Planned')).toBeVisible()
     await expect(statsRow.locator('text=Completed')).toBeVisible()
     await expect(statsRow.locator('text=Coverage')).toBeVisible()
@@ -38,16 +38,17 @@ test.describe('Planner page', () => {
     await page.goto('/planner')
 
     // Grab the initial date text
-    const dateText = page.locator('.flex.items-center.gap-1 span.px-3')
+    const weekNav = page.locator('.rounded-lg.border.border-slate-200.bg-slate-50')
+    const dateText = weekNav.locator('span')
     const initialText = await dateText.innerText()
 
     // Click next week
-    await page.locator('.flex.items-center.gap-1 button:last-child').click()
+    await weekNav.locator('button:last-child').click()
     const nextText = await dateText.innerText()
     expect(nextText).not.toBe(initialText)
 
     // Click previous week (back twice to go before initial)
-    await page.locator('.flex.items-center.gap-1 button:first-child').click()
+    await weekNav.locator('button:first-child').click()
     const backText = await dateText.innerText()
     expect(backText).toBe(initialText)
   })

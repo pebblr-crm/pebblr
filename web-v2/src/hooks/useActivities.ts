@@ -35,7 +35,7 @@ export function useActivities(params: ActivityListParams = {}) {
 export function useActivity(id: string) {
   return useQuery({
     queryKey: activityKeys.detail(id),
-    queryFn: () => api.get<Activity>(`/activities/${id}`),
+    queryFn: () => api.get<{ activity: Activity }>(`/activities/${id}`).then((r) => r.activity),
     enabled: !!id,
   })
 }

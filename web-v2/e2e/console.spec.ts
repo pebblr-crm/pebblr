@@ -30,7 +30,7 @@ test.describe('Console page', () => {
   test('switching to Teams section shows team cards', async ({ page }) => {
     await page.goto('/console')
 
-    await page.click('button:has-text("Teams")')
+    await page.locator('.hidden.md\\:block button:has-text("Teams")').click()
     await expect(page.locator('h1:has-text("Teams")')).toBeVisible()
 
     for (const team of TEAMS.items) {
@@ -41,7 +41,7 @@ test.describe('Console page', () => {
   test('switching to Territories section shows territory cards', async ({ page }) => {
     await page.goto('/console')
 
-    await page.click('button:has-text("Territories")')
+    await page.locator('.hidden.md\\:block button:has-text("Territories")').click()
     await expect(page.locator('h1:has-text("Territories")')).toBeVisible()
 
     for (const territory of TERRITORIES.items) {
@@ -52,7 +52,7 @@ test.describe('Console page', () => {
   test('switching to Business Rules section shows config', async ({ page }) => {
     await page.goto('/console')
 
-    await page.click('button:has-text("Business Rules")')
+    await page.locator('.hidden.md\\:block button:has-text("Business Rules")').click()
     await expect(page.locator('h1:has-text("Business Rules")')).toBeVisible()
 
     // Visit frequency requirements

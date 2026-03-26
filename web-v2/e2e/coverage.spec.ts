@@ -9,17 +9,18 @@ test.describe('Coverage page', () => {
   test('renders filter sidebar with team and priority filters', async ({ page }) => {
     await page.goto('/coverage')
 
-    await expect(page.locator('text=Filters')).toBeVisible()
-    await expect(page.locator('text=Reset')).toBeVisible()
+    const filterSidebar = page.locator('.md\\:static.w-72')
+    await expect(filterSidebar.locator('text=Filters')).toBeVisible()
+    await expect(filterSidebar.locator('text=Reset')).toBeVisible()
 
     // Team names from fixtures
-    await expect(page.locator('text=Alpha')).toBeVisible()
-    await expect(page.locator('text=Bravo')).toBeVisible()
+    await expect(filterSidebar.locator('text=Alpha')).toBeVisible()
+    await expect(filterSidebar.locator('text=Bravo')).toBeVisible()
 
     // Priority filter buttons
-    await expect(page.locator('button:has-text("A")')).toBeVisible()
-    await expect(page.locator('button:has-text("B")')).toBeVisible()
-    await expect(page.locator('button:has-text("C")')).toBeVisible()
+    await expect(filterSidebar.locator('button:has-text("A")')).toBeVisible()
+    await expect(filterSidebar.locator('button:has-text("B")')).toBeVisible()
+    await expect(filterSidebar.locator('button:has-text("C")')).toBeVisible()
   })
 
   test('shows coverage summary card with percentage', async ({ page }) => {
@@ -41,6 +42,7 @@ test.describe('Coverage page', () => {
     await page.goto('/coverage')
 
     // 2 targets have coordinates in fixtures
-    await expect(page.locator('text=2 pins')).toBeVisible()
+    const filterSidebar = page.locator('.md\\:static.w-72')
+    await expect(filterSidebar.locator('text=2 pins')).toBeVisible()
   })
 })
