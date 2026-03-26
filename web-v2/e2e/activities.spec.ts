@@ -181,6 +181,9 @@ test.describe('Activity detail modal', () => {
     // planificat can transition to realizat or anulat
     await expect(page.getByRole('button', { name: 'Completed', exact: true })).toBeVisible({ timeout: 5000 })
     await expect(page.getByRole('button', { name: 'Cancelled', exact: true })).toBeVisible()
+
+    // feedback textarea is available in the footer
+    await expect(page.locator('textarea[placeholder="How did the visit go?"]')).toBeVisible()
   })
 
   test('closing detail modal with X dismisses it', async ({ page }) => {
