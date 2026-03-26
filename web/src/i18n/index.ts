@@ -11,14 +11,9 @@ i18n
   .use(LanguageDetector)
   .use(initReactI18next)
   .init({
-    resources: {
-      en,
-      ro,
-    },
+    resources: { en, ro },
     fallbackLng: 'en',
-    interpolation: {
-      escapeValue: false, // React already escapes
-    },
+    interpolation: { escapeValue: false },
     detection: {
       order: ['localStorage', 'navigator'],
       lookupLocalStorage: 'pebblr-language',

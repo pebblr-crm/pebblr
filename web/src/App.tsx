@@ -1,34 +1,35 @@
-import { useState, useCallback, useEffect, useMemo } from 'react'
+import { useState, useEffect, useCallback } from 'react'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { createRouter, RouterProvider } from '@tanstack/react-router'
-import { DemoAccountPicker } from './components/DemoAccountPicker'
-import { ToastProvider } from './components/Toast'
-import { PlannerContext, type PlannerState } from './contexts/planner'
-import { ThemeContext, type Theme } from './contexts/theme'
-import { isDemoMode, getCurrentUser, demoLogin, onAuthChange } from './services/auth'
-import { Route as rootRoute } from './routes/__root'
-import { Route as indexRoute } from './routes/index'
-import { Route as plannerRoute } from './routes/planner/index'
-import { Route as plannerDailyRoute } from './routes/planner/daily'
-import { Route as plannerMapRoute } from './routes/planner/map'
-import { Route as teamRoute } from './routes/team/index'
-import { Route as targetsIndexRoute } from './routes/targets/index'
-import { Route as targetDetailRoute } from './routes/targets/$targetId'
-import { Route as newActivityRoute } from './routes/activities/new'
-import { Route as activityDetailRoute } from './routes/activities/$activityId'
-import { Route as editActivityRoute } from './routes/activities/$activityId.edit'
+import { AuthProvider } from '@/auth/provider'
+import { useAuth } from '@/auth/context'
+import '@/i18n'
+
+import { Route as rootRoute } from '@/routes/__root'
+import { Route as indexRoute } from '@/routes/index'
+import { Route as plannerRoute } from '@/routes/planner'
+import { Route as targetsRoute } from '@/routes/targets'
+import { Route as activitiesRoute } from '@/routes/activities'
+import { Route as dashboardRoute } from '@/routes/dashboard'
+import { Route as coverageRoute } from '@/routes/coverage'
+import { Route as consoleRoute } from '@/routes/console'
+import { Route as auditRoute } from '@/routes/audit'
+import { Route as targetDetailRoute } from '@/routes/targets.$id'
+import { Route as repDrillDownRoute } from '@/routes/reps.$id'
+import { Route as signInRoute } from '@/routes/sign-in'
 
 const routeTree = rootRoute.addChildren([
   indexRoute,
+  signInRoute,
   plannerRoute,
-  plannerDailyRoute,
-  plannerMapRoute,
-  teamRoute,
-  targetsIndexRoute,
+  targetsRoute,
   targetDetailRoute,
-  newActivityRoute,
-  activityDetailRoute,
-  editActivityRoute,
+  activitiesRoute,
+  dashboardRoute,
+  repDrillDownRoute,
+  coverageRoute,
+  consoleRoute,
+  auditRoute,
 ])
 
 const router = createRouter({ routeTree })
@@ -48,59 +49,74 @@ const queryClient = new QueryClient({
   },
 })
 
-function getInitialTheme(): Theme {
-  if (typeof globalThis.window === 'undefined') return 'light'
-  const stored = localStorage.getItem('pebblr-theme')
-  if (stored === 'dark' || stored === 'light') return stored
-  return 'light'
+interface DemoAccount {
+  id: string
+  name: string
+  email: string
+  role: string
+}
+
+function DemoGate({ children }: { children: React.ReactNode }) {
+  const { user, isDemoMode, demoLogin } = useAuth()
+  const [accounts, setAccounts] = useState<DemoAccount[]>([])
+
+  useEffect(() => {
+    if (!isDemoMode) return
+    fetch('/demo/accounts')
+      .then((r) => {
+        if (!r.ok) return []
+        return r.json() as Promise<DemoAccount[]>
+      })
+      .then((data) => setAccounts(Array.isArray(data) ? data : []))
+      .catch(() => {})
+  }, [isDemoMode])
+
+  const handleLogin = useCallback(
+    async (userId: string) => {
+      await demoLogin(userId)
+      queryClient.removeQueries()
+      await queryClient.invalidateQueries()
+    },
+    [demoLogin],
+  )
+
+  if (isDemoMode && !user) {
+    return (
+      <div className="flex min-h-screen items-center justify-center bg-slate-50">
+        <div className="w-80 rounded-xl border border-slate-200 bg-white p-6 shadow-sm">
+          <h2 className="text-lg font-semibold text-slate-900">Pebblr v2 Demo</h2>
+          <p className="mt-1 text-sm text-slate-500">Select a demo account to continue.</p>
+          <div className="mt-4 space-y-2">
+            {accounts.map((acct) => (
+              <button
+                key={acct.id}
+                onClick={() => handleLogin(acct.id)}
+                className="w-full rounded-lg border border-slate-200 px-4 py-2.5 text-left hover:bg-slate-50"
+              >
+                <div className="text-sm font-medium text-slate-900">{acct.name}</div>
+                <div className="text-xs text-slate-500">{acct.role} &middot; {acct.email}</div>
+              </button>
+            ))}
+            {accounts.length === 0 && (
+              <p className="text-sm text-slate-400">Loading accounts...</p>
+            )}
+          </div>
+        </div>
+      </div>
+    )
+  }
+
+  return <>{children}</>
 }
 
 export function App() {
-  const [plannerState, setPlannerState] = useState<PlannerState>({ week: null, from: null })
-  const setWeek = useCallback((week: string) => setPlannerState((s) => ({ ...s, week })), [])
-  const setFrom = useCallback((from: string) => setPlannerState((s) => ({ ...s, from })), [])
-
-  const [currentTheme, setThemeState] = useState<Theme>(getInitialTheme)
-  const setTheme = useCallback((t: Theme) => {
-    setThemeState(t)
-    localStorage.setItem('pebblr-theme', t)
-    document.documentElement.classList.toggle('dark', t === 'dark')
-  }, [])
-  const toggle = useCallback(() => setTheme(currentTheme === 'dark' ? 'light' : 'dark'), [currentTheme, setTheme])
-
-  // Track whether a demo user is selected.
-  const [authed, setAuthed] = useState(() => !isDemoMode() || getCurrentUser() !== null)
-
-  useEffect(() => {
-    onAuthChange(() => {
-      setAuthed(getCurrentUser() !== null)
-      // Clear TanStack Query cache on account switch so data reloads for the new user.
-      queryClient.clear()
-    })
-  }, [])
-
-  // Apply theme class on mount
-  useEffect(() => {
-    document.documentElement.classList.toggle('dark', currentTheme === 'dark')
-  }, [currentTheme])
-
-  const themeContextValue = useMemo(() => ({ theme: currentTheme, setTheme, toggle }), [currentTheme, setTheme, toggle])
-  const plannerContextValue = useMemo(() => ({ state: plannerState, setWeek, setFrom }), [plannerState, setWeek, setFrom])
-
-  // Demo mode: show account picker if no user selected.
-  if (isDemoMode() && !authed) {
-    return <DemoAccountPicker onSelect={demoLogin} />
-  }
-
   return (
-    <QueryClientProvider client={queryClient}>
-      <ThemeContext.Provider value={themeContextValue}>
-        <PlannerContext.Provider value={plannerContextValue}>
-          <ToastProvider>
-            <RouterProvider router={router} />
-          </ToastProvider>
-        </PlannerContext.Provider>
-      </ThemeContext.Provider>
-    </QueryClientProvider>
+    <AuthProvider>
+      <QueryClientProvider client={queryClient}>
+        <DemoGate>
+          <RouterProvider router={router} />
+        </DemoGate>
+      </QueryClientProvider>
+    </AuthProvider>
   )
 }

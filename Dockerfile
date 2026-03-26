@@ -15,7 +15,7 @@ COPY migrations/ migrations/
 RUN CGO_ENABLED=0 GOOS=linux go build -ldflags="-w -s" -o /bin/pebblr ./cmd/pebblr && \
     CGO_ENABLED=0 GOOS=linux go build -ldflags="-w -s" -o /bin/migrate ./cmd/migrate
 
-# ── Stage 2a: Frontend v1 builder ────────────────────────────────────────────
+# ── Stage 2: Frontend builder ────────────────────────────────────────────────
 FROM node:25-alpine AS web-builder
 
 WORKDIR /app/web
@@ -23,22 +23,6 @@ COPY web/package.json web/bun.lock* ./
 RUN npm install -g bun && bun install --frozen-lockfile
 
 COPY web/ ./
-ARG VITE_STATIC_TOKEN=""
-ENV VITE_STATIC_TOKEN=${VITE_STATIC_TOKEN}
-ARG VITE_GOOGLE_MAPS_API_KEY=""
-ENV VITE_GOOGLE_MAPS_API_KEY=${VITE_GOOGLE_MAPS_API_KEY}
-ARG VITE_DEMO_MODE=""
-ENV VITE_DEMO_MODE=${VITE_DEMO_MODE}
-RUN bun run build
-
-# ── Stage 2b: Frontend v2 builder ────────────────────────────────────────────
-FROM node:25-alpine AS web-v2-builder
-
-WORKDIR /app/web-v2
-COPY web-v2/package.json web-v2/bun.lock* ./
-RUN npm install -g bun && bun install --frozen-lockfile
-
-COPY web-v2/ ./
 ARG VITE_STATIC_TOKEN=""
 ENV VITE_STATIC_TOKEN=${VITE_STATIC_TOKEN}
 ARG VITE_GOOGLE_MAPS_API_KEY=""
@@ -58,7 +42,6 @@ COPY --from=go-builder /bin/pebblr .
 COPY --from=go-builder /bin/migrate .
 COPY --from=go-builder /app/migrations/ ./migrations/
 COPY --from=web-builder /app/web/dist ./web/dist
-COPY --from=web-v2-builder /app/web-v2/dist ./web-v2/dist
 COPY config/ ./config/
 
 # Secrets are read from file mounts — never from environment variables

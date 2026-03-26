@@ -1,8 +1,3 @@
-/**
- * Tenant configuration types — mirror the Go backend config model.
- * Loaded from GET /api/v1/config and used to drive dynamic UI rendering.
- */
-
 export interface OptionDef {
   key: string
   label: string
@@ -11,7 +6,7 @@ export interface OptionDef {
 export interface FieldConfig {
   key: string
   label?: string
-  type: 'text' | 'select' | 'multi_select' | 'relation' | 'date'
+  type: 'text' | 'select' | 'multi_select' | 'relation' | 'date' | 'checklist'
   required: boolean
   editable?: boolean
   options?: string[]
@@ -47,7 +42,7 @@ export interface ActivitiesConfig {
   durations: OptionDef[]
   types: ActivityTypeConfig[]
   routing_options: OptionDef[]
-  hoisted_fields?: string[] // Populated by backend: field keys that map to top-level DB columns
+  hoisted_fields?: string[]
 }
 
 export interface RulesConfig {
@@ -65,13 +60,8 @@ export interface RecoveryConfig {
 }
 
 export interface TenantConfig {
-  tenant: {
-    name: string
-    locale: string
-  }
-  accounts: {
-    types: AccountTypeConfig[]
-  }
+  tenant: { name: string; locale: string }
+  accounts: { types: AccountTypeConfig[] }
   activities: ActivitiesConfig
   options: Record<string, OptionDef[]>
   rules: RulesConfig

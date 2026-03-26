@@ -19,7 +19,6 @@ linters:
   exclusions:
     paths:
       - web/node_modules
-      - web-v2/node_modules
     rules:
       # Ginkgo/Gomega idiomatically use dot imports and test runners are not parallelizable.
       - path: test/e2e/

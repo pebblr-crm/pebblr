@@ -1,5 +1,3 @@
-
-
 import { defineConfig } from 'vite'
 import react from '@vitejs/plugin-react'
 import tailwindcss from '@tailwindcss/vite'
@@ -12,15 +10,17 @@ export default defineConfig({
     },
   },
   server: {
-    port: 5173,
+    port: 5174,
     proxy: {
       '/api': {
-        target: 'http://pebblr.local:9090',
+        target: 'https://demo.pebblr.net',
         changeOrigin: true,
+        secure: true,
       },
       '/demo': {
-        target: 'http://pebblr.local:9090',
+        target: 'https://demo.pebblr.net',
         changeOrigin: true,
+        secure: true,
       },
     },
   },

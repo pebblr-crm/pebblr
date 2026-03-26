@@ -6,7 +6,6 @@ import (
 	"net/http"
 	"os"
 	"path/filepath"
-	"strings"
 
 	"github.com/go-chi/chi/v5"
 	chimiddleware "github.com/go-chi/chi/v5/middleware"
@@ -30,7 +29,6 @@ type RouterConfig struct {
 	AuditHandler       *AuditHandler
 	DemoHandler        *demo.Handler
 	WebDistPath        string
-	WebV2DistPath      string
 }
 
 // NewRouter constructs and returns the application HTTP router.
@@ -59,7 +57,7 @@ func NewRouter(cfg RouterConfig) http.Handler {
 		mountAPIRoutes(r, cfg)
 	})
 
-	mountDualSPA(r, cfg.WebDistPath, cfg.WebV2DistPath)
+	mountSPA(r, cfg.WebDistPath)
 
 	return r
 }
@@ -131,97 +129,25 @@ func mountAPIRoutes(r chi.Router, cfg RouterConfig) {
 	}
 }
 
-const uiCookieName = "pebblr_ui"
-
-// mountDualSPA serves either the v1 or v2 frontend SPA based on the pebblr_ui cookie.
-// The ?ui=v2 or ?ui=v1 query parameter sets the cookie and redirects.
-// If v2DistPath is empty, only v1 is served regardless of cookie.
-func mountDualSPA(r *chi.Mux, v1DistPath, v2DistPath string) {
-	if v1DistPath == "" {
+// mountSPA serves the frontend SPA from the given dist directory.
+// Static files are served directly; all other paths fall back to index.html
+// for client-side routing.
+func mountSPA(r *chi.Mux, distPath string) {
+	if distPath == "" {
 		return
 	}
 
-	v1Server := http.FileServer(http.Dir(v1DistPath))
-
-	var v2Server http.Handler
-	if v2DistPath != "" {
-		v2Server = http.FileServer(http.Dir(v2DistPath))
-	}
+	fileServer := http.FileServer(http.Dir(distPath))
 
 	r.NotFound(func(w http.ResponseWriter, req *http.Request) {
-		if handleUISwitch(w, req) {
+		path := filepath.Clean(req.URL.Path)
+		if _, err := fs.Stat(os.DirFS(distPath), path[1:]); err == nil {
+			fileServer.ServeHTTP(w, req)
 			return
 		}
-		distPath, fileServer := selectSPA(req, v1DistPath, v1Server, v2DistPath, v2Server)
-		serveSPA(w, req, distPath, fileServer)
-	})
-}
-
-// handleUISwitch checks for the ?ui= query parameter, sets the preference
-// cookie, and redirects. Returns true if a redirect was issued.
-func handleUISwitch(w http.ResponseWriter, req *http.Request) bool {
-	uiParam := req.URL.Query().Get("ui")
-	if uiParam != "v1" && uiParam != "v2" {
-		return false
-	}
-
-	http.SetCookie(w, &http.Cookie{
-		Name:     uiCookieName,
-		Value:    uiParam,
-		Path:     "/",
-		MaxAge:   30 * 24 * 60 * 60, // 30 days
-		SameSite: http.SameSiteLaxMode,
-		Secure:   true,
-		HttpOnly: true,
-	})
-
-	dest := sanitizeRedirectPath(req)
-	http.Redirect(w, req, dest, http.StatusFound)
-	return true
-}
-
-// sanitizeRedirectPath builds a safe, same-origin redirect target from the
-// request path, stripping the "ui" query parameter. Only relative paths
-// (starting with "/") are allowed; anything else falls back to "/".
-func sanitizeRedirectPath(req *http.Request) string {
-	path := req.URL.Path
-	if !strings.HasPrefix(path, "/") {
-		path = "/"
-	}
-	// Reject any path containing sequences that could be used for open redirects.
-	if strings.HasPrefix(path, "//") || strings.Contains(path, "://") {
-		path = "/"
-	}
-	path = filepath.Clean(path)
-
-	q := req.URL.Query()
-	q.Del("ui")
-	if encoded := q.Encode(); encoded != "" {
-		return path + "?" + encoded
-	}
-	return path
-}
-
-// selectSPA picks the file server and dist path based on the UI preference cookie.
-func selectSPA(req *http.Request, v1Dist string, v1Server http.Handler, v2Dist string, v2Server http.Handler) (string, http.Handler) {
-	if v2Server != nil {
-		if c, err := req.Cookie(uiCookieName); err == nil && c.Value == "v2" {
-			return v2Dist, v2Server
-		}
-	}
-	return v1Dist, v1Server
-}
-
-// serveSPA tries to serve a static file and falls back to index.html for
-// client-side routing.
-func serveSPA(w http.ResponseWriter, req *http.Request, distPath string, fileServer http.Handler) {
-	path := filepath.Clean(req.URL.Path)
-	if _, err := fs.Stat(os.DirFS(distPath), path[1:]); err == nil {
+		req.URL.Path = "/"
 		fileServer.ServeHTTP(w, req)
-		return
-	}
-	req.URL.Path = "/"
-	fileServer.ServeHTTP(w, req)
+	})
 }
 
 func healthHandler(w http.ResponseWriter, _ *http.Request) {
