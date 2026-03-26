@@ -11,6 +11,7 @@ import {
   Settings,
   FileText,
   LogOut,
+  X,
 } from 'lucide-react'
 
 interface NavItem {
@@ -20,7 +21,7 @@ interface NavItem {
   roles: readonly string[]
 }
 
-export function Sidebar({ currentPath }: { currentPath: string }) {
+export function Sidebar({ currentPath, onNavigate }: { currentPath: string; onNavigate?: () => void }) {
   const { t } = useTranslation()
   const queryClient = useQueryClient()
   const { role, isDemoMode, demoLogout } = useAuth()
@@ -52,6 +53,13 @@ export function Sidebar({ currentPath }: { currentPath: string }) {
         </div>
         <span className="text-lg font-semibold text-slate-900">Pebblr</span>
         <span className="ml-1 rounded bg-teal-50 px-1.5 py-0.5 text-xs font-medium text-teal-700">v2</span>
+        <button
+          onClick={onNavigate}
+          className="ml-auto rounded-lg p-1.5 text-slate-400 hover:bg-slate-100 md:hidden"
+          aria-label="Close menu"
+        >
+          <X size={18} />
+        </button>
       </div>
 
       <nav className="flex-1 space-y-1 p-3">
@@ -61,6 +69,7 @@ export function Sidebar({ currentPath }: { currentPath: string }) {
             <Link
               key={item.href}
               to={item.href}
+              onClick={onNavigate}
               className={`flex items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium transition-colors ${
                 active
                   ? 'bg-teal-50 text-teal-700'

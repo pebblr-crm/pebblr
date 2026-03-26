@@ -106,7 +106,7 @@ function TargetsPage() {
   return (
     <div className="flex h-full">
       {/* Table panel */}
-      <div className="flex-1 overflow-auto p-6">
+      <div className="flex-1 overflow-auto p-4 md:p-6">
         <div className="mb-4 flex items-center justify-between">
           <h1 className="text-2xl font-bold text-slate-900">Target Portfolio</h1>
           <div className="flex items-center gap-2">
@@ -115,8 +115,8 @@ function TargetsPage() {
         </div>
 
         {/* Filters */}
-        <div className="mb-4 flex items-center gap-3">
-          <div className="relative flex-1 max-w-xs">
+        <div className="mb-4 flex flex-wrap items-center gap-3">
+          <div className="relative w-full max-w-xs sm:flex-1">
             <Search size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
             <input
               type="text"

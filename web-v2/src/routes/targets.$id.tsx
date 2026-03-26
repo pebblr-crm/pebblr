@@ -55,7 +55,7 @@ function TargetDetailPage() {
   return (
     <div className="flex h-full flex-col">
       {/* Header */}
-      <div className="border-b border-slate-200 bg-white px-6 py-4">
+      <div className="border-b border-slate-200 bg-white px-4 py-3 md:px-6 md:py-4">
         <div className="flex items-center gap-3 mb-3">
           <a href="/targets" className="text-slate-400 hover:text-slate-600">
             <ArrowLeft size={20} />
@@ -88,10 +88,10 @@ function TargetDetailPage() {
         </div>
       </div>
 
-      {/* Content: 3 columns */}
-      <div className="flex flex-1 min-h-0">
+      {/* Content: 3 columns on desktop, stacked on mobile */}
+      <div className="flex flex-1 min-h-0 flex-col md:flex-row">
         {/* Left: Target fields */}
-        <div className="w-1/3 overflow-auto border-r border-slate-200 p-6 space-y-4">
+        <div className="overflow-auto border-b border-slate-200 p-4 space-y-4 md:w-1/3 md:border-b-0 md:border-r md:p-6">
           <Card>
             <h3 className="text-sm font-semibold text-slate-900 mb-3">Target Details</h3>
             <dl className="space-y-2">
@@ -117,7 +117,7 @@ function TargetDetailPage() {
         </div>
 
         {/* Center: Activity timeline */}
-        <div className="w-1/3 overflow-auto border-r border-slate-200 p-6">
+        <div className="overflow-auto border-b border-slate-200 p-4 md:w-1/3 md:border-b-0 md:border-r md:p-6">
           <h3 className="text-sm font-semibold text-slate-900 mb-4">
             Visit History ({activities.length})
           </h3>
@@ -159,7 +159,7 @@ function TargetDetailPage() {
         </div>
 
         {/* Right: Map */}
-        <div className="w-1/3">
+        <div className="h-56 md:h-auto md:w-1/3">
           {lat != null && lng != null ? (
             <MapContainer
               className="h-full"

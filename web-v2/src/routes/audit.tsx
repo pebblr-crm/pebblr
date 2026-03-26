@@ -112,11 +112,11 @@ function AuditPage() {
   if (isLoading) return <Spinner />
 
   return (
-    <div className="p-6">
+    <div className="p-4 md:p-6">
       {/* Header */}
-      <div className="mb-6 flex items-center justify-between">
+      <div className="mb-4 flex flex-col gap-3 sm:mb-6 sm:flex-row sm:items-center sm:justify-between">
         <div>
-          <h1 className="text-2xl font-bold text-slate-900">Audit Logs</h1>
+          <h1 className="text-xl font-bold text-slate-900 sm:text-2xl">Audit Logs</h1>
           <p className="mt-1 text-sm text-slate-500">Immutable change history and review workflow.</p>
         </div>
         <div className="flex items-center gap-3">
@@ -133,7 +133,7 @@ function AuditPage() {
       </div>
 
       {/* Filters */}
-      <div className="mb-4 flex items-center gap-3">
+      <div className="mb-4 flex flex-wrap items-center gap-3">
         <select
           value={entityTypeFilter}
           onChange={(e) => { setEntityTypeFilter(e.target.value); setPage(1) }}

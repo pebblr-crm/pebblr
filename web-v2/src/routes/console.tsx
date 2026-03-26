@@ -76,9 +76,27 @@ function ConsolePage() {
   if (usersLoading) return <Spinner />
 
   return (
-    <div className="flex h-full">
-      {/* Sub-nav */}
-      <div className="w-56 border-r border-slate-200 bg-white p-3 space-y-1">
+    <div className="flex h-full flex-col md:flex-row">
+      {/* Mobile tab bar */}
+      <div className="flex gap-1 overflow-x-auto border-b border-slate-200 bg-white px-3 py-2 md:hidden">
+        {sections.map((s) => (
+          <button
+            key={s.key}
+            onClick={() => setSection(s.key)}
+            className={`flex shrink-0 items-center gap-1.5 rounded-lg px-3 py-2 text-sm transition-colors ${
+              section === s.key
+                ? 'bg-teal-50 text-teal-700 font-medium'
+                : 'text-slate-600 hover:bg-slate-50'
+            }`}
+          >
+            {s.icon}
+            {s.label}
+          </button>
+        ))}
+      </div>
+
+      {/* Desktop sub-nav */}
+      <div className="hidden w-56 border-r border-slate-200 bg-white p-3 space-y-1 md:block">
         <h2 className="px-3 py-2 text-xs font-semibold uppercase text-slate-400">Configuration</h2>
         {sections.map((s) => (
           <button
@@ -98,7 +116,7 @@ function ConsolePage() {
       </div>
 
       {/* Content */}
-      <div className="flex-1 overflow-auto p-6">
+      <div className="flex-1 overflow-auto p-4 md:p-6">
         {section === 'users' && (
           <div>
             <h1 className="mb-4 text-xl font-bold text-slate-900">Users & Roles</h1>
