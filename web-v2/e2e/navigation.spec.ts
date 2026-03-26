@@ -24,7 +24,7 @@ test.describe('Sidebar navigation', () => {
     await expect(page.locator('text=Team Dashboard')).toBeVisible()
 
     await page.goto('/coverage')
-    await expect(page.locator('text=Filters')).toBeVisible()
+    await expect(page.locator('.md\\:static.w-72').locator('text=Filters')).toBeVisible()
   })
 
   test('navigating to admin pages renders correctly', async ({ page }) => {

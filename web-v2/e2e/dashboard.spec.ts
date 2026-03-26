@@ -16,7 +16,7 @@ test.describe('Dashboard page', () => {
   test('renders KPI stat cards', async ({ page }) => {
     await page.goto('/dashboard')
 
-    const kpiRow = page.locator('.grid.grid-cols-4')
+    const kpiRow = page.locator('.grid.grid-cols-2.md\\:grid-cols-4')
     await expect(kpiRow.locator('text=Cycle Compliance')).toBeVisible()
     await expect(kpiRow.locator('text=Coverage')).toBeVisible()
     await expect(kpiRow.locator('text=Week Progress')).toBeVisible()

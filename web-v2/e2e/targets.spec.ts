@@ -64,6 +64,6 @@ test.describe('Target detail page', () => {
   test('shows back link to targets list', async ({ page }) => {
     await page.goto('/targets/t-001')
 
-    await expect(page.locator('a[href="/targets"]')).toBeVisible()
+    await expect(page.locator('main a[href="/targets"]')).toBeVisible()
   })
 })

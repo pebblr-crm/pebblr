@@ -15,8 +15,9 @@ test.describe('App boot', () => {
 
   test('renders the sidebar with Pebblr branding', async ({ page }) => {
     await page.goto('/planner')
-    await expect(page.locator('text=Pebblr')).toBeVisible()
-    await expect(page.locator('text=v2')).toBeVisible()
+    const sidebar = page.locator('aside')
+    await expect(sidebar.locator('text=Pebblr')).toBeVisible()
+    await expect(sidebar.locator('text=v2')).toBeVisible()
   })
 
   test('does not show a blank white screen on any route', async ({ page }) => {
