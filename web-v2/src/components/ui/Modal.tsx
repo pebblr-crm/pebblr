@@ -6,9 +6,10 @@ interface ModalProps {
   onClose: () => void
   title: string
   children: ReactNode
+  footer?: ReactNode
 }
 
-export function Modal({ open, onClose, title, children }: ModalProps) {
+export function Modal({ open, onClose, title, children, footer }: ModalProps) {
   useEffect(() => {
     if (!open) return
     const handleKey = (e: KeyboardEvent) => {
@@ -41,6 +42,11 @@ export function Modal({ open, onClose, title, children }: ModalProps) {
         <div className="flex-1 overflow-auto px-4 py-4">
           {children}
         </div>
+        {footer && (
+          <div className="border-t border-slate-200 px-4 py-3">
+            {footer}
+          </div>
+        )}
       </div>
     </div>
   )
