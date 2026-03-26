@@ -11,5 +11,8 @@ type AuditEntry struct {
 	ActorID    string         `json:"actorId"`
 	OldValue   map[string]any `json:"oldValue,omitempty"`
 	NewValue   map[string]any `json:"newValue,omitempty"`
+	Status     string         `json:"status"`               // "pending", "accepted", "false_positive"
+	ReviewedBy string         `json:"reviewedBy,omitempty"`
+	ReviewedAt *time.Time     `json:"reviewedAt,omitempty"`
 	CreatedAt  time.Time      `json:"createdAt"`
 }

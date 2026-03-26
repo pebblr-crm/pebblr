@@ -41,3 +41,8 @@ func (db *DB) Dashboard() store.DashboardRepository {
 func (db *DB) Collections() store.CollectionRepository {
 	return &collectionRepository{pool: db.pool}
 }
+
+// Territories returns the PostgreSQL-backed territory repository.
+func (db *DB) Territories() store.TerritoryRepository {
+	return &territoryRepository{pool: db.pool}
+}

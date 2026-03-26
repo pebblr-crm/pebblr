@@ -15,11 +15,11 @@ export default defineConfig({
     port: 5173,
     proxy: {
       '/api': {
-        target: 'http://localhost:9090',
+        target: 'http://pebblr.local:9090',
         changeOrigin: true,
       },
       '/demo': {
-        target: 'http://localhost:9090',
+        target: 'http://pebblr.local:9090',
         changeOrigin: true,
       },
     },

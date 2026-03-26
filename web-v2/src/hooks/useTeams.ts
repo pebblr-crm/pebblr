@@ -1,0 +1,23 @@
+import { useQuery } from '@tanstack/react-query'
+import { api } from '@/api/client'
+import type { Team, TeamDetail } from '@/types/team'
+
+export const teamKeys = {
+  all: ['teams'] as const,
+  detail: (id: string) => [...teamKeys.all, id] as const,
+}
+
+export function useTeams() {
+  return useQuery({
+    queryKey: teamKeys.all,
+    queryFn: () => api.get<{ items: Team[]; total: number }>('/teams'),
+  })
+}
+
+export function useTeam(id: string) {
+  return useQuery({
+    queryKey: teamKeys.detail(id),
+    queryFn: () => api.get<TeamDetail>(`/teams/${id}`),
+    enabled: !!id,
+  })
+}
