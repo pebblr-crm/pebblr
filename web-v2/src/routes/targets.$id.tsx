@@ -353,8 +353,9 @@ function ScheduleVisitModal({ open, onClose, targetId, targetName }: {
     >
       <div className="space-y-4">
         <div>
-          <label className="mb-1.5 block text-sm font-medium text-slate-700">Date</label>
+          <label htmlFor="field-schedule-date" className="mb-1.5 block text-sm font-medium text-slate-700">Date</label>
           <input
+            id="field-schedule-date"
             type="date"
             value={dueDate}
             onChange={(e) => setDueDate(e.target.value)}
@@ -362,8 +363,8 @@ function ScheduleVisitModal({ open, onClose, targetId, targetName }: {
           />
         </div>
         <div>
-          <label className="mb-1.5 block text-sm font-medium text-slate-700">Visit Type</label>
-          <div className="flex rounded-lg border border-slate-200 overflow-hidden">
+          <label id="field-visit-type" className="mb-1.5 block text-sm font-medium text-slate-700">Visit Type</label>
+          <div role="group" aria-labelledby="field-visit-type" className="flex rounded-lg border border-slate-200 overflow-hidden">
             {visitTypes.map((vt) => (
               <button
                 key={vt.key}

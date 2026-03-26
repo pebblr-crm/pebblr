@@ -382,8 +382,11 @@ function MonthGrid({ monthDate, activities, onWeekClick, selectedRep, repName }:
           return (
             <div
               key={wi}
+              role="button"
+              tabIndex={0}
               className="grid grid-cols-7 border-b border-slate-100 last:border-0 cursor-pointer hover:bg-slate-50/50 transition-colors"
               onClick={() => onWeekClick(weekMonday)}
+              onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); onWeekClick(weekMonday) } }}
             >
               {week.map((day) => {
                 const dateStr = formatDate(day)

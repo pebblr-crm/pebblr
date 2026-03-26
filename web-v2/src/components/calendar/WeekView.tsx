@@ -229,9 +229,12 @@ function DayColumn({
             <div
               key={activity.id}
               draggable
+              role="button"
+              tabIndex={0}
               onDragStart={() => onActivityDragStart?.(activity.id)}
               onDragEnd={() => onActivityDragEnd?.()}
               onClick={() => onActivityClick?.(activity)}
+              onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); onActivityClick?.(activity) } }}
               className={`bg-white p-2 rounded border-l-4 ${borderClass} shadow-sm text-sm cursor-grab hover:shadow-md transition-all ${
                 draggingActivityId === activity.id ? 'opacity-40 scale-95' : ''
               }`}
@@ -279,7 +282,10 @@ function DayColumn({
           return (
             <div
               key={blocker.id}
+              role="button"
+              tabIndex={0}
               onClick={() => onActivityClick?.(blocker)}
+              onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); onActivityClick?.(blocker) } }}
               className="rounded border border-slate-200 overflow-hidden cursor-pointer hover:border-slate-300 transition-colors relative flex-1 min-h-[70px]"
               style={{
                 backgroundImage: HATCH_PATTERN,

@@ -431,12 +431,15 @@ function PlannerPage() {
                     <li
                       key={t.id}
                       draggable
+                      role="button"
+                      tabIndex={0}
                       onDragStart={(e) => {
                         e.dataTransfer.setData('text/plain', t.id)
                         setDragTargetId(t.id)
                       }}
                       onDragEnd={() => setDragTargetId(null)}
                       onClick={() => toggleTarget(t.id)}
+                      onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); toggleTarget(t.id) } }}
                       onMouseEnter={() => setHoveredTargetId(t.id)}
                       onMouseLeave={() => setHoveredTargetId(null)}
                       className={`px-3 py-2 border-b border-slate-50 flex items-center gap-2 text-xs cursor-pointer transition-colors ${
@@ -652,8 +655,8 @@ function PlannerPage() {
         />
         {/* Visit type toggle */}
         <div>
-          <label className="mb-1.5 block text-sm font-medium text-slate-700">Visit type</label>
-          <div className="flex rounded-lg border border-slate-200 overflow-hidden">
+          <label id="field-bulk-visit-type" className="mb-1.5 block text-sm font-medium text-slate-700">Visit type</label>
+          <div role="group" aria-labelledby="field-bulk-visit-type" className="flex rounded-lg border border-slate-200 overflow-hidden">
             <button
               type="button"
               onClick={() => setBulkVisitType('f2f')}
