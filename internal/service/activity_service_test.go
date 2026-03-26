@@ -129,6 +129,14 @@ func (r *stubAuditRepo) ListByEntity(_ context.Context, _, _ string) ([]*domain.
 	return r.entries, nil
 }
 
+func (r *stubAuditRepo) List(_ context.Context, _ store.AuditFilter) ([]*domain.AuditEntry, int, error) {
+	return r.entries, len(r.entries), nil
+}
+
+func (r *stubAuditRepo) UpdateStatus(_ context.Context, _, _, _ string) error {
+	return nil
+}
+
 // --- test config with activities ---
 
 func activityTestConfig() *config.TenantConfig {

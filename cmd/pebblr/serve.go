@@ -93,6 +93,8 @@ func serve(configPath, authProvider string) error {
 	activitySvc := service.NewActivityService(db.Activities(), db.Targets(), db.Users(), db.Audit(), enforcer, tenantCfg, service.WithDashboard(db.Dashboard()))
 	dashboardSvc := service.NewDashboardService(db.Dashboard(), enforcer, tenantCfg)
 	collectionSvc := service.NewCollectionService(db.Collections())
+	territorySvc := service.NewTerritoryService(db.Territories())
+	auditSvc := service.NewAuditService(db.Audit())
 
 	targetHandler := api.NewTargetHandler(targetSvc)
 	activityHandler := api.NewActivityHandler(activitySvc)
@@ -100,9 +102,12 @@ func serve(configPath, authProvider string) error {
 	teamHandler := api.NewTeamHandler(teamSvc)
 	userHandler := api.NewUserHandler(userSvc)
 	collectionHandler := api.NewCollectionHandler(collectionSvc)
+	territoryHandler := api.NewTerritoryHandler(territorySvc)
+	auditHandler := api.NewAuditHandler(auditSvc)
 	configHandler := api.NewConfigHandler(tenantCfg)
 
 	webDistPath := os.Getenv("WEB_DIST_PATH")
+	webV2DistPath := os.Getenv("WEB_V2_DIST_PATH")
 
 	secretPath := os.Getenv("SECRET_MOUNT_PATH")
 	if secretPath == "" {
@@ -124,8 +129,11 @@ func serve(configPath, authProvider string) error {
 		UserHandler:      userHandler,
 		ConfigHandler:      configHandler,
 		CollectionHandler:  collectionHandler,
+		TerritoryHandler:   territoryHandler,
+		AuditHandler:       auditHandler,
 		DemoHandler:        demoHandler,
 		WebDistPath:        webDistPath,
+		WebV2DistPath:      webV2DistPath,
 	})
 
 	srv := &http.Server{

@@ -41,7 +41,7 @@ Sidebar shows different menu items based on `user.role`.
 
 ## Phase 1: Infrastructure — Dual SPA Serving
 
-**Status:** Not started
+**Status:** DONE
 
 ### 1.1 Go router changes
 
@@ -91,7 +91,7 @@ Sidebar shows different menu items based on `user.role`.
 
 ## Phase 2: Backend Additions
 
-**Status:** Not started
+**Status:** DONE
 
 ### 2.1 Migration 007: Territories
 
@@ -155,7 +155,7 @@ All new endpoints functional. `make test` passes. v1 frontend unaffected.
 
 ## Phase 3: Frontend v2 Scaffold
 
-**Status:** Not started
+**Status:** DONE
 
 ### 3.1 Project setup
 
@@ -225,7 +225,7 @@ web-v2/src/
 
 ## Phase 4: View Implementation
 
-### P0 — Build First
+### P0 — DONE
 
 | View | Route | Key Components | Data Hooks |
 |---|---|---|---|
@@ -233,7 +233,7 @@ web-v2/src/
 | Mobile Activity Submission | `/activities/new` | 2-step form (outcome → notes), quick tags (MultiSelectField), outcome radio grid | useCreateActivity, useConfig |
 | Rep Target Portfolio | `/targets` | DataTable, map sidebar, bulk action footer, filter bar | useTargets, useTargetVisitStatus, useTargetFrequencyStatus |
 
-### P1 — Build Second
+### P1 — DONE
 
 | View | Route | Key Components |
 |---|---|---|
@@ -242,7 +242,7 @@ web-v2/src/
 | Manager Team Dashboard | `/dashboard` | KPI cards (StatCard), rep performance table (DataTable), activity breakdown chart |
 | Manager Rep Drill-Down | `/reps/$id` | Read-only banner, stats cards, map + schedule (reuse planner components) |
 
-### P2 — Build Third
+### P2 — DONE
 
 | View | Route | Key Components |
 |---|---|---|
@@ -257,13 +257,16 @@ web-v2/src/
 
 ---
 
-## Phase 5: Quality & Testing
+## Phase 5: Quality & Testing — DONE
 
-- **TDD** — every file gets a companion `.test.ts(x)`
-- **Backend tests:** repository integration tests, service unit tests, handler HTTP tests
-- **Frontend tests:** component tests (`@testing-library/react`), hook tests (`renderHook`)
-- **Quality gates at every phase:** `make test && make lint && make typecheck`
-- **E2E:** extend `e2e/` for territory CRUD, audit status, SPA toggle
+**Results:**
+- Go tests: all passing (api, auth, config, domain, rbac, service, store, e2e)
+- v1 frontend: 15 test files, 158 tests passing
+- v2 frontend: 9 test files, 31 tests passing (Badge, Button, Card, Spinner, EmptyState, StatCard, WeekView, ApiError, useAuth)
+- v2 typecheck: clean
+- v2 lint: clean (zero warnings)
+- v2 build: 416KB gzipped
+- Backend: 24 new handler tests (9 dual SPA + 15 territory/audit)
 
 ---
 

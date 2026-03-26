@@ -25,8 +25,11 @@ type RouterConfig struct {
 	UserHandler      *UserHandler
 	ConfigHandler      *ConfigHandler
 	CollectionHandler  *CollectionHandler
+	TerritoryHandler   *TerritoryHandler
+	AuditHandler       *AuditHandler
 	DemoHandler        *demo.Handler
 	WebDistPath        string
+	WebV2DistPath      string
 }
 
 // NewRouter constructs and returns the application HTTP router.
@@ -55,7 +58,7 @@ func NewRouter(cfg RouterConfig) http.Handler {
 		mountAPIRoutes(r, cfg)
 	})
 
-	mountSPA(r, cfg.WebDistPath)
+	mountDualSPA(r, cfg.WebDistPath, cfg.WebV2DistPath)
 
 	return r
 }
@@ -129,6 +132,20 @@ func mountAPIRoutes(r chi.Router, cfg RouterConfig) {
 	}
 	mountOrStub(r, "/collections", collectionRouter, []string{"/", "/{id}"})
 
+	// Territory routes
+	var territoryRouter http.Handler
+	if cfg.TerritoryHandler != nil {
+		territoryRouter = NewTerritoryRouter(cfg.TerritoryHandler)
+	}
+	mountOrStub(r, "/territories", territoryRouter, []string{"/", "/{id}"})
+
+	// Audit routes
+	var auditRouter http.Handler
+	if cfg.AuditHandler != nil {
+		auditRouter = NewAuditRouter(cfg.AuditHandler)
+	}
+	mountOrStub(r, "/audit", auditRouter, []string{"/", "/{id}/status"})
+
 	// Config route
 	if cfg.ConfigHandler != nil {
 		r.Get("/config", cfg.ConfigHandler.Get)
@@ -137,23 +154,62 @@ func mountAPIRoutes(r chi.Router, cfg RouterConfig) {
 	}
 }
 
-// mountSPA serves the frontend SPA from the given directory if configured.
-func mountSPA(r *chi.Mux, webDistPath string) {
-	if webDistPath == "" {
+const uiCookieName = "pebblr_ui"
+
+// mountDualSPA serves either the v1 or v2 frontend SPA based on the pebblr_ui cookie.
+// The ?ui=v2 or ?ui=v1 query parameter sets the cookie and redirects.
+// If v2DistPath is empty, only v1 is served regardless of cookie.
+func mountDualSPA(r *chi.Mux, v1DistPath, v2DistPath string) {
+	if v1DistPath == "" {
 		return
 	}
-	staticFS := http.Dir(webDistPath)
-	fileServer := http.FileServer(staticFS)
-	r.NotFound(func(w http.ResponseWriter, r *http.Request) {
-		// Try to serve the requested file. If it doesn't exist,
-		// fall back to index.html for client-side routing.
-		path := filepath.Clean(r.URL.Path)
-		if _, err := fs.Stat(os.DirFS(webDistPath), path[1:]); err == nil {
-			fileServer.ServeHTTP(w, r)
+
+	v1FS := http.Dir(v1DistPath)
+	v1Server := http.FileServer(v1FS)
+
+	var v2Server http.Handler
+	if v2DistPath != "" {
+		v2Server = http.FileServer(http.Dir(v2DistPath))
+	}
+
+	r.NotFound(func(w http.ResponseWriter, req *http.Request) {
+		// Handle ?ui= query param: set cookie and redirect.
+		if uiParam := req.URL.Query().Get("ui"); uiParam == "v1" || uiParam == "v2" {
+			http.SetCookie(w, &http.Cookie{
+				Name:     uiCookieName,
+				Value:    uiParam,
+				Path:     "/",
+				MaxAge:   30 * 24 * 60 * 60, // 30 days
+				SameSite: http.SameSiteLaxMode,
+			})
+			q := req.URL.Query()
+			q.Del("ui")
+			dest := req.URL.Path
+			if encoded := q.Encode(); encoded != "" {
+				dest += "?" + encoded
+			}
+			http.Redirect(w, req, dest, http.StatusFound)
 			return
 		}
-		r.URL.Path = "/"
-		fileServer.ServeHTTP(w, r)
+
+		// Decide which SPA to serve.
+		distPath := v1DistPath
+		fileServer := v1Server
+		if v2Server != nil {
+			if c, err := req.Cookie(uiCookieName); err == nil && c.Value == "v2" {
+				distPath = v2DistPath
+				fileServer = v2Server
+			}
+		}
+
+		// Try to serve a static file. Fall back to index.html for client-side routing.
+		path := filepath.Clean(req.URL.Path)
+		if _, err := fs.Stat(os.DirFS(distPath), path[1:]); err == nil {
+			fileServer.ServeHTTP(w, req)
+			return
+		}
+		req.URL.Path = "/"
+		fileServer.ServeHTTP(w, req)
 	})
 }
 
