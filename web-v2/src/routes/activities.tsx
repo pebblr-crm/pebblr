@@ -62,7 +62,7 @@ function ActivitiesPage() {
   if (isLoading) return <Spinner />
 
   return (
-    <div className="p-6">
+    <div className="p-4 md:p-6">
       {/* Header */}
       <div className="mb-6 flex items-center justify-between">
         <h1 className="text-2xl font-bold text-slate-900">Activity Log</h1>
@@ -75,7 +75,7 @@ function ActivitiesPage() {
       </div>
 
       {/* Recovery + nudge cards */}
-      <div className="mb-6 grid grid-cols-3 gap-4">
+      <div className="mb-6 grid grid-cols-1 gap-3 sm:grid-cols-3 sm:gap-4">
         {recovery && (
           <Card>
             <div className="flex items-center gap-2">
@@ -86,7 +86,7 @@ function ActivitiesPage() {
             <p className="text-xs text-slate-500">{recovery.earned} earned, {recovery.taken} taken</p>
           </Card>
         )}
-        <Card className="col-span-2 flex items-center gap-3 bg-amber-50 border-amber-200">
+        <Card className="sm:col-span-2 flex items-center gap-3 bg-amber-50 border-amber-200">
           <AlertTriangle size={18} className="text-amber-600 shrink-0" />
           <span className="text-sm text-amber-800">
             Review your submitted activities. Overdue targets need visits scheduled.
@@ -95,7 +95,7 @@ function ActivitiesPage() {
       </div>
 
       {/* Filters */}
-      <div className="mb-4 flex items-center gap-3">
+      <div className="mb-4 flex flex-wrap items-center gap-3">
         <select
           value={typeFilter}
           onChange={(e) => setTypeFilter(e.target.value)}
