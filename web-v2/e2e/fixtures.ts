@@ -44,7 +44,10 @@ export const ACTIVITIES = {
       duration: 'full_day',
       targetName: 'Dr. Elena Popescu',
       label: null,
+      creatorId: 'u-001',
       submittedAt: '2026-03-25T18:00:00Z',
+      createdAt: '2026-03-25T08:00:00Z',
+      updatedAt: '2026-03-25T18:00:00Z',
       fields: { notes: 'Good discussion about new treatment.', tags: ['Left Samples'] },
     },
     {
@@ -55,7 +58,10 @@ export const ACTIVITIES = {
       duration: 'half_day',
       targetName: 'Farmacia Central',
       label: null,
+      creatorId: 'u-001',
       submittedAt: null,
+      createdAt: '2026-03-26T07:00:00Z',
+      updatedAt: '2026-03-26T07:00:00Z',
       fields: { tags: [] },
     },
     {
@@ -66,7 +72,10 @@ export const ACTIVITIES = {
       duration: 'full_day',
       targetName: null,
       label: 'Team meeting',
+      creatorId: 'u-001',
       submittedAt: null,
+      createdAt: '2026-03-24T09:00:00Z',
+      updatedAt: '2026-03-24T09:00:00Z',
       fields: {},
     },
   ],
@@ -88,9 +97,9 @@ export const COVERAGE = {
 
 export const FREQUENCY = {
   items: [
-    { classification: 'A', targetCount: 5, totalVisits: 20, required: 25, compliance: 0.8 },
-    { classification: 'B', targetCount: 10, totalVisits: 15, required: 20, compliance: 0.75 },
-    { classification: 'C', targetCount: 10, totalVisits: 5, required: 10, compliance: 0.5 },
+    { classification: 'A', targetCount: 5, totalVisits: 20, required: 25, compliance: 80 },
+    { classification: 'B', targetCount: 10, totalVisits: 15, required: 20, compliance: 75 },
+    { classification: 'C', targetCount: 10, totalVisits: 5, required: 10, compliance: 50 },
   ],
 }
 
@@ -208,9 +217,9 @@ export const VISIT_STATUS = {
 
 export const FREQUENCY_STATUS = {
   items: [
-    { targetId: 't-001', compliance: 0.9 },
-    { targetId: 't-002', compliance: 0.6 },
-    { targetId: 't-003', compliance: 0.3 },
+    { targetId: 't-001', compliance: 90 },
+    { targetId: 't-002', compliance: 60 },
+    { targetId: 't-003', compliance: 30 },
   ],
 }
 
@@ -263,6 +272,11 @@ export async function mockApi(page: Page) {
     if (path === '/targets/frequency-status') return route.fulfill({ json: FREQUENCY_STATUS })
     if (path === '/targets/coverage') return route.fulfill({ json: COVERAGE })
     if (path === '/activities' || path === '/activities/') return route.fulfill({ json: ACTIVITIES })
+    if (path.match(/^\/activities\/[^/]+$/) && !path.includes('stats') && !path.includes('frequency') && !path.includes('recovery') && !path.includes('clone')) {
+      const id = path.split('/').pop()
+      const a = ACTIVITIES.items.find((a) => a.id === id)
+      return route.fulfill({ json: { activity: a ?? ACTIVITIES.items[0] } })
+    }
     if (path === '/activities/stats') return route.fulfill({ json: ACTIVITY_STATS })
     if (path === '/activities/frequency') return route.fulfill({ json: FREQUENCY })
     if (path === '/activities/recovery-balance') return route.fulfill({ json: RECOVERY_BALANCE })

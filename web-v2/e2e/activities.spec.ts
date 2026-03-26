@@ -1,5 +1,5 @@
 import { test, expect } from '@playwright/test'
-import { mockApi, ACTIVITIES } from './fixtures'
+import { mockApi, ACTIVITIES, CONFIG } from './fixtures'
 
 test.describe('Activities page', () => {
   test.beforeEach(async ({ page }) => {
@@ -49,89 +49,161 @@ test.describe('Activities page', () => {
     await expect(page.locator('text=realizat').first()).toBeVisible()
     await expect(page.locator('text=planificat').first()).toBeVisible()
   })
-
-  test('"Log Activity" button links to new activity form', async ({ page }) => {
-    await page.goto('/activities')
-
-    await page.click('text=Log Activity')
-    await expect(page).toHaveURL(/\/activities\/new/)
-  })
 })
 
-test.describe('New activity form', () => {
+test.describe('Create activity modal', () => {
   test.beforeEach(async ({ page }) => {
     await mockApi(page)
   })
 
-  test('renders step 1 with activity type, tags, and outcomes', async ({ page }) => {
-    await page.goto('/activities/new')
+  test('"Log Activity" opens create modal with form fields', async ({ page }) => {
+    await page.goto('/activities')
 
-    await expect(page.locator('text=Log Activity')).toBeVisible()
-    await expect(page.locator('text=Step 1 of 2')).toBeVisible()
+    await page.click('text=Log Activity')
 
-    // Activity type select
-    await expect(page.locator('text=Activity Type')).toBeVisible()
+    // Modal should be open with form
+    await expect(page.locator('label:has-text("Activity Type")')).toBeVisible()
+    await expect(page.locator('label:has-text("Quick Tags")')).toBeVisible()
+    await expect(page.getByRole('button', { name: 'Left Samples', exact: true })).toBeVisible()
+    await expect(page.getByRole('button', { name: 'Follow-up Required', exact: true })).toBeVisible()
 
-    // Quick tags
-    await expect(page.locator('text=Left Samples')).toBeVisible()
-    await expect(page.locator('text=Follow-up Required')).toBeVisible()
-
-    // Outcome buttons
-    await expect(page.locator('text=Completed')).toBeVisible()
-    await expect(page.locator('text=Rescheduled')).toBeVisible()
-    await expect(page.locator('text=No Show')).toBeVisible()
-    await expect(page.locator('text=Cancelled')).toBeVisible()
+    // URL should NOT change — stays on /activities
+    expect(page.url()).toMatch(/\/activities\/?$/)
   })
 
-  test('continue button is disabled until outcome is selected', async ({ page }) => {
-    await page.goto('/activities/new')
+  test('submit button is disabled until activity type is selected', async ({ page }) => {
+    await page.goto('/activities')
+    await page.click('text=Log Activity')
 
-    const continueBtn = page.locator('button:has-text("Continue")')
-    await expect(continueBtn).toBeDisabled()
+    // The submit button in the modal — last "Log Activity" button
+    const submitBtn = page.locator('button:has-text("Log Activity")').last()
+    await expect(submitBtn).toBeDisabled()
 
-    // Select an outcome
-    await page.click('text=Completed')
-    await expect(continueBtn).toBeEnabled()
+    // Select an activity type from the modal's select
+    const typeSelect = page.locator('label:has-text("Activity Type")').locator('..').locator('select')
+    await typeSelect.selectOption(CONFIG.activities.types[0].key)
+    await expect(submitBtn).toBeEnabled()
   })
 
-  test('advances to step 2 and shows notes + submit', async ({ page }) => {
-    await page.goto('/activities/new')
+  test('can toggle quick tags', async ({ page }) => {
+    await page.goto('/activities')
+    await page.click('text=Log Activity')
 
-    // Complete step 1
-    await page.click('text=Left Samples')
-    await page.click('text=Completed')
-    await page.click('button:has-text("Continue")')
+    const tag = page.getByRole('button', { name: 'Left Samples', exact: true })
+    await tag.click()
+    // Tag should have teal styling when selected
+    await expect(tag).toHaveClass(/border-teal-500/)
 
-    // Step 2
-    await expect(page.locator('text=Step 2 of 2')).toBeVisible()
-    await expect(page.locator('text=Visit Notes')).toBeVisible()
-    await expect(page.locator('text=Schedule next visit?')).toBeVisible()
-    await expect(page.locator('button:has-text("Submit Activity")')).toBeVisible()
-    await expect(page.locator('button:has-text("Back")')).toBeVisible()
+    // Click again to deselect
+    await tag.click()
+    await expect(tag).toHaveClass(/border-slate-200/)
   })
 
-  test('submits activity and navigates to activities page', async ({ page }) => {
-    await page.goto('/activities/new')
+  test('submitting closes modal and stays on activities page', async ({ page }) => {
+    await page.goto('/activities')
+    await page.click('text=Log Activity')
 
-    // Step 1
-    await page.click('text=Completed')
-    await page.click('button:has-text("Continue")')
+    // Fill form
+    const typeSelect = page.locator('label:has-text("Activity Type")').locator('..').locator('select')
+    await typeSelect.selectOption(CONFIG.activities.types[0].key)
+    await page.locator('button:has-text("Log Activity")').last().click()
 
-    // Step 2 — fill notes and submit
-    await page.locator('textarea').fill('Test visit notes')
-    await page.click('button:has-text("Submit Activity")')
-
-    await expect(page).toHaveURL(/\/activities/, { timeout: 5000 })
+    // Modal should close
+    await expect(page.locator('label:has-text("Activity Type")')).not.toBeVisible({ timeout: 5000 })
+    expect(page.url()).toMatch(/\/activities\/?$/)
   })
 
-  test('back button returns to step 1', async ({ page }) => {
-    await page.goto('/activities/new')
+  test('closing modal with X button dismisses it', async ({ page }) => {
+    await page.goto('/activities')
+    await page.click('text=Log Activity')
 
-    await page.click('text=Completed')
-    await page.click('button:has-text("Continue")')
-    await expect(page.locator('text=Step 2 of 2')).toBeVisible()
+    await expect(page.locator('label:has-text("Activity Type")')).toBeVisible()
 
-    await page.click('button:has-text("Back")')
-    await expect(page.locator('text=Step 1 of 2')).toBeVisible()
+    // Click X button
+    await page.locator('button[aria-label="Close"]').click()
+
+    await expect(page.locator('label:has-text("Activity Type")')).not.toBeVisible()
+  })
+})
+
+test.describe('Activity detail modal', () => {
+  test.beforeEach(async ({ page }) => {
+    await mockApi(page)
+  })
+
+  test('clicking an activity card opens detail modal', async ({ page }) => {
+    await page.goto('/activities')
+
+    // Click the first activity (Dr. Elena Popescu)
+    await page.locator('button:has-text("Dr. Elena Popescu")').click()
+
+    // Modal should show activity detail line with date
+    await expect(page.getByText(/visit · full_day · /)).toBeVisible()
+
+    // URL should NOT change
+    expect(page.url()).toMatch(/\/activities\/?$/)
+  })
+
+  test('detail modal shows notes', async ({ page }) => {
+    await page.goto('/activities')
+
+    await page.locator('button:has-text("Dr. Elena Popescu")').click()
+
+    // Notes text appears in both the list card and the modal — check count is 2
+    await expect(page.getByText('Good discussion about new treatment.')).toHaveCount(2)
+  })
+
+  test('detail modal shows tags', async ({ page }) => {
+    await page.goto('/activities')
+
+    await page.locator('button:has-text("Dr. Elena Popescu")').click()
+
+    // "Left Samples" appears once in the list card and once in the modal
+    await expect(page.getByText('Left Samples')).toHaveCount(2)
+  })
+
+  test('detail modal shows submitted badge for completed activities', async ({ page }) => {
+    await page.goto('/activities')
+
+    await page.locator('button:has-text("Dr. Elena Popescu")').click()
+
+    // Submitted badge in both list and modal
+    const submittedBadges = page.getByText('Submitted')
+    await expect(submittedBadges.first()).toBeVisible()
+  })
+
+  test('detail modal shows status transition buttons for planned activities', async ({ page }) => {
+    await page.goto('/activities')
+
+    // Click the planned activity (Farmacia Central)
+    await page.locator('button:has-text("Farmacia Central")').click()
+
+    // planificat can transition to realizat or anulat
+    await expect(page.getByRole('button', { name: 'Completed', exact: true })).toBeVisible({ timeout: 5000 })
+    await expect(page.getByRole('button', { name: 'Cancelled', exact: true })).toBeVisible()
+  })
+
+  test('closing detail modal with X dismisses it', async ({ page }) => {
+    await page.goto('/activities')
+
+    await page.locator('button:has-text("Dr. Elena Popescu")').click()
+
+    // Wait for modal content
+    await expect(page.getByText('Created')).toBeVisible({ timeout: 5000 })
+
+    // Close
+    await page.locator('button[aria-label="Close"]').click()
+
+    // "Created" label is only in the modal
+    await expect(page.getByText('Created')).not.toBeVisible()
+  })
+
+  test('detail modal shows valid creation date, not Invalid Date', async ({ page }) => {
+    await page.goto('/activities')
+
+    await page.locator('button:has-text("Dr. Elena Popescu")').click()
+
+    await expect(page.getByText('Created')).toBeVisible({ timeout: 5000 })
+    await expect(page.getByText('Invalid Date')).not.toBeVisible()
   })
 })
