@@ -42,7 +42,7 @@ function DashboardPage() {
       freqColumnHelper.accessor('compliance', {
         header: 'Compliance',
         cell: (info) => {
-          const v = Math.round(info.getValue() * 100)
+          const v = Math.round(info.getValue())
           const color = v >= 80 ? 'text-emerald-600' : v >= 50 ? 'text-amber-600' : 'text-red-600'
           return <span className={`font-semibold ${color}`}>{v}%</span>
         },

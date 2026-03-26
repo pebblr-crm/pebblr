@@ -14,7 +14,6 @@ import { Route as dashboardRoute } from '@/routes/dashboard'
 import { Route as coverageRoute } from '@/routes/coverage'
 import { Route as consoleRoute } from '@/routes/console'
 import { Route as auditRoute } from '@/routes/audit'
-import { Route as newActivityRoute } from '@/routes/activities.new'
 import { Route as targetDetailRoute } from '@/routes/targets.$id'
 import { Route as repDrillDownRoute } from '@/routes/reps.$id'
 import { Route as signInRoute } from '@/routes/sign-in'
@@ -26,7 +25,6 @@ const routeTree = rootRoute.addChildren([
   targetsRoute,
   targetDetailRoute,
   activitiesRoute,
-  newActivityRoute,
   dashboardRoute,
   repDrillDownRoute,
   coverageRoute,
