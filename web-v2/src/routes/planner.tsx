@@ -11,7 +11,7 @@ import { StatCard } from '@/components/data/StatCard'
 import { Button } from '@/components/ui/Button'
 import { Badge } from '@/components/ui/Badge'
 import { Spinner } from '@/components/ui/Spinner'
-import { ChevronLeft, ChevronRight, Copy, CalendarDays } from 'lucide-react'
+import { ChevronLeft, ChevronRight, Copy, CalendarDays, MapIcon, X } from 'lucide-react'
 
 export const Route = createRoute({
   getParentRoute: () => rootRoute,
@@ -54,6 +54,7 @@ function getClassification(fields: Record<string, unknown>): string {
 
 function PlannerPage() {
   const [weekStart, setWeekStart] = useState(() => getMonday(new Date()))
+  const [showMobileMap, setShowMobileMap] = useState(false)
 
   const weekEnd = useMemo(() => addDays(weekStart, 4), [weekStart])
   const dateFrom = formatDate(weekStart)
@@ -146,8 +147,8 @@ function PlannerPage() {
 
       {/* Main content: map + calendar */}
       <div className="flex flex-1 min-h-0 flex-col md:flex-row">
-        {/* Map */}
-        <div className="h-56 border-b border-slate-200 md:h-auto md:w-1/2 md:border-b-0 md:border-r">
+        {/* Map — always visible on desktop, toggle on mobile */}
+        <div className="hidden md:block md:w-1/2 md:border-r md:border-slate-200">
           <MapContainer className="h-full">
             {(map) =>
               geoTargets.map((t) => (
@@ -164,8 +165,47 @@ function PlannerPage() {
           </MapContainer>
         </div>
 
+        {/* Mobile map overlay */}
+        {showMobileMap && (
+          <div className="fixed inset-0 z-50 flex flex-col bg-white md:hidden">
+            <div className="flex items-center justify-between border-b border-slate-200 px-4 py-3">
+              <h2 className="text-sm font-semibold text-slate-900">Target Map</h2>
+              <button
+                onClick={() => setShowMobileMap(false)}
+                className="rounded-lg p-1.5 text-slate-400 hover:bg-slate-100"
+              >
+                <X size={20} />
+              </button>
+            </div>
+            <div className="flex-1">
+              <MapContainer className="h-full">
+                {(map) =>
+                  geoTargets.map((t) => (
+                    <TargetMarker
+                      key={t.id}
+                      map={map}
+                      lat={getLat(t.fields)!}
+                      lng={getLng(t.fields)!}
+                      name={t.name}
+                      priority={getClassification(t.fields)}
+                    />
+                  ))
+                }
+              </MapContainer>
+            </div>
+          </div>
+        )}
+
         {/* Calendar */}
         <div className="flex-1 overflow-auto p-4 md:w-1/2">
+          {/* Mobile map toggle */}
+          <button
+            onClick={() => setShowMobileMap(true)}
+            className="mb-3 flex w-full items-center justify-center gap-2 rounded-lg border border-slate-200 bg-white py-2.5 text-sm font-medium text-slate-600 hover:bg-slate-50 md:hidden"
+          >
+            <MapIcon size={16} />
+            Show Map ({geoTargets.length} targets)
+          </button>
           <WeekView
             weekStart={weekStart}
             activities={activities}
