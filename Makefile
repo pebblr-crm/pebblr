@@ -2,7 +2,7 @@
 # CI/CD pipelines call these targets only.
 
 .DEFAULT_GOAL := help
-.PHONY: help build test lint typecheck dev-api dev-web dev-web-legacy dev-db dev-db-stop dev-db-reset seed cluster-up cluster-deps deploy migrate validate-config clean helm-validate e2e e2e-teardown e2e-cluster e2e-db e2e-deploy e2e-web e2e-web-integration sonar
+.PHONY: help build test lint typecheck dev-api dev-web dev-db dev-db-stop dev-db-reset seed cluster-up cluster-deps deploy migrate validate-config clean helm-validate e2e e2e-teardown e2e-cluster e2e-db e2e-deploy e2e-web e2e-web-integration sonar
 
 # ── Pinned versions ───────────────────────────────────────────────────────────
 ESO_VERSION           := 0.12.1
@@ -11,8 +11,7 @@ CERT_MANAGER_VERSION  := v1.17.1
 
 # ── Paths ─────────────────────────────────────────────────────────────────────
 GO_CMD     := cmd/pebblr
-WEB_DIR        := web
-WEB_LEGACY_DIR := web-legacy
+WEB_DIR    := web
 CLUSTER    := pebblr-local
 KIND_CFG := deploy/kind/kind-config.yaml
 
@@ -24,33 +23,26 @@ help: ## Show available targets
 	@grep -E '^[a-zA-Z_-]+:.*##' $(MAKEFILE_LIST) | \
 		awk 'BEGIN {FS = ":.*## "}; {printf "  \033[36m%-20s\033[0m %s\n", $$1, $$2}' | sort
 
-build: ## Build Go binary and both React frontends
+build: ## Build Go binary and React frontend
 	@go build -o bin/pebblr ./$(GO_CMD)
 	@cd $(WEB_DIR) && bun install --frozen-lockfile && bun run build
-	@cd $(WEB_LEGACY_DIR) && bun install --frozen-lockfile && bun run build
 
-test: ## Run Go tests and both frontend tests
+test: ## Run Go tests and frontend tests
 	@go test ./...
 	@cd $(WEB_DIR) && bun run test
-	@cd $(WEB_LEGACY_DIR) && bun run test
 
-lint: ## Run golangci-lint and ESLint on both frontends
+lint: ## Run golangci-lint and ESLint
 	@golangci-lint run ./...
 	@cd $(WEB_DIR) && bun run lint
-	@cd $(WEB_LEGACY_DIR) && bun run lint
 
-typecheck: ## Run tsc --noEmit in both frontends
+typecheck: ## Run tsc --noEmit
 	@cd $(WEB_DIR) && bun run typecheck
-	@cd $(WEB_LEGACY_DIR) && bun run typecheck
 
 dev-api: ## Run Go API server locally with hot reload
 	@air -c .air.toml || go run ./$(GO_CMD) serve
 
 dev-web: ## Run Vite dev server
 	@cd $(WEB_DIR) && bun run dev
-
-dev-web-legacy: ## Run Vite dev server (legacy) on port 5173
-	@cd $(WEB_LEGACY_DIR) && bun run dev
 
 dev-db: ## Deploy on-cluster PostgreSQL, run migrations, and seed data (pebblr namespace)
 	$(AKS_GUARD)
@@ -136,4 +128,4 @@ sonar: ## Run SonarCloud analysis locally
 		-Dsonar.token=$${SONAR_TOKEN:?Set SONAR_TOKEN}
 
 clean: ## Clean build artifacts
-	@rm -rf bin/ web/dist/ web/node_modules/.vite web-legacy/dist/ web-legacy/node_modules/.vite
+	@rm -rf bin/ web/dist/ web/node_modules/.vite

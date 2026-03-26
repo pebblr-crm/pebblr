@@ -49,7 +49,6 @@ if ! curl -sf "http://127.0.0.1:${LOCAL_PORT}/healthz" >/dev/null 2>&1; then
   exit 1
 fi
 
-# The new web frontend is now served by default — no cookie needed.
 echo "==> Verifying SPA is served..."
 HTTP_STATUS=$(curl -s -o /dev/null -w '%{http_code}' -L "http://127.0.0.1:${LOCAL_PORT}/")
 if [[ "$HTTP_STATUS" != "200" ]]; then

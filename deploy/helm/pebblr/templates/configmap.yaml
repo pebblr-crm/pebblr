@@ -9,7 +9,6 @@ data:
   API_PORT: {{ .Values.config.apiPort | quote }}
   LOG_LEVEL: {{ .Values.config.logLevel | quote }}
   WEB_DIST_PATH: {{ .Values.config.webDistPath | quote }}
-  WEB_LEGACY_DIST_PATH: {{ .Values.config.webLegacyDistPath | quote }}
   DB_HOST: {{ .Values.database.host | quote }}
   DB_PORT: {{ .Values.database.port | quote }}
   DB_NAME: {{ .Values.database.name | quote }}

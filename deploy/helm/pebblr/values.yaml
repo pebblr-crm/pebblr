@@ -95,7 +95,6 @@ config:
   apiPort: "8080"
   logLevel: "info"
   webDistPath: "/app/web/dist"
-  webLegacyDistPath: "/app/web-legacy/dist"
   tenantConfigPath: "/app/config/tenant.json"
 
 livenessProbe:

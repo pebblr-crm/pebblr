@@ -11,36 +11,26 @@
  *   - 18 activities (visits, admin, meetings, travel, training, vacation)
  *   - 13 audit log entries
  */
-import { test, expect, type Page } from '@playwright/test'
-
-// Navigate to the v2 UI by setting the pebblr_ui=v2 cookie.
-async function gotoV2(page: Page, path: string) {
-  // First visit sets the v2 cookie via query param.
-  if (!page.url().includes('ui=v2')) {
-    await page.goto('/?ui=v2')
-  }
-  await page.goto(path)
-}
+import { test, expect } from '@playwright/test'
 
 test.describe('Smoke: app boots on real backend', () => {
-  test('v2 SPA loads without crashing', async ({ page }) => {
-    await gotoV2(page, '/')
+  test('SPA loads without crashing', async ({ page }) => {
+    await page.goto('/')
 
     // Should redirect to /planner and show the workspace
     await expect(page.locator('text=Planning Workspace')).toBeVisible({ timeout: 15_000 })
   })
 
-  test('sidebar renders with Pebblr v2 branding', async ({ page }) => {
-    await gotoV2(page, '/planner')
+  test('sidebar renders with Pebblr branding', async ({ page }) => {
+    await page.goto('/planner')
 
     await expect(page.locator('text=Pebblr')).toBeVisible({ timeout: 10_000 })
-    await expect(page.locator('text=v2')).toBeVisible()
   })
 
   test('no blank white screen on any route', async ({ page }) => {
     const routes = ['/planner', '/targets', '/activities', '/dashboard', '/console', '/audit']
     for (const route of routes) {
-      await gotoV2(page, route)
+      await page.goto(route)
       const bodyText = await page.locator('body').innerText({ timeout: 10_000 })
       expect(bodyText.trim().length, `Route ${route} rendered empty`).toBeGreaterThan(0)
     }
@@ -49,7 +39,7 @@ test.describe('Smoke: app boots on real backend', () => {
 
 test.describe('Targets: real seed data', () => {
   test('target portfolio shows seeded doctors and pharmacies', async ({ page }) => {
-    await gotoV2(page, '/targets')
+    await page.goto('/targets')
 
     await expect(page.locator('h1:has-text("Target Portfolio")')).toBeVisible({ timeout: 10_000 })
 
@@ -63,7 +53,7 @@ test.describe('Targets: real seed data', () => {
   })
 
   test('target detail page loads real target data', async ({ page }) => {
-    await gotoV2(page, '/targets')
+    await page.goto('/targets')
 
     await expect(page.locator('text=Dr. Elena Popescu')).toBeVisible({ timeout: 10_000 })
 
@@ -77,7 +67,7 @@ test.describe('Targets: real seed data', () => {
   })
 
   test('targets page search filters results', async ({ page }) => {
-    await gotoV2(page, '/targets')
+    await page.goto('/targets')
     await expect(page.locator('h1:has-text("Target Portfolio")')).toBeVisible({ timeout: 10_000 })
 
     const searchInput = page.locator('input[placeholder="Search targets..."]')
@@ -95,7 +85,7 @@ test.describe('Targets: real seed data', () => {
 
 test.describe('Activities: real seed data', () => {
   test('activity log shows seeded activities', async ({ page }) => {
-    await gotoV2(page, '/activities')
+    await page.goto('/activities')
 
     await expect(page.locator('h1:has-text("Activity Log")')).toBeVisible({ timeout: 10_000 })
 
@@ -106,7 +96,7 @@ test.describe('Activities: real seed data', () => {
   })
 
   test('new activity form loads config from backend', async ({ page }) => {
-    await gotoV2(page, '/activities/new')
+    await page.goto('/activities/new')
 
     await expect(page.locator('text=Log Activity')).toBeVisible({ timeout: 10_000 })
     await expect(page.locator('text=Step 1 of 2')).toBeVisible()
@@ -120,7 +110,7 @@ test.describe('Activities: real seed data', () => {
 
 test.describe('Dashboard: real aggregated data', () => {
   test('team dashboard shows real teams and KPIs', async ({ page }) => {
-    await gotoV2(page, '/dashboard')
+    await page.goto('/dashboard')
 
     await expect(page.locator('h1:has-text("Team Dashboard")')).toBeVisible({ timeout: 10_000 })
 
@@ -136,7 +126,7 @@ test.describe('Dashboard: real aggregated data', () => {
 
 test.describe('Console: real admin data', () => {
   test('users table shows seeded users', async ({ page }) => {
-    await gotoV2(page, '/console')
+    await page.goto('/console')
 
     await expect(page.locator('h1:has-text("Users & Roles")')).toBeVisible({ timeout: 10_000 })
 
@@ -146,7 +136,7 @@ test.describe('Console: real admin data', () => {
   })
 
   test('teams section shows seeded teams', async ({ page }) => {
-    await gotoV2(page, '/console')
+    await page.goto('/console')
 
     await expect(page.locator('h1:has-text("Users & Roles")')).toBeVisible({ timeout: 10_000 })
 
@@ -160,7 +150,7 @@ test.describe('Console: real admin data', () => {
 
 test.describe('Audit: real audit entries', () => {
   test('audit page shows seeded log entries', async ({ page }) => {
-    await gotoV2(page, '/audit')
+    await page.goto('/audit')
 
     await expect(page.locator('h1:has-text("Audit Logs")')).toBeVisible({ timeout: 10_000 })
 
@@ -173,7 +163,7 @@ test.describe('Audit: real audit entries', () => {
 
 test.describe('Navigation: sidebar links work end-to-end', () => {
   test('can navigate between all pages without errors', async ({ page }) => {
-    await gotoV2(page, '/planner')
+    await page.goto('/planner')
     await expect(page.locator('text=Planning Workspace')).toBeVisible({ timeout: 15_000 })
 
     // Navigate to targets

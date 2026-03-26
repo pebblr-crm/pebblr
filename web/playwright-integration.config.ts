@@ -26,10 +26,6 @@ export default defineConfig({
   use: {
     baseURL,
     trace: 'on-first-retry',
-    // The pebblr_ui=v2 cookie tells the server to serve the v2 SPA.
-    extraHTTPHeaders: {
-      Cookie: 'pebblr_ui=v2',
-    },
   },
   projects: [
     {
