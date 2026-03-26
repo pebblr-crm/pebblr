@@ -46,7 +46,12 @@ func (r *userRepository) GetByExternalID(ctx context.Context, externalID string)
 
 func (r *userRepository) List(ctx context.Context) ([]*domain.User, error) {
 	rows, err := r.pool.Query(ctx,
-		`SELECT `+userColumns+` FROM users ORDER BY name`,
+		`SELECT u.id, u.external_id, u.email, u.name, u.role, u.avatar, u.online_status,
+		        COALESCE(array_agg(tm.team_id::TEXT) FILTER (WHERE tm.team_id IS NOT NULL), '{}')
+		 FROM users u
+		 LEFT JOIN team_members tm ON u.id = tm.user_id
+		 GROUP BY u.id
+		 ORDER BY u.name`,
 	)
 	if err != nil {
 		return nil, fmt.Errorf("querying users: %w", err)
@@ -55,11 +60,12 @@ func (r *userRepository) List(ctx context.Context) ([]*domain.User, error) {
 
 	var users []*domain.User
 	for rows.Next() {
-		u, err := scanUser(rows)
+		var u domain.User
+		err := rows.Scan(&u.ID, &u.ExternalID, &u.Email, &u.Name, &u.Role, &u.Avatar, &u.OnlineStatus, &u.TeamIDs)
 		if err != nil {
-			return nil, err
+			return nil, fmt.Errorf("scanning user: %w", err)
 		}
-		users = append(users, u)
+		users = append(users, &u)
 	}
 	if err := rows.Err(); err != nil {
 		return nil, fmt.Errorf("iterating users: %w", err)

@@ -102,10 +102,11 @@ func (h *Handler) IssueToken(w http.ResponseWriter, r *http.Request) {
 	}
 
 	token, err := h.auth.IssueToken(Persona{
-		ID:    user.ID,
-		Email: user.Email,
-		Name:  user.Name,
-		Role:  user.Role,
+		ID:      user.ID,
+		Email:   user.Email,
+		Name:    user.Name,
+		Role:    user.Role,
+		TeamIDs: user.TeamIDs,
 	})
 	if err != nil {
 		writeError(w, http.StatusInternalServerError, "TOKEN_ERROR", "failed to issue token")

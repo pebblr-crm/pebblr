@@ -35,14 +35,14 @@ export function Sidebar({ currentPath, onNavigate }: { currentPath: string; onNa
     { label: t('nav.planner'), href: '/planner', icon: <Map size={20} />, roles: ['rep'] },
     { label: t('nav.targets'), href: '/targets', icon: <Target size={20} />, roles: ['rep'] },
     { label: t('nav.activities'), href: '/activities', icon: <CalendarCheck size={20} />, roles: ['rep'] },
-    { label: t('nav.dashboard'), href: '/dashboard', icon: <LayoutDashboard size={20} />, roles: ['manager'] },
-    { label: t('nav.coverage'), href: '/coverage', icon: <Globe size={20} />, roles: ['manager'] },
+    { label: t('nav.dashboard'), href: '/dashboard', icon: <LayoutDashboard size={20} />, roles: ['manager', 'admin'] },
+    { label: t('nav.coverage'), href: '/coverage', icon: <Globe size={20} />, roles: ['manager', 'admin'] },
     { label: t('nav.console'), href: '/console', icon: <Settings size={20} />, roles: ['admin'] },
     { label: t('nav.audit'), href: '/audit', icon: <FileText size={20} />, roles: ['admin'] },
   ]
 
   const visibleItems = navItems.filter(
-    (item) => role === 'admin' || item.roles.includes(role ?? ''),
+    (item) => item.roles.includes(role ?? '') || (role === 'admin' && !item.roles.includes('rep')),
   )
 
   return (

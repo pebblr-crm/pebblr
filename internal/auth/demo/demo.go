@@ -50,12 +50,13 @@ func (a *Authenticator) IssueToken(persona Persona) (string, error) {
 
 	now := time.Now()
 	claims := demoClaims{
-		Sub:   persona.ID,
-		Email: persona.Email,
-		Name:  persona.Name,
-		Role:  string(persona.Role),
-		Iat:   now.Unix(),
-		Exp:   now.Add(a.tokenTTL).Unix(),
+		Sub:     persona.ID,
+		Email:   persona.Email,
+		Name:    persona.Name,
+		Role:    string(persona.Role),
+		TeamIDs: persona.TeamIDs,
+		Iat:     now.Unix(),
+		Exp:     now.Add(a.tokenTTL).Unix(),
 	}
 
 	return a.sign(claims)
@@ -78,31 +79,37 @@ func (a *Authenticator) ValidateToken(_ context.Context, token string) (*auth.Us
 		role = domain.RoleRep
 	}
 
+	teamIDs := claims.TeamIDs
+	if teamIDs == nil {
+		teamIDs = []string{}
+	}
 	return &auth.UserClaims{
 		Sub:     claims.Sub,
 		Email:   claims.Email,
 		Name:    claims.Name,
 		Roles:   []domain.Role{role},
-		TeamIDs: []string{},
+		TeamIDs: teamIDs,
 	}, nil
 }
 
 // Persona describes a demo user identity.
 type Persona struct {
-	ID    string      `json:"id"`
-	Email string      `json:"email"`
-	Name  string      `json:"name"`
-	Role  domain.Role `json:"role"`
+	ID      string      `json:"id"`
+	Email   string      `json:"email"`
+	Name    string      `json:"name"`
+	Role    domain.Role `json:"role"`
+	TeamIDs []string    `json:"teamIds,omitempty"`
 }
 
 // demoClaims are the JWT payload fields for demo tokens.
 type demoClaims struct {
-	Sub   string `json:"sub"`
-	Email string `json:"email"`
-	Name  string `json:"name"`
-	Role  string `json:"role"`
-	Iat   int64  `json:"iat"`
-	Exp   int64  `json:"exp"`
+	Sub     string   `json:"sub"`
+	Email   string   `json:"email"`
+	Name    string   `json:"name"`
+	Role    string   `json:"role"`
+	TeamIDs []string `json:"team_ids,omitempty"`
+	Iat     int64    `json:"iat"`
+	Exp     int64    `json:"exp"`
 }
 
 type jwtHeader struct {
