@@ -264,9 +264,7 @@ function TargetDetailPage() {
                 <div className="flex-1">
                   {lat != null && lng != null ? (
                     <MapContainer className="h-full" center={[lng, lat]} zoom={14}>
-                      {(map) => (
-                        <TargetMarker map={map} lat={lat} lng={lng} name={target.name} priority={potential} />
-                      )}
+                      <TargetMarker lat={lat} lng={lng} name={target.name} priority={potential} />
                     </MapContainer>
                   ) : (
                     <div className="flex h-full items-center justify-center bg-slate-100 text-sm text-slate-400">

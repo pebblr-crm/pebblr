@@ -203,18 +203,15 @@ function CoveragePage() {
       {/* Map */}
       <div className="flex-1">
         <MapContainer className="h-full">
-          {(map) =>
-            geoTargets.map((t) => (
-              <TargetMarker
-                key={t.id}
-                map={map}
-                lat={getLat(t.fields)!}
-                lng={getLng(t.fields)!}
-                name={t.name}
-                priority={getClassification(t.fields)}
-              />
-            ))
-          }
+          {geoTargets.map((t) => (
+            <TargetMarker
+              key={t.id}
+              lat={getLat(t.fields)!}
+              lng={getLng(t.fields)!}
+              name={t.name}
+              priority={getClassification(t.fields)}
+            />
+          ))}
         </MapContainer>
       </div>
     </div>

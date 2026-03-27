@@ -342,22 +342,19 @@ function PlannerPage() {
           {/* Map */}
           <div className="flex-1 relative min-h-0">
             <MapContainer className="h-full">
-              {(map) =>
-                filteredTargets.map((t) => (
-                  <TargetMarker
-                    key={t.id}
-                    map={map}
-                    lat={getLat(t.fields)!}
-                    lng={getLng(t.fields)!}
-                    name={t.name}
-                    priority={getClassification(t.fields)}
-                    selected={selectedTargetIds.has(t.id)}
-                    highlighted={hoveredTargetId === t.id}
-                    onClick={() => toggleTarget(t.id)}
-                    onHover={(h) => setHoveredTargetId(h ? t.id : null)}
-                  />
-                ))
-              }
+              {filteredTargets.map((t) => (
+                <TargetMarker
+                  key={t.id}
+                  lat={getLat(t.fields)!}
+                  lng={getLng(t.fields)!}
+                  name={t.name}
+                  priority={getClassification(t.fields)}
+                  selected={selectedTargetIds.has(t.id)}
+                  highlighted={hoveredTargetId === t.id}
+                  onClick={() => toggleTarget(t.id)}
+                  onHover={(h) => setHoveredTargetId(h ? t.id : null)}
+                />
+              ))}
             </MapContainer>
 
             {/* Map legend */}
@@ -597,20 +594,17 @@ function PlannerPage() {
             </div>
             <div className="flex-1">
               <MapContainer className="h-full">
-                {(map) =>
-                  geoTargets.map((t) => (
-                    <TargetMarker
-                      key={t.id}
-                      map={map}
-                      lat={getLat(t.fields)!}
-                      lng={getLng(t.fields)!}
-                      name={t.name}
-                      priority={getClassification(t.fields)}
-                      selected={selectedTargetIds.has(t.id)}
-                      onClick={() => toggleTarget(t.id)}
-                    />
-                  ))
-                }
+                {geoTargets.map((t) => (
+                  <TargetMarker
+                    key={t.id}
+                    lat={getLat(t.fields)!}
+                    lng={getLng(t.fields)!}
+                    name={t.name}
+                    priority={getClassification(t.fields)}
+                    selected={selectedTargetIds.has(t.id)}
+                    onClick={() => toggleTarget(t.id)}
+                  />
+                ))}
               </MapContainer>
             </div>
           </div>
