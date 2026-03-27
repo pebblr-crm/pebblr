@@ -2,45 +2,15 @@ import { render, waitFor } from '@testing-library/react'
 import { vi, describe, it, expect, beforeEach, beforeAll } from 'vitest'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 
-// --- Mock maplibre-gl before any component imports --------------------------------
-const mockAddTo = vi.fn()
-const mockMarkerRemove = vi.fn()
-const MockMarker = vi.fn().mockImplementation(function () {
-  const instance = {
-    setLngLat: vi.fn().mockReturnValue(null as unknown),
-    addTo: mockAddTo.mockReturnValue(null as unknown),
-    remove: mockMarkerRemove,
-  }
-  // Make chaining work: setLngLat returns instance, addTo returns instance
-  instance.setLngLat.mockReturnValue(instance)
-  instance.addTo.mockReturnValue(instance)
-  return instance
-})
+// --- Mock @vis.gl/react-google-maps before any component imports -----------------
+const MockAdvancedMarker = vi.fn(({ children }: { children?: React.ReactNode }) => (
+  <div data-testid="advanced-marker">{children}</div>
+))
 
-const mockMapRemove = vi.fn()
-const mockMapOn = vi.fn()
-const mockAddControl = vi.fn()
-const MockMap = vi.fn().mockImplementation(function (this: Record<string, unknown>) {
-  this.remove = mockMapRemove
-  this.on = mockMapOn
-  this.addControl = mockAddControl
-  // Immediately fire 'load' so children are rendered
-  setTimeout(() => {
-    const loadCb = mockMapOn.mock.calls.find((c: unknown[]) => c[0] === 'load')
-    if (loadCb) (loadCb[1] as () => void)()
-  }, 0)
-})
-const MockNavigationControl = vi.fn()
-
-vi.mock('maplibre-gl', () => ({
-  default: {
-    Map: MockMap,
-    Marker: MockMarker,
-    NavigationControl: MockNavigationControl,
-  },
-  Map: MockMap,
-  Marker: MockMarker,
-  NavigationControl: MockNavigationControl,
+vi.mock('@vis.gl/react-google-maps', () => ({
+  APIProvider: ({ children }: { children: React.ReactNode }) => <div>{children}</div>,
+  Map: ({ children }: { children?: React.ReactNode }) => <div data-testid="google-map">{children}</div>,
+  AdvancedMarker: MockAdvancedMarker,
 }))
 
 // --- Mock hooks -------------------------------------------------------------------
@@ -196,15 +166,12 @@ describe('Planner map markers', () => {
     mockStats.mockReturnValue({ data: { total: 0, byStatus: {} } })
     mockCoverage.mockReturnValue({ data: null })
 
-    renderWithProviders(<PlannerPage />)
+    const { getAllByTestId } = renderWithProviders(<PlannerPage />)
 
-    // Wait for the map 'load' callback (setTimeout 0)
     await waitFor(() => {
       // Two markers should have been created (t1 and t2 have coords, t3 does not)
-      expect(MockMarker).toHaveBeenCalledTimes(2)
+      expect(getAllByTestId('advanced-marker')).toHaveLength(2)
     })
-
-    expect(mockAddTo).toHaveBeenCalledTimes(2)
   })
 
   it('shows no markers when targets lack lat/lng', async () => {
@@ -223,12 +190,12 @@ describe('Planner map markers', () => {
     mockStats.mockReturnValue({ data: { total: 0, byStatus: {} } })
     mockCoverage.mockReturnValue({ data: null })
 
-    renderWithProviders(<PlannerPage />)
+    const { queryByTestId } = renderWithProviders(<PlannerPage />)
 
     await waitFor(() => {
-      expect(MockMap).toHaveBeenCalled()
+      expect(queryByTestId('google-map')).toBeTruthy()
     })
 
-    expect(MockMarker).not.toHaveBeenCalled()
+    expect(queryByTestId('advanced-marker')).toBeNull()
   })
 })

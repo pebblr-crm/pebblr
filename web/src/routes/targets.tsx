@@ -165,19 +165,16 @@ function TargetsPage() {
       {/* Map sidebar */}
       <div className="hidden w-96 border-l border-slate-200 lg:block">
         <MapContainer className="h-full">
-          {(map) =>
-            geoTargets.map((t) => (
-              <TargetMarker
-                key={t.id}
-                map={map}
-                lat={getLat(t.fields)!}
-                lng={getLng(t.fields)!}
-                name={t.name}
-                priority={getClassification(t.fields)}
-                onClick={() => navigate({ to: '/targets/$id', params: { id: t.id } })}
-              />
-            ))
-          }
+          {geoTargets.map((t) => (
+            <TargetMarker
+              key={t.id}
+              lat={getLat(t.fields)!}
+              lng={getLng(t.fields)!}
+              name={t.name}
+              priority={getClassification(t.fields)}
+              onClick={() => navigate({ to: '/targets/$id', params: { id: t.id } })}
+            />
+          ))}
         </MapContainer>
       </div>
     </div>

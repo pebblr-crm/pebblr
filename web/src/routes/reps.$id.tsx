@@ -120,18 +120,15 @@ function RepDrillDownPage() {
       <div className="flex flex-1 min-h-0 flex-col md:flex-row">
         <div className="h-56 border-b border-slate-200 md:h-auto md:w-1/2 md:border-b-0 md:border-r">
           <MapContainer className="h-full">
-            {(map) =>
-              geoTargets.map((t) => (
-                <TargetMarker
-                  key={t.id}
-                  map={map}
-                  lat={getLat(t.fields)!}
-                  lng={getLng(t.fields)!}
-                  name={t.name}
-                  priority={getClassification(t.fields)}
-                />
-              ))
-            }
+            {geoTargets.map((t) => (
+              <TargetMarker
+                key={t.id}
+                lat={getLat(t.fields)!}
+                lng={getLng(t.fields)!}
+                name={t.name}
+                priority={getClassification(t.fields)}
+              />
+            ))}
           </MapContainer>
         </div>
         <div className="flex-1 overflow-auto p-4 md:w-1/2">
