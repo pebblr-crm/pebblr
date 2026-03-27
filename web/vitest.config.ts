@@ -1,18 +1,8 @@
 import { defineConfig } from 'vitest/config'
 import react from '@vitejs/plugin-react'
-import istanbul from 'vite-plugin-istanbul'
 
 export default defineConfig({
-  plugins: [
-    react(),
-    istanbul({
-      include: 'src/**/*',
-      exclude: ['node_modules', 'src/test/**'],
-      extension: ['.ts', '.tsx'],
-      requireEnv: true,       // only instrument when VITE_COVERAGE=true
-      forceBuildInstrument: false,
-    }),
-  ],
+  plugins: [react()],
   test: {
     globals: true,
     environment: 'jsdom',

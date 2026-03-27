@@ -26,7 +26,6 @@ export default defineConfig({
     timeout: 30_000,
     env: {
       VITE_STATIC_TOKEN: 'e2e-test-token',
-      VITE_COVERAGE: 'true',
     },
   },
 })
