@@ -46,7 +46,8 @@ jobs:
         run: cd web && bun run coverage:merge
 
       - name: Verify coverage report exists
-        run: test -f web/coverage/lcov.info && echo "Coverage report found" || (echo "ERROR: No coverage report" && exit 1)
+        run: |
+          test -f web/coverage/lcov.info && echo "Coverage report found" || (echo "ERROR: No coverage report" && exit 1)
 
       - name: SonarCloud Scan
         uses: SonarSource/sonarqube-scan-action@v7
