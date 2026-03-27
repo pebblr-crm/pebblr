@@ -22,6 +22,11 @@ yarn-debug.log*
 yarn-error.log*
 bun.lockb
 
+# Coverage
+web/coverage/
+web/coverage-e2e/
+web/.nyc_output/
+
 # Build artifacts
 dist/
 build/

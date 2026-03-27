@@ -16,7 +16,8 @@
     "test:e2e": "playwright test",
     "test:e2e:demo": "playwright test --config=playwright-demo.config.ts",
     "test:e2e:headed": "playwright test --headed",
-    "test:e2e:integration": "playwright test --config=playwright-integration.config.ts"
+    "test:e2e:integration": "playwright test --config=playwright-integration.config.ts",
+    "coverage:merge": "../scripts/merge-frontend-coverage.sh"
   },
   "dependencies": {
     "@tanstack/react-query": "^5.56.2",
@@ -46,11 +47,13 @@
     "eslint-plugin-react-refresh": "^0.4.12",
     "globals": "^16.2.0",
     "jsdom": "^25.0.1",
+    "nyc": "^18.0.0",
     "prettier": "^3.3.3",
     "tailwindcss": "^4.1.14",
     "typescript": "^5.5.4",
     "typescript-eslint": "^8.33.0",
     "vite": "^8.0.0",
+    "vite-plugin-istanbul": "^8.0.0",
     "vitest": "^4.1.2"
   }
 }

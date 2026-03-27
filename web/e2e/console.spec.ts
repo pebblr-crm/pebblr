@@ -1,4 +1,4 @@
-import { test, expect } from '@playwright/test'
+import { test, expect } from './coverage-fixture'
 import { mockApi, USERS, TEAMS, TERRITORIES } from './fixtures'
 
 test.describe('Console page', () => {

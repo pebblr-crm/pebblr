@@ -1,4 +1,4 @@
-import { test, expect } from '@playwright/test'
+import { test, expect } from './coverage-fixture'
 import { mockApi, ACTIVITIES, CONFIG } from './fixtures'
 
 test.describe('Activities page', () => {

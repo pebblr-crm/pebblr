@@ -12,6 +12,7 @@ export default defineConfig({
     baseURL: 'http://localhost:5174',
     trace: 'on-first-retry',
   },
+  globalTeardown: './e2e/global-teardown.ts',
   projects: [
     {
       name: 'chromium',
@@ -25,6 +26,7 @@ export default defineConfig({
     timeout: 30_000,
     env: {
       VITE_STATIC_TOKEN: 'e2e-test-token',
+      VITE_COVERAGE: 'true',
     },
   },
 })
