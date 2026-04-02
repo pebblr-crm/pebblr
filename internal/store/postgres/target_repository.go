@@ -85,34 +85,14 @@ func (b *targetQueryBuilder) whereClause() string {
 // applyScope applies RBAC scope conditions to the query builder.
 // Returns false if the scope excludes all targets (empty result).
 func (b *targetQueryBuilder) applyScope(scope rbac.TargetScope) bool {
-	if scope.AllTargets {
+	scopeSQL, outArgs, nextIdx := targetScopeConditionsAliased("", scope, b.args, b.argIdx)
+	b.args = outArgs
+	b.argIdx = nextIdx
+	if scopeSQL != "" {
+		b.conditions = append(b.conditions, scopeSQL)
 		return true
 	}
-
-	var scopeParts []string
-	if len(scope.AssigneeIDs) > 0 {
-		placeholders := make([]string, len(scope.AssigneeIDs))
-		for i, id := range scope.AssigneeIDs {
-			placeholders[i] = fmt.Sprintf("$%d", b.argIdx)
-			b.args = append(b.args, id)
-			b.argIdx++
-		}
-		scopeParts = append(scopeParts, fmt.Sprintf("assignee_id::TEXT = ANY(ARRAY[%s])", strings.Join(placeholders, ",")))
-	}
-	if len(scope.TeamIDs) > 0 {
-		placeholders := make([]string, len(scope.TeamIDs))
-		for i, id := range scope.TeamIDs {
-			placeholders[i] = fmt.Sprintf("$%d", b.argIdx)
-			b.args = append(b.args, id)
-			b.argIdx++
-		}
-		scopeParts = append(scopeParts, fmt.Sprintf("team_id::TEXT = ANY(ARRAY[%s])", strings.Join(placeholders, ",")))
-	}
-	if len(scopeParts) == 0 {
-		return false
-	}
-	b.conditions = append(b.conditions, "("+strings.Join(scopeParts, " OR ")+")")
-	return true
+	return scope.AllTargets
 }
 
 // applyTargetFilter adds filter conditions to the query builder.
@@ -279,33 +259,21 @@ type targetScopeResult struct {
 }
 
 // buildTargetScopeConditions generates SQL conditions and args for a target RBAC scope.
-// The prefix (e.g. "t.") is prepended to column names.
+// The prefix (e.g. "t.") is prepended to column names. It delegates to the shared
+// targetScopeConditionsAliased function to avoid duplicating scope-building logic.
 func buildTargetScopeConditions(scope rbac.TargetScope, prefix string, startArgIdx int) targetScopeResult {
-	result := targetScopeResult{argIdx: startArgIdx}
+	// Convert prefix "t." to alias "t" (strip trailing dot).
+	alias := strings.TrimSuffix(prefix, ".")
 
-	if scope.AllTargets {
-		return result
-	}
+	scopeSQL, outArgs, nextIdx := targetScopeConditionsAliased(alias, scope, nil, startArgIdx)
 
-	if len(scope.AssigneeIDs) > 0 {
-		phs := make([]string, len(scope.AssigneeIDs))
-		for i, id := range scope.AssigneeIDs {
-			phs[i] = fmt.Sprintf("$%d", result.argIdx)
-			result.args = append(result.args, id)
-			result.argIdx++
-		}
-		result.conditions = append(result.conditions, fmt.Sprintf("%sassignee_id::TEXT = ANY(ARRAY[%s])", prefix, strings.Join(phs, ",")))
+	result := targetScopeResult{
+		args:   outArgs,
+		argIdx: nextIdx,
 	}
-	if len(scope.TeamIDs) > 0 {
-		phs := make([]string, len(scope.TeamIDs))
-		for i, id := range scope.TeamIDs {
-			phs[i] = fmt.Sprintf("$%d", result.argIdx)
-			result.args = append(result.args, id)
-			result.argIdx++
-		}
-		result.conditions = append(result.conditions, fmt.Sprintf("%steam_id::TEXT = ANY(ARRAY[%s])", prefix, strings.Join(phs, ",")))
-	}
-	if len(result.conditions) == 0 {
+	if scopeSQL != "" {
+		result.conditions = []string{scopeSQL}
+	} else if !scope.AllTargets {
 		result.empty = true
 	}
 	return result

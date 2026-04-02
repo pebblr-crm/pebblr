@@ -723,24 +723,12 @@ func (s *ActivityService) checkDayHasNoFieldActivities(ctx context.Context, crea
 
 // blockingActivityTypes returns the keys of all activity types that block field activities.
 func (s *ActivityService) blockingActivityTypes() []string {
-	var types []string
-	for i := range s.cfg.Activities.Types {
-		if s.cfg.Activities.Types[i].BlocksFieldActivities {
-			types = append(types, s.cfg.Activities.Types[i].Key)
-		}
-	}
-	return types
+	return s.cfg.BlockingActivityTypes()
 }
 
 // fieldActivityTypes returns the keys of all field-category activity types.
 func (s *ActivityService) fieldActivityTypes() []string {
-	var types []string
-	for i := range s.cfg.Activities.Types {
-		if s.cfg.Activities.Types[i].Category == "field" {
-			types = append(types, s.cfg.Activities.Types[i].Key)
-		}
-	}
-	return types
+	return s.cfg.FieldActivityTypes()
 }
 
 // checkRecoveryBalance verifies that a recovery-type activity can only be created
