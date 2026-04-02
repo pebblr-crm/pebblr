@@ -36,17 +36,6 @@ type Activity struct {
 	DeletedAt      *time.Time     `json:"deletedAt,omitempty"`    // soft delete
 }
 
-// PrepareForResponse injects hoisted column values back into the Fields map
-// so the frontend sees them as dynamic fields driven by the tenant config.
-func (a *Activity) PrepareForResponse() {
-	if a.Fields == nil {
-		a.Fields = map[string]any{}
-	}
-	if a.JointVisitUID != "" {
-		a.Fields["joint_visit_user_id"] = a.JointVisitUID
-	}
-}
-
 // IsSubmitted returns true if the activity has been submitted and is locked.
 func (a *Activity) IsSubmitted() bool {
 	return a.SubmittedAt != nil
