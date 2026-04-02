@@ -16,13 +16,13 @@ import (
 
 type stubUserSvc struct{}
 
-func (s *stubUserSvc) List(_ context.Context) ([]*domain.User, error) {
+func (s *stubUserSvc) List(_ context.Context, _ *domain.User) ([]*domain.User, error) {
 	return []*domain.User{
 		{ID: "user-1", Name: "Alice Admin", Role: domain.RoleAdmin},
 	}, nil
 }
 
-func (s *stubUserSvc) Get(_ context.Context, id string) (*domain.User, error) {
+func (s *stubUserSvc) Get(_ context.Context, _ *domain.User, id string) (*domain.User, error) {
 	if id == "user-1" {
 		return &domain.User{ID: "user-1", Name: "Alice Admin", Role: domain.RoleAdmin}, nil
 	}

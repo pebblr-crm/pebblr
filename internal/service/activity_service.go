@@ -258,7 +258,7 @@ func (s *ActivityService) AutoCompleteExpired(ctx context.Context, actor *domain
 
 	nonFieldTypes := s.nonFieldTypeSet()
 
-	scope := s.enforcer.ScopeActivityQuery(ctx, actor)
+	scope := s.enforcer.ScopeActivityQuery(actor)
 	today := time.Now().Truncate(24 * time.Hour)
 	yesterday := today.AddDate(0, 0, -1)
 	statusFilter := initialStatus

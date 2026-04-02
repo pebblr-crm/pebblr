@@ -7,14 +7,15 @@ import (
 
 	"github.com/go-chi/chi/v5"
 	"github.com/pebblr/pebblr/internal/domain"
+	"github.com/pebblr/pebblr/internal/service"
 	"github.com/pebblr/pebblr/internal/store"
 )
 
 // TeamServicer is the interface the TeamHandler depends on for business logic.
 type TeamServicer interface {
-	List(ctx context.Context) ([]*domain.Team, error)
-	Get(ctx context.Context, id string) (*domain.Team, error)
-	ListMembers(ctx context.Context, teamID string) ([]*domain.User, error)
+	List(ctx context.Context, actor *domain.User) ([]*domain.Team, error)
+	Get(ctx context.Context, actor *domain.User, id string) (*domain.Team, error)
+	ListMembers(ctx context.Context, actor *domain.User, teamID string) ([]*domain.User, error)
 }
 
 // TeamHandler handles HTTP requests for team read operations.
@@ -53,16 +54,21 @@ func mapTeamServiceError(w http.ResponseWriter, err error) {
 		writeError(w, http.StatusNotFound, "NOT_FOUND", "team not found")
 		return
 	}
+	if errors.Is(err, service.ErrForbidden) {
+		writeError(w, http.StatusForbidden, "FORBIDDEN", "access denied")
+		return
+	}
 	writeError(w, http.StatusInternalServerError, "INTERNAL_ERROR", errUnexpected)
 }
 
 // List handles GET /api/v1/teams
 func (h *TeamHandler) List(w http.ResponseWriter, r *http.Request) {
-	if actor := requireActor(w, r); actor == nil {
+	actor := requireActor(w, r)
+	if actor == nil {
 		return
 	}
 
-	teams, err := h.svc.List(r.Context())
+	teams, err := h.svc.List(r.Context(), actor)
 	if err != nil {
 		mapTeamServiceError(w, err)
 		return
@@ -79,18 +85,19 @@ func (h *TeamHandler) List(w http.ResponseWriter, r *http.Request) {
 
 // Get handles GET /api/v1/teams/{id}
 func (h *TeamHandler) Get(w http.ResponseWriter, r *http.Request) {
-	if actor := requireActor(w, r); actor == nil {
+	actor := requireActor(w, r)
+	if actor == nil {
 		return
 	}
 
 	id := chi.URLParam(r, "id")
-	team, err := h.svc.Get(r.Context(), id)
+	team, err := h.svc.Get(r.Context(), actor, id)
 	if err != nil {
 		mapTeamServiceError(w, err)
 		return
 	}
 
-	members, err := h.svc.ListMembers(r.Context(), id)
+	members, err := h.svc.ListMembers(r.Context(), actor, id)
 	if err != nil {
 		mapTeamServiceError(w, err)
 		return
