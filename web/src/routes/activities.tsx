@@ -63,6 +63,12 @@ function getDayLabel(dateStr: string): string {
   return d.toLocaleDateString('en-GB', { weekday: 'short', month: 'short', day: 'numeric' })
 }
 
+function priorityDotColor(priority: string): string {
+  if (priority === 'a') return 'bg-red-500'
+  if (priority === 'b') return 'bg-amber-500'
+  return 'bg-slate-400'
+}
+
 const activityIcon: Record<string, typeof Stethoscope> = {
   visit: Stethoscope,
   administrative: Briefcase,
@@ -402,6 +408,91 @@ function CreateActivityModal({ open, onClose }: { open: boolean; onClose: () => 
 }
 
 
+// --- Activity Card ---
+
+interface ActivityCardProps {
+  readonly activity: Activity
+  readonly allStatuses: ReadonlyArray<{ key: string; label: string }>
+  readonly canFilterByRep: boolean
+  readonly userMap: Map<string, string>
+  readonly onSelect: (id: string) => void
+}
+
+function ActivityCard({ activity, allStatuses, canFilterByRep, userMap, onSelect }: ActivityCardProps) {
+  const Icon = activity.targetSummary?.targetType === 'pharmacy' ? Building2
+    : activityIcon[activity.activityType] ?? Briefcase
+  const priority = getTargetPriority(activity)
+  const isCancelled = activity.status === 'anulat' || activity.status === 'cancelled'
+
+  return (
+    <button
+      type="button"
+      onClick={() => onSelect(activity.id)}
+      className={`block w-full bg-white border border-slate-200 rounded-lg p-4 text-left shadow-sm hover:shadow-md transition-shadow ${isCancelled ? 'opacity-60' : ''}`}
+    >
+      <div className="flex flex-col sm:flex-row sm:items-start justify-between gap-3">
+        <div className="flex gap-3">
+          <div className={`w-10 h-10 rounded-full flex items-center justify-center shrink-0 ${
+            activity.activityType === 'visit' ? 'bg-teal-50 text-teal-600' : 'bg-slate-100 text-slate-500'
+          }`}>
+            <Icon size={18} />
+          </div>
+          <div>
+            <div className="flex items-center gap-2 mb-0.5 flex-wrap">
+              <h3 className={`text-sm font-semibold ${isCancelled ? 'text-slate-500 line-through' : 'text-slate-900'}`}>
+                {activity.targetName ?? activity.label ?? activity.activityType}
+              </h3>
+              {priority && (
+                <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded text-[10px] font-semibold ${priorityStyle[priority] ?? ''}`}>
+                  <span className={`w-1.5 h-1.5 rounded-full ${priorityDotColor(priority)}`} />
+                  {priority.toUpperCase()}
+                </span>
+              )}
+            </div>
+            <div className="text-xs text-slate-500 flex items-center gap-2 mb-1.5 flex-wrap">
+              <span className="capitalize">{activity.activityType}</span>
+              {str(activity.fields?.visit_type) && (
+                <>
+                  <span className="text-slate-300">&middot;</span>
+                  <span>{str(activity.fields.visit_type) === 'f2f' ? 'In-Person Visit' : 'Remote'}</span>
+                </>
+              )}
+              {activity.targetSummary && (
+                <>
+                  <span className="text-slate-300">&middot;</span>
+                  <span className="capitalize">{activity.targetSummary.targetType}</span>
+                </>
+              )}
+            </div>
+            {str(activity.fields?.feedback) && (
+              <p className="text-sm text-slate-700">{str(activity.fields.feedback)}</p>
+            )}
+            {str(activity.fields?.notes) && !str(activity.fields?.feedback) && (
+              <p className={`text-sm ${isCancelled ? 'text-slate-500 italic' : 'text-slate-700'}`}>{str(activity.fields.notes)}</p>
+            )}
+          </div>
+        </div>
+        <div className="flex flex-col items-end gap-1.5 shrink-0">
+          <Badge variant={statusVariant[activity.status] ?? 'default'}>
+            {allStatuses.find((s) => s.key === activity.status)?.label ?? activity.status}
+          </Badge>
+          {activity.submittedAt && <Badge variant="success">Submitted</Badge>}
+          {canFilterByRep && userMap.has(activity.creatorId) && (
+            <span className="text-xs text-slate-500">{userMap.get(activity.creatorId)}</span>
+          )}
+        </div>
+      </div>
+      {Array.isArray(activity.fields?.tags) && (activity.fields.tags as string[]).length > 0 && (
+        <div className="mt-3 pt-3 border-t border-slate-100 flex flex-wrap gap-2">
+          {(activity.fields.tags as string[]).map((tag) => (
+            <span key={tag} className="px-2 py-1 bg-slate-50 border border-slate-200 rounded text-xs text-slate-600">{tag}</span>
+          ))}
+        </div>
+      )}
+    </button>
+  )
+}
+
 // --- Main Page ---
 
 const PAGE_SIZE = 20
@@ -460,83 +551,16 @@ function ActivitiesPage() {
 
   if (isLoading) return <Spinner />
 
-  const renderActivityCard = (activity: Activity) => {
-    const Icon = activity.targetSummary?.targetType === 'pharmacy' ? Building2
-      : activityIcon[activity.activityType] ?? Briefcase
-    const priority = getTargetPriority(activity)
-    const isCancelled = activity.status === 'anulat' || activity.status === 'cancelled'
-
-    return (
-      <button
-        key={activity.id}
-        type="button"
-        onClick={() => setDetailId(activity.id)}
-        className={`block w-full bg-white border border-slate-200 rounded-lg p-4 text-left shadow-sm hover:shadow-md transition-shadow ${isCancelled ? 'opacity-60' : ''}`}
-      >
-        <div className="flex flex-col sm:flex-row sm:items-start justify-between gap-3">
-          <div className="flex gap-3">
-            <div className={`w-10 h-10 rounded-full flex items-center justify-center shrink-0 ${
-              activity.activityType === 'visit' ? 'bg-teal-50 text-teal-600' : 'bg-slate-100 text-slate-500'
-            }`}>
-              <Icon size={18} />
-            </div>
-            <div>
-              <div className="flex items-center gap-2 mb-0.5 flex-wrap">
-                <h3 className={`text-sm font-semibold ${isCancelled ? 'text-slate-500 line-through' : 'text-slate-900'}`}>
-                  {activity.targetName ?? activity.label ?? activity.activityType}
-                </h3>
-                {priority && (
-                  <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded text-[10px] font-semibold ${priorityStyle[priority] ?? ''}`}>
-                    <span className={`w-1.5 h-1.5 rounded-full ${
-                      priority === 'a' ? 'bg-red-500' : priority === 'b' ? 'bg-amber-500' : 'bg-slate-400'
-                    }`} />
-                    {priority.toUpperCase()}
-                  </span>
-                )}
-              </div>
-              <div className="text-xs text-slate-500 flex items-center gap-2 mb-1.5 flex-wrap">
-                <span className="capitalize">{activity.activityType}</span>
-                {str(activity.fields?.visit_type) && (
-                  <>
-                    <span className="text-slate-300">&middot;</span>
-                    <span>{str(activity.fields.visit_type) === 'f2f' ? 'In-Person Visit' : 'Remote'}</span>
-                  </>
-                )}
-                {activity.targetSummary && (
-                  <>
-                    <span className="text-slate-300">&middot;</span>
-                    <span className="capitalize">{activity.targetSummary.targetType}</span>
-                  </>
-                )}
-              </div>
-              {str(activity.fields?.feedback) && (
-                <p className="text-sm text-slate-700">{str(activity.fields.feedback)}</p>
-              )}
-              {str(activity.fields?.notes) && !str(activity.fields?.feedback) && (
-                <p className={`text-sm ${isCancelled ? 'text-slate-500 italic' : 'text-slate-700'}`}>{str(activity.fields.notes)}</p>
-              )}
-            </div>
-          </div>
-          <div className="flex flex-col items-end gap-1.5 shrink-0">
-            <Badge variant={statusVariant[activity.status] ?? 'default'}>
-              {allStatuses.find((s) => s.key === activity.status)?.label ?? activity.status}
-            </Badge>
-            {activity.submittedAt && <Badge variant="success">Submitted</Badge>}
-            {canFilterByRep && userMap.has(activity.creatorId) && (
-              <span className="text-xs text-slate-500">{userMap.get(activity.creatorId)}</span>
-            )}
-          </div>
-        </div>
-        {Array.isArray(activity.fields?.tags) && (activity.fields.tags as string[]).length > 0 && (
-          <div className="mt-3 pt-3 border-t border-slate-100 flex flex-wrap gap-2">
-            {(activity.fields.tags as string[]).map((tag) => (
-              <span key={tag} className="px-2 py-1 bg-slate-50 border border-slate-200 rounded text-xs text-slate-600">{tag}</span>
-            ))}
-          </div>
-        )}
-      </button>
-    )
-  }
+  const renderActivityCard = (activity: Activity) => (
+    <ActivityCard
+      key={activity.id}
+      activity={activity}
+      allStatuses={allStatuses}
+      canFilterByRep={canFilterByRep}
+      userMap={userMap}
+      onSelect={setDetailId}
+    />
+  )
 
   const renderWeekTimeline = (weeks: string[], groupMap: Map<string, Map<string, Activity[]>>) => (
     <div className="space-y-8">
