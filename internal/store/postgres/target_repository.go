@@ -79,7 +79,7 @@ func (b *targetQueryBuilder) whereClause() string {
 	if len(b.conditions) == 0 {
 		return ""
 	}
-	return "WHERE " + strings.Join(b.conditions, " AND ")
+	return " WHERE " + strings.Join(b.conditions, " AND ")
 }
 
 // applyScope applies RBAC scope conditions to the query builder.
@@ -150,13 +150,13 @@ func (r *targetRepository) List(ctx context.Context, scope rbac.TargetScope, fil
 
 	where := qb.whereClause()
 
-	countQuery := `SELECT COUNT(*) FROM targets ` + where
+	countQuery := `SELECT COUNT(*) FROM targets` + where
 	var total int
 	if err := r.pool.QueryRow(ctx, countQuery, qb.args...).Scan(&total); err != nil {
 		return nil, fmt.Errorf("counting targets: %w", err)
 	}
 
-	listQuery := `SELECT ` + targetColumns + ` FROM targets ` + where +
+	listQuery := `SELECT ` + targetColumns + ` FROM targets` + where +
 		fmt.Sprintf(` ORDER BY name ASC LIMIT $%d OFFSET $%d`, qb.argIdx, qb.argIdx+1)
 	qb.args = append(qb.args, limit, offset)
 

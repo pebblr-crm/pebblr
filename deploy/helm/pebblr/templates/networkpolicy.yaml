@@ -1,0 +1,37 @@
+{{- if .Values.networkPolicy.enabled -}}
+# Default-deny all ingress/egress, then allow only required traffic.
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: {{ include "pebblr.fullname" . }}
+  namespace: {{ .Release.Namespace }}
+  labels:
+    {{- include "pebblr.labels" . | nindent 4 }}
+spec:
+  podSelector:
+    matchLabels:
+      {{- include "pebblr.selectorLabels" . | nindent 6 }}
+  policyTypes:
+    - Ingress
+    - Egress
+  ingress:
+    # Allow traffic from the gateway / ingress controller
+    - ports:
+        - port: 8080
+          protocol: TCP
+  egress:
+    # DNS resolution
+    - ports:
+        - port: 53
+          protocol: UDP
+        - port: 53
+          protocol: TCP
+    # PostgreSQL
+    - ports:
+        - port: 5432
+          protocol: TCP
+    # HTTPS outbound (Azure AD OIDC, KeyVault)
+    - ports:
+        - port: 443
+          protocol: TCP
+{{- end }}

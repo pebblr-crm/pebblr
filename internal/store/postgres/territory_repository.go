@@ -149,11 +149,3 @@ func unmarshalBoundary(data []byte) (map[string]any, error) {
 	}
 	return m, nil
 }
-
-// marshalJSONField marshals a map to JSON, returning nil for nil/empty maps.
-func marshalJSONField(m map[string]any) ([]byte, error) {
-	if m == nil {
-		return nil, nil
-	}
-	return json.Marshal(m)
-}

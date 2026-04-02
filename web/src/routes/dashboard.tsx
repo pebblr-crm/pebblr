@@ -30,6 +30,16 @@ const freqColumnHelper = createColumnHelper<FrequencyItem>()
 
 /* ── Helpers ── */
 
+function statusDotColor(status: string): string {
+  if (status === 'realizat') return 'bg-emerald-500'
+  if (status === 'anulat') return 'bg-red-500'
+  return 'bg-blue-500'
+}
+
+function categoryDotColor(category: string): string {
+  return category === 'field' ? 'bg-amber-500' : 'bg-blue-500'
+}
+
 function getMonthStart(d: Date): Date {
   return new Date(d.getFullYear(), d.getMonth(), 1)
 }
@@ -230,25 +240,17 @@ function DashboardPage() {
 
           {/* Calendar body */}
           <div className="p-4">
-            {repLoading ? (
-              <div className="py-12 flex justify-center"><Spinner /></div>
-            ) : selectedRep === '' && viewMode === 'week' ? (
-              <div className="py-12 text-center text-sm text-slate-400">Select a rep to view their calendar.</div>
-            ) : viewMode === 'week' ? (
-              <WeekView
-                weekStart={weekStart}
-                activities={activities}
-                onActivityClick={(a) => setDetailActivityId(a.id)}
-              />
-            ) : (
-              <MonthGrid
-                monthDate={monthDate}
-                activities={activities}
-                onWeekClick={handleMonthWeekClick}
-                selectedRep={selectedRep}
-                repName={selectedRepName}
-              />
-            )}
+            <CalendarBody
+              viewMode={viewMode}
+              repLoading={repLoading}
+              selectedRep={selectedRep}
+              weekStart={weekStart}
+              activities={activities}
+              monthDate={monthDate}
+              onWeekClick={handleMonthWeekClick}
+              selectedRepName={selectedRepName}
+              onActivityClick={(a) => setDetailActivityId(a.id)}
+            />
           </div>
         </Card>
 
@@ -261,7 +263,7 @@ function DashboardPage() {
                 {Object.entries(stats.byStatus).map(([status, count]) => (
                   <div key={status} className="flex items-center justify-between">
                     <div className="flex items-center gap-2">
-                      <div className={`h-3 w-3 rounded-full ${status === 'realizat' ? 'bg-emerald-500' : status === 'anulat' ? 'bg-red-500' : 'bg-blue-500'}`} />
+                      <div className={`h-3 w-3 rounded-full ${statusDotColor(status)}`} />
                       <span className="text-sm text-slate-700 capitalize">{status}</span>
                     </div>
                     <span className="text-sm font-medium text-slate-900">{count}</span>
@@ -278,7 +280,7 @@ function DashboardPage() {
                 {Object.entries(stats.byCategory).map(([category, count]) => (
                   <div key={category} className="flex items-center justify-between">
                     <div className="flex items-center gap-2">
-                      <div className={`h-3 w-3 rounded-full ${category === 'field' ? 'bg-amber-500' : 'bg-blue-500'}`} />
+                      <div className={`h-3 w-3 rounded-full ${categoryDotColor(category)}`} />
                       <span className="text-sm text-slate-700 capitalize">{category}</span>
                     </div>
                     <span className="text-sm font-medium text-slate-900">{count}</span>
@@ -304,14 +306,49 @@ function DashboardPage() {
   )
 }
 
+/* ── Calendar Body ── */
+
+interface CalendarBodyProps {
+  viewMode: 'week' | 'month'
+  repLoading: boolean
+  selectedRep: string
+  weekStart: Date
+  activities: Activity[]
+  monthDate: Date
+  onWeekClick: (mondayStr: string) => void
+  selectedRepName: string
+  onActivityClick: (activity: Activity) => void
+}
+
+function CalendarBody({ viewMode, repLoading, selectedRep, weekStart, activities, monthDate, onWeekClick, selectedRepName, onActivityClick }: CalendarBodyProps) {
+  if (repLoading) {
+    return <div className="py-12 flex justify-center"><Spinner /></div>
+  }
+  if (selectedRep === '' && viewMode === 'week') {
+    return <div className="py-12 text-center text-sm text-slate-400">Select a rep to view their calendar.</div>
+  }
+  if (viewMode === 'week') {
+    return <WeekView weekStart={weekStart} activities={activities} onActivityClick={onActivityClick} />
+  }
+  return (
+    <MonthGrid
+      monthDate={monthDate}
+      activities={activities}
+      onWeekClick={onWeekClick}
+      selectedRep={selectedRep}
+      repName={selectedRepName}
+    />
+  )
+}
+
 /* ── Month Grid ── */
 
 interface MonthGridProps {
-  monthDate: Date
-  activities: Activity[]
-  onWeekClick: (mondayStr: string) => void
-  selectedRep: string
-  repName: string
+  readonly monthDate: Date
+  readonly activities: readonly Activity[]
+  readonly onWeekClick: (mondayStr: string) => void
+  readonly selectedRep: string
+  readonly repName: string
 }
 
 function MonthGrid({ monthDate, activities, onWeekClick, selectedRep, repName }: MonthGridProps) {
@@ -380,13 +417,11 @@ function MonthGrid({ monthDate, activities, onWeekClick, selectedRep, repName }:
         {weeks.map((week, wi) => {
           const weekMonday = formatDate(week[0])
           return (
-            <div
+            <button
               key={wi}
-              role="button"
-              tabIndex={0}
-              className="grid grid-cols-7 border-b border-slate-100 last:border-0 cursor-pointer hover:bg-slate-50/50 transition-colors"
+              type="button"
+              className="grid grid-cols-7 border-b border-slate-100 last:border-0 cursor-pointer hover:bg-slate-50/50 transition-colors w-full text-left"
               onClick={() => onWeekClick(weekMonday)}
-              onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); onWeekClick(weekMonday) } }}
             >
               {week.map((day) => {
                 const dateStr = formatDate(day)
@@ -426,7 +461,7 @@ function MonthGrid({ monthDate, activities, onWeekClick, selectedRep, repName }:
                   </div>
                 )
               })}
-            </div>
+            </button>
           )
         })}
       </div>

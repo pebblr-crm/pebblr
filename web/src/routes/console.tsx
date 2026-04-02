@@ -1,4 +1,4 @@
-import { useState, useMemo } from 'react'
+import { useState, useMemo, type ReactNode } from 'react'
 import { createRoute } from '@tanstack/react-router'
 import { createColumnHelper } from '@tanstack/react-table'
 import { Route as rootRoute } from './__root'
@@ -66,7 +66,7 @@ function ConsolePage() {
     [],
   )
 
-  const sections: { key: Section; label: string; icon: React.ReactNode; count: number }[] = [
+  const sections: { key: Section; label: string; icon: ReactNode; count: number }[] = [
     { key: 'users', label: 'Users & Roles', icon: <Users size={18} />, count: users.length },
     { key: 'teams', label: 'Teams', icon: <Building2 size={18} />, count: teams.length },
     { key: 'territories', label: 'Territories', icon: <MapPinned size={18} />, count: territories.length },

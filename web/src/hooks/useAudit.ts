@@ -5,7 +5,8 @@ import type { PaginatedResponse } from '@/types/api'
 
 export const auditKeys = {
   all: ['audit'] as const,
-  list: (params: AuditListParams) => [...auditKeys.all, params] as const,
+  lists: () => [...auditKeys.all, 'list'] as const,
+  list: (params: AuditListParams) => [...auditKeys.lists(), params] as const,
 }
 
 function buildQuery(params: AuditListParams): string {

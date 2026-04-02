@@ -27,11 +27,14 @@ func writeJSON(w http.ResponseWriter, r *http.Request, v any) {
 
 // writeError writes a structured JSON error response.
 func writeError(w http.ResponseWriter, status int, code, message string) {
-	w.Header().Set("Content-Type", "application/json")
+	w.Header().Set(headerContentType, contentTypeJSON)
 	w.WriteHeader(status)
 	if err := json.NewEncoder(w).Encode(errorResponse{
 		Error: errorDetail{Code: code, Message: message},
 	}); err != nil {
+		// At this point the status code and headers are already written. The
+		// request context (and therefore the request-scoped logger) is not
+		// available in this helper, so fall back to the default logger.
 		slog.Default().Error("failed to encode error response", "err", err)
 	}
 }

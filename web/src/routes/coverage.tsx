@@ -18,19 +18,7 @@ export const Route = createRoute({
   component: CoveragePage,
 })
 
-function getLat(fields: Record<string, unknown>): number | null {
-  const v = fields.lat
-  return typeof v === 'number' ? v : null
-}
-
-function getLng(fields: Record<string, unknown>): number | null {
-  const v = fields.lng
-  return typeof v === 'number' ? v : null
-}
-
-function getClassification(fields: Record<string, unknown>): string {
-  return ((fields.potential as string) ?? 'c').toLowerCase()
-}
+import { getLat, getLng, getClassification } from '@/lib/target-fields'
 
 function CoveragePage() {
   const [teamFilter, setTeamFilter] = useState('')

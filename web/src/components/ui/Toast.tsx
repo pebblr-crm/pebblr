@@ -16,6 +16,31 @@ const variantStyles: Record<Toast['variant'], string> = {
 const SHOW_MS = 2500
 const EXIT_MS = 300
 
+function markLeaving(id: number) {
+  return (prev: Toast[]) => prev.map((t) => (t.id === id ? { ...t, leaving: true } : t))
+}
+
+function removeToast(id: number) {
+  return (prev: Toast[]) => prev.filter((t) => t.id !== id)
+}
+
+function getToastAnimation(leaving: boolean): string {
+  return leaving
+    ? `toast-exit ${EXIT_MS}ms ease-in forwards`
+    : `toast-enter 300ms ease-out`
+}
+
+const TOAST_KEYFRAMES = `
+  @keyframes toast-enter {
+    from { opacity: 0; transform: translateY(16px) scale(0.95); }
+    to   { opacity: 1; transform: translateY(0) scale(1); }
+  }
+  @keyframes toast-exit {
+    from { opacity: 1; transform: translateY(0) scale(1); }
+    to   { opacity: 0; transform: translateY(8px) scale(0.95); }
+  }
+`
+
 export function useToast() {
   const [toasts, setToasts] = useState<Toast[]>([])
   const nextId = useRef(0)
@@ -23,16 +48,8 @@ export function useToast() {
   const showToast = useCallback((message: string, variant: Toast['variant'] = 'info') => {
     const id = nextId.current++
     setToasts((prev) => [...prev, { id, message, variant, leaving: false }])
-
-    // Start exit animation
-    setTimeout(() => {
-      setToasts((prev) => prev.map((t) => (t.id === id ? { ...t, leaving: true } : t)))
-    }, SHOW_MS)
-
-    // Remove from DOM after animation completes
-    setTimeout(() => {
-      setToasts((prev) => prev.filter((t) => t.id !== id))
-    }, SHOW_MS + EXIT_MS)
+    setTimeout(() => setToasts(markLeaving(id)), SHOW_MS)
+    setTimeout(() => setToasts(removeToast(id)), SHOW_MS + EXIT_MS)
   }, [])
 
   const ToastContainer = useCallback(() => {
@@ -42,26 +59,13 @@ export function useToast() {
         {toasts.map((t) => (
           <div
             key={t.id}
-            style={{
-              animation: t.leaving
-                ? `toast-exit ${EXIT_MS}ms ease-in forwards`
-                : `toast-enter 300ms ease-out`,
-            }}
+            style={{ animation: getToastAnimation(t.leaving) }}
             className={`${variantStyles[t.variant]} px-4 py-2.5 rounded-lg shadow-lg text-sm font-medium pointer-events-auto`}
           >
             {t.message}
           </div>
         ))}
-        <style>{`
-          @keyframes toast-enter {
-            from { opacity: 0; transform: translateY(16px) scale(0.95); }
-            to   { opacity: 1; transform: translateY(0) scale(1); }
-          }
-          @keyframes toast-exit {
-            from { opacity: 1; transform: translateY(0) scale(1); }
-            to   { opacity: 0; transform: translateY(8px) scale(0.95); }
-          }
-        `}</style>
+        <style>{TOAST_KEYFRAMES}</style>
       </div>
     )
   }, [toasts])
