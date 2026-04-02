@@ -2,6 +2,7 @@ package service
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"log/slog"
 	"time"
@@ -18,29 +19,29 @@ const dateFormat = "2006-01-02"
 const errFmtGettingActivity = "getting activity: %w"
 
 // ErrSubmitted indicates that the activity is already submitted and locked.
-var ErrSubmitted = fmt.Errorf("activity is submitted and locked")
+var ErrSubmitted = errors.New("activity is submitted and locked")
 
 // ErrMaxActivities indicates that the maximum activities per day has been reached.
-var ErrMaxActivities = fmt.Errorf("maximum activities per day reached")
+var ErrMaxActivities = errors.New("maximum activities per day reached")
 
 // ErrBlockedDay indicates that a blocking activity (e.g. vacation) prevents field activities on this day.
-var ErrBlockedDay = fmt.Errorf("day is blocked by a non-field activity")
+var ErrBlockedDay = errors.New("day is blocked by a non-field activity")
 
 // ErrTargetRequired indicates that a field activity requires a target.
-var ErrTargetRequired = fmt.Errorf("target required")
+var ErrTargetRequired = errors.New("target required")
 
 // ErrInvalidJointVisitor indicates that the joint visit user ID is invalid
 // (e.g. self-reference or non-existent user).
-var ErrInvalidJointVisitor = fmt.Errorf("invalid joint visit user")
+var ErrInvalidJointVisitor = errors.New("invalid joint visit user")
 
 // ErrStatusNotSubmittable indicates the activity's current status does not allow submission.
-var ErrStatusNotSubmittable = fmt.Errorf("current status does not allow submission")
+var ErrStatusNotSubmittable = errors.New("current status does not allow submission")
 
 // ErrNoRecoveryBalance indicates that no recovery day is available to claim.
-var ErrNoRecoveryBalance = fmt.Errorf("no recovery day balance available")
+var ErrNoRecoveryBalance = errors.New("no recovery day balance available")
 
 // ErrDuplicateActivity indicates that an activity for this target on this date already exists.
-var ErrDuplicateActivity = fmt.Errorf("activity for this target on this date already exists")
+var ErrDuplicateActivity = errors.New("activity for this target on this date already exists")
 
 // ValidationErrors wraps a slice of config.FieldError for returning from the service layer.
 type ValidationErrors struct {
