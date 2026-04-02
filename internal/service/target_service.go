@@ -13,7 +13,7 @@ import (
 	"github.com/pebblr/pebblr/internal/store"
 )
 
-const errGettingTarget = "getting target: %w"
+const errFmtGettingTarget = "getting target: %w"
 
 // TargetService handles target business logic with RBAC enforcement.
 type TargetService struct {
@@ -72,7 +72,7 @@ func (s *TargetService) Create(ctx context.Context, actor *domain.User, target *
 func (s *TargetService) Get(ctx context.Context, actor *domain.User, id string) (*domain.Target, error) {
 	target, err := s.targets.Get(ctx, id)
 	if err != nil {
-		return nil, fmt.Errorf(errGettingTarget, err)
+		return nil, fmt.Errorf(errFmtGettingTarget, err)
 	}
 	if !s.enforcer.CanViewTarget(ctx, actor, target) {
 		return nil, ErrForbidden
@@ -95,7 +95,7 @@ func (s *TargetService) List(ctx context.Context, actor *domain.User, filter sto
 func (s *TargetService) Update(ctx context.Context, actor *domain.User, target *domain.Target) (*domain.Target, error) {
 	existing, err := s.targets.Get(ctx, target.ID)
 	if err != nil {
-		return nil, fmt.Errorf(errGettingTarget, err)
+		return nil, fmt.Errorf(errFmtGettingTarget, err)
 	}
 	if !s.enforcer.CanUpdateTarget(ctx, actor, existing) {
 		return nil, ErrForbidden
@@ -123,7 +123,7 @@ func (s *TargetService) Assign(ctx context.Context, actor *domain.User, targetID
 
 	existing, err := s.targets.Get(ctx, targetID)
 	if err != nil {
-		return nil, fmt.Errorf(errGettingTarget, err)
+		return nil, fmt.Errorf(errFmtGettingTarget, err)
 	}
 	if !s.enforcer.CanUpdateTarget(ctx, actor, existing) {
 		return nil, ErrForbidden
@@ -265,7 +265,7 @@ func (s *TargetService) FrequencyStatus(ctx context.Context, actor *domain.User,
 		return nil, fmt.Errorf("querying frequency status: %w", err)
 	}
 
-	months := frequencyMonths(dateFrom, dateTo)
+	months := monthsInRange(dateFrom, dateTo)
 	items := make([]TargetFrequencyItem, 0, len(rows))
 	for _, row := range rows {
 		required := 0
@@ -289,18 +289,6 @@ func (s *TargetService) FrequencyStatus(ctx context.Context, actor *domain.User,
 		})
 	}
 	return items, nil
-}
-
-// frequencyMonths returns the number of calendar months spanned by the date range (minimum 1).
-func frequencyMonths(from, to time.Time) int {
-	if to.Before(from) {
-		return 1
-	}
-	months := (to.Year()-from.Year())*12 + int(to.Month()) - int(from.Month()) + 1
-	if months < 1 {
-		return 1
-	}
-	return months
 }
 
 // fieldActivityTypes returns the keys of all field-category activity types from config.

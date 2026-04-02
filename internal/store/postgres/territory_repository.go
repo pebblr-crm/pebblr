@@ -150,10 +150,3 @@ func (r *territoryRepository) Delete(ctx context.Context, id string) error {
 	return nil
 }
 
-// marshalJSONField marshals a map to JSON, returning nil for nil/empty maps.
-func marshalJSONField(m map[string]any) ([]byte, error) {
-	if m == nil {
-		return nil, nil
-	}
-	return json.Marshal(m)
-}
