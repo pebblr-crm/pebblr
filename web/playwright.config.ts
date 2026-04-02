@@ -12,6 +12,7 @@ export default defineConfig({
     baseURL: 'http://localhost:5174',
     trace: 'on-first-retry',
   },
+  globalTeardown: './e2e/global-teardown.ts',
   projects: [
     {
       name: 'chromium',

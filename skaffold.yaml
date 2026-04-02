@@ -51,6 +51,13 @@ profiles:
               resources.limits.memory: "256Mi"
 
   - name: e2e
+    build:
+      artifacts:
+        - image: pebblr-api
+          docker:
+            dockerfile: Dockerfile
+            buildArgs:
+              VITE_STATIC_TOKEN: "local-jwt-secret-not-for-production"
     manifests:
       helm:
         releases:

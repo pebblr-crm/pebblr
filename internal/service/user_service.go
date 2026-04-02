@@ -23,11 +23,11 @@ func NewUserService(users store.UserRepository) *UserService {
 func (s *UserService) List(ctx context.Context, actor *domain.User) ([]*domain.User, error) {
 	switch actor.Role {
 	case domain.RoleAdmin, domain.RoleManager:
-		users, err := s.users.List(ctx)
+		result, err := s.users.ListPaginated(ctx, 1, 10000)
 		if err != nil {
 			return nil, fmt.Errorf("listing users: %w", err)
 		}
-		return users, nil
+		return result.Users, nil
 	case domain.RoleRep:
 		user, err := s.users.GetByID(ctx, actor.ID)
 		if err != nil {

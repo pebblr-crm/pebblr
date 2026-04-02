@@ -23,9 +23,10 @@ COPY web/package.json web/bun.lock* ./
 RUN bun install --frozen-lockfile
 
 COPY web/ ./
-# VITE_STATIC_TOKEN is intentionally excluded from the Docker build.
-# It is a dev/test-only token passed via Vite dev server env, never baked into
-# production images (where it would leak via image layers and the JS bundle).
+# VITE_STATIC_TOKEN is excluded by default — only set via build-arg for E2E
+# images (where it auto-authenticates the SPA). Never set for production.
+ARG VITE_STATIC_TOKEN=""
+ENV VITE_STATIC_TOKEN=${VITE_STATIC_TOKEN}
 ARG VITE_GOOGLE_MAPS_API_KEY=""
 ENV VITE_GOOGLE_MAPS_API_KEY=${VITE_GOOGLE_MAPS_API_KEY}
 ARG VITE_DEMO_MODE=""

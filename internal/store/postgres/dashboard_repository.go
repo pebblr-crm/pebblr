@@ -290,36 +290,6 @@ func (r *dashboardRepository) RecoveryActivities(ctx context.Context, scope rbac
 }
 
 
-// appendDashboardFilter adds date range and user/team filter conditions.
-func appendDashboardFilter(conditions []string, args []any, argIdx int, filter store.DashboardFilter) (conds []string, outArgs []any, nextIdx int) {
-	if !filter.DateFrom.IsZero() {
-		conditions = append(conditions, fmt.Sprintf("due_date >= $%d", argIdx))
-		args = append(args, filter.DateFrom)
-		argIdx++
-	}
-	if !filter.DateTo.IsZero() {
-		conditions = append(conditions, fmt.Sprintf("due_date <= $%d", argIdx))
-		args = append(args, filter.DateTo)
-		argIdx++
-	}
-	if filter.UserID != nil {
-		conditions = append(conditions, fmt.Sprintf("creator_id::TEXT = $%d", argIdx))
-		args = append(args, *filter.UserID)
-		argIdx++
-	}
-	if filter.TeamID != nil {
-		conditions = append(conditions, fmt.Sprintf("team_id::TEXT = $%d", argIdx))
-		args = append(args, *filter.TeamID)
-		argIdx++
-	}
-	return conditions, args, argIdx
-}
-
-// activityScopeConditions builds the RBAC scope WHERE clause for activities (no alias).
-func activityScopeConditions(scope rbac.ActivityScope, args []any, argIdx int) (sql string, outArgs []any, nextIdx int) {
-	return activityScopeConditionsAliased("", scope, args, argIdx)
-}
-
 // activityScopeConditionsAliased builds the RBAC scope WHERE clause for activities with optional table alias.
 func activityScopeConditionsAliased(alias string, scope rbac.ActivityScope, args []any, argIdx int) (sql string, outArgs []any, nextIdx int) {
 	if scope.DenyAll {
@@ -357,11 +327,6 @@ func activityScopeConditionsAliased(alias string, scope rbac.ActivityScope, args
 		return "(" + strings.Join(parts, " OR ") + ")", args, argIdx
 	}
 	return "", args, argIdx
-}
-
-// targetScopeConditions builds the RBAC scope WHERE clause for targets (no alias).
-func targetScopeConditions(scope rbac.TargetScope, args []any, argIdx int) (sql string, outArgs []any, nextIdx int) {
-	return targetScopeConditionsAliased("", scope, args, argIdx)
 }
 
 // targetScopeConditionsAliased builds the RBAC scope WHERE clause for targets with optional table alias.

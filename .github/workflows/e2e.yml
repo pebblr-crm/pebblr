@@ -47,6 +47,15 @@ jobs:
           chmod +x skaffold
           sudo mv skaffold /usr/local/bin/skaffold
 
+      - name: Log in to Docker Hub
+        if: env.DOCKERHUB_USERNAME != ''
+        uses: docker/login-action@v3
+        env:
+          DOCKERHUB_USERNAME: ${{ secrets.DOCKERHUB_USERNAME }}
+        with:
+          username: ${{ secrets.DOCKERHUB_USERNAME }}
+          password: ${{ secrets.DOCKERHUB_TOKEN }}
+
       - name: Cluster
         run: make e2e-cluster
 
@@ -59,8 +68,17 @@ jobs:
       - name: Deploy
         run: make e2e-deploy
 
+      - name: Seed data
+        run: make seed
+
       - name: Test
         run: make e2e
+
+      - name: Install Playwright browsers
+        run: cd web && bunx playwright install --with-deps chromium
+
+      - name: Frontend E2E tests
+        run: make e2e-web-integration
 
       - name: Debug
         if: failure()
