@@ -199,6 +199,26 @@ func (s *ActivityService) List(ctx context.Context, actor *domain.User, filter s
 	return result, nil
 }
 
+// nonFieldTypeSet returns a set of activity type keys that are in the "non_field" category.
+func (s *ActivityService) nonFieldTypeSet() map[string]bool {
+	types := make(map[string]bool)
+	for _, at := range s.cfg.Activities.Types {
+		if at.Category == "non_field" {
+			types[at.Key] = true
+		}
+	}
+	return types
+}
+
+// shouldAutoComplete returns true if the activity is a past non-field activity
+// in the initial status that has not been submitted.
+func shouldAutoComplete(a *domain.Activity, nonFieldTypes map[string]bool, initialStatus string, today time.Time) bool {
+	if !nonFieldTypes[a.ActivityType] || a.Status != initialStatus || a.SubmittedAt != nil {
+		return false
+	}
+	return a.DueDate.Before(today)
+}
+
 // autoCompleteNonFieldActivities transitions non-field activities whose due date
 // is in the past from the initial status to "completed". This is fire-and-forget
 // — errors are logged but don't block the response.
@@ -206,30 +226,16 @@ func (s *ActivityService) autoCompleteNonFieldActivities(ctx context.Context, ac
 	if s.cfg == nil {
 		return
 	}
-	initialStatus := ""
-	for _, st := range s.cfg.Activities.Statuses {
-		if st.Initial {
-			initialStatus = st.Key
-			break
-		}
-	}
+	initialStatus := s.cfg.InitialStatus()
 	if initialStatus == "" {
 		return
 	}
 
-	nonFieldTypes := make(map[string]bool)
-	for _, at := range s.cfg.Activities.Types {
-		if at.Category == "non_field" {
-			nonFieldTypes[at.Key] = true
-		}
-	}
-
+	nonFieldTypes := s.nonFieldTypeSet()
 	today := time.Now().Truncate(24 * time.Hour)
+
 	for _, a := range activities {
-		if !nonFieldTypes[a.ActivityType] || a.Status != initialStatus || a.SubmittedAt != nil {
-			continue
-		}
-		if !a.DueDate.Before(today) {
+		if !shouldAutoComplete(a, nonFieldTypes, initialStatus, today) {
 			continue
 		}
 		a.Status = "completed"
