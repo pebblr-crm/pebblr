@@ -3,6 +3,18 @@ import { setTokenProvider } from '@/api/client'
 import { AuthContext } from './context'
 import type { AuthenticatedUser, Role } from '@/types/user'
 
+const VALID_ROLES: readonly string[] = ['admin', 'manager', 'rep'] as const
+
+function isRole(value: string): value is Role {
+  return VALID_ROLES.includes(value)
+}
+
+function parseRole(value: string): Role {
+  if (isRole(value)) return value
+  console.warn(`Unknown role "${value}", defaulting to "rep"`)
+  return 'rep'
+}
+
 const DEMO_SESSION_KEY = 'pebblr_demo_user'
 
 let _currentUser: AuthenticatedUser | null = null
@@ -85,7 +97,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       name: data.account.name,
       displayName: data.account.name,
       email: data.account.email,
-      role: data.account.role as Role,
+      role: parseRole(data.account.role),
       oid: data.account.id,
       accessToken: data.token,
       expiresAt: Date.now() + 24 * 60 * 60 * 1000,
