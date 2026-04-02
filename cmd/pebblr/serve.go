@@ -136,16 +136,19 @@ func serve(configPath, authProvider string) error {
 	})
 
 	srv := &http.Server{
-		Addr:         ":8080",
-		Handler:      router,
-		ReadTimeout:  15 * time.Second,
-		WriteTimeout: 15 * time.Second,
-		IdleTimeout:  60 * time.Second,
+		Addr:              ":8080",
+		Handler:           router,
+		ReadHeaderTimeout: 5 * time.Second,
+		ReadTimeout:       15 * time.Second,
+		WriteTimeout:      15 * time.Second,
+		IdleTimeout:       60 * time.Second,
 	}
 
 	ctx, cancel := signal.NotifyContext(context.Background(), syscall.SIGINT, syscall.SIGTERM)
 	defer cancel()
 
+	// Channel to surface ListenAndServe errors back to the main goroutine
+	// instead of calling os.Exit (which skips deferred cleanup like pool.Close).
 	listenErr := make(chan error, 1)
 	go func() {
 		logger.Info("starting server", "addr", srv.Addr)
@@ -157,7 +160,7 @@ func serve(configPath, authProvider string) error {
 
 	select {
 	case err := <-listenErr:
-		return fmt.Errorf("listen: %w", err)
+		return fmt.Errorf("server listen: %w", err)
 	case <-ctx.Done():
 	}
 

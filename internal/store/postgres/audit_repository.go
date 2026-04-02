@@ -3,7 +3,6 @@ package postgres
 import (
 	"context"
 	"encoding/json"
-	"errors"
 	"fmt"
 
 	"github.com/jackc/pgx/v5"
@@ -142,7 +141,7 @@ func scanAuditEntries(rows pgx.Rows) ([]*domain.AuditEntry, error) {
 		}
 		entries = append(entries, e)
 	}
-	if err := rows.Err(); err != nil && !errors.Is(err, pgx.ErrNoRows) {
+	if err := rows.Err(); err != nil {
 		return nil, fmt.Errorf("iterating audit log: %w", err)
 	}
 	return entries, nil

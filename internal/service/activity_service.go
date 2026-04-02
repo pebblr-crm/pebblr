@@ -116,7 +116,7 @@ func (s *ActivityService) Create(ctx context.Context, actor *domain.User, activi
 		return nil, fmt.Errorf("creating activity: %w", err)
 	}
 
-	_ = s.audit.Record(ctx, &domain.AuditEntry{
+	s.recordAudit(ctx, &domain.AuditEntry{
 		EntityType: "activity",
 		EntityID:   created.ID,
 		EventType:  "created",
@@ -268,7 +268,7 @@ func (s *ActivityService) Update(ctx context.Context, actor *domain.User, id str
 		return nil, fmt.Errorf("updating activity: %w", err)
 	}
 
-	_ = s.audit.Record(ctx, &domain.AuditEntry{
+	s.recordAudit(ctx, &domain.AuditEntry{
 		EntityType: "activity",
 		EntityID:   id,
 		EventType:  "updated",
@@ -334,7 +334,7 @@ func (s *ActivityService) Delete(ctx context.Context, actor *domain.User, id str
 		return fmt.Errorf("deleting activity: %w", err)
 	}
 
-	_ = s.audit.Record(ctx, &domain.AuditEntry{
+	s.recordAudit(ctx, &domain.AuditEntry{
 		EntityType: "activity",
 		EntityID:   id,
 		EventType:  "deleted",
@@ -378,7 +378,7 @@ func (s *ActivityService) Submit(ctx context.Context, actor *domain.User, id str
 		return nil, fmt.Errorf("submitting activity: %w", err)
 	}
 
-	_ = s.audit.Record(ctx, &domain.AuditEntry{
+	s.recordAudit(ctx, &domain.AuditEntry{
 		EntityType: "activity",
 		EntityID:   id,
 		EventType:  "submitted",
@@ -426,7 +426,7 @@ func (s *ActivityService) PartialUpdate(ctx context.Context, actor *domain.User,
 		return nil, fmt.Errorf("updating activity: %w", err)
 	}
 
-	_ = s.audit.Record(ctx, &domain.AuditEntry{
+	s.recordAudit(ctx, &domain.AuditEntry{
 		EntityType: "activity",
 		EntityID:   id,
 		EventType:  "updated",
@@ -469,7 +469,7 @@ func (s *ActivityService) PatchStatus(ctx context.Context, actor *domain.User, i
 		return nil, fmt.Errorf("updating activity status: %w", err)
 	}
 
-	_ = s.audit.Record(ctx, &domain.AuditEntry{
+	s.recordAudit(ctx, &domain.AuditEntry{
 		EntityType: "activity",
 		EntityID:   id,
 		EventType:  "status_changed",
@@ -821,6 +821,13 @@ func isWindowClaimed(claimFrom, claimBy time.Time, recoveryDates []time.Time, ta
 		}
 	}
 	return false
+}
+
+// recordAudit persists an audit entry. Failures are logged but do not block the caller.
+func (s *ActivityService) recordAudit(ctx context.Context, entry *domain.AuditEntry) {
+	if err := s.audit.Record(ctx, entry); err != nil {
+		slog.Default().Warn("audit record failed", "entity", entry.EntityID, "event", entry.EventType, "err", err)
+	}
 }
 
 // checkTargetAccess verifies that the actor can view the referenced target.
