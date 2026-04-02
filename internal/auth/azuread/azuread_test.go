@@ -58,7 +58,10 @@ func signJWT(t *testing.T, key *rsa.PrivateKey, kid string, claims tokenClaims) 
 
 	signingInput := headerB64 + "." + claimsB64
 	hash := sha256.Sum256([]byte(signingInput))
-	sig, err := rsa.SignPKCS1v15(rand.Reader, key, crypto.SHA256, hash[:])
+	// PKCS1v15 is used here intentionally: this test helper creates mock RS256 JWTs
+	// to exercise the token validation path. It mirrors real Azure AD token signing
+	// (RS256 = RSASSA-PKCS1-v1_5 with SHA-256) and is not used for production encryption.
+	sig, err := rsa.SignPKCS1v15(rand.Reader, key, crypto.SHA256, hash[:]) //nolint:gosec // test-only mock JWT signing
 	if err != nil {
 		t.Fatalf("signing JWT: %v", err)
 	}

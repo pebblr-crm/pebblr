@@ -1,8 +1,8 @@
 import { AlertTriangle, RotateCcw } from 'lucide-react'
 
 interface QueryErrorProps {
-  message?: string
-  onRetry?: () => void
+  readonly message?: string
+  readonly onRetry?: () => void
 }
 
 export function QueryError({ message = 'Failed to load data', onRetry }: QueryErrorProps) {

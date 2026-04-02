@@ -2,7 +2,7 @@ package postgres
 
 import (
 	"context"
-	"fmt"
+	"errors"
 	"testing"
 	"time"
 
@@ -10,6 +10,21 @@ import (
 	"github.com/pebblr/pebblr/internal/store"
 
 	pgxmock "github.com/pashagolub/pgxmock/v4"
+)
+
+const (
+	sqlSelectStatusCount    = "SELECT status, COUNT\\(\\*\\) FROM activities"
+	sqlSelectTypeCount      = "SELECT activity_type, COUNT\\(\\*\\) FROM activities"
+	dashErrUnexpected       = "unexpected error: %v"
+	dashTestUserID          = "user-1"
+	dashTestTeamID          = "team-1"
+	dashTestDBError         = "db error"
+	dashErrExpectedError    = "expected error, got nil"
+	sqlSelectCountTargets   = "SELECT COUNT\\(\\*\\) FROM targets"
+	sqlSelectDistinctTarget = "SELECT COUNT\\(DISTINCT a.target_id\\) FROM activities a"
+	sqlSelectTFields        = "SELECT t.fields"
+	sqlSelectDistinctDue    = "SELECT DISTINCT due_date FROM activities"
+	sqlSelectDueDate        = "SELECT due_date FROM activities"
 )
 
 func newDashboardRepo(pool pgxmock.PgxPoolIface) *dashboardRepository {
@@ -34,13 +49,13 @@ func TestActivityStats_AllActivities(t *testing.T) {
 	filter := defaultFilter()
 
 	// AllActivities + 2 date filters = 2 args
-	mock.ExpectQuery("SELECT status, COUNT\\(\\*\\) FROM activities").
+	mock.ExpectQuery(sqlSelectStatusCount).
 		WithArgs(filter.DateFrom, filter.DateTo).
 		WillReturnRows(mock.NewRows([]string{"status", "count"}).
 			AddRow("planned", 5).
 			AddRow("completed", 3))
 
-	mock.ExpectQuery("SELECT activity_type, COUNT\\(\\*\\) FROM activities").
+	mock.ExpectQuery(sqlSelectTypeCount).
 		WithArgs(filter.DateFrom, filter.DateTo).
 		WillReturnRows(mock.NewRows([]string{"activity_type", "count"}).
 			AddRow("visit", 6).
@@ -48,7 +63,7 @@ func TestActivityStats_AllActivities(t *testing.T) {
 
 	stats, err := repo.ActivityStats(ctx, scope, filter)
 	if err != nil {
-		t.Fatalf("unexpected error: %v", err)
+		t.Fatalf(dashErrUnexpected, err)
 	}
 	if stats.Total != 8 {
 		t.Errorf("expected total 8, got %d", stats.Total)
@@ -73,7 +88,7 @@ func TestActivityStats_EmptyScope(t *testing.T) {
 
 	stats, err := repo.ActivityStats(ctx, scope, filter)
 	if err != nil {
-		t.Fatalf("unexpected error: %v", err)
+		t.Fatalf(dashErrUnexpected, err)
 	}
 	if stats.Total != 0 {
 		t.Errorf("expected total 0, got %d", stats.Total)
@@ -88,23 +103,23 @@ func TestActivityStats_ScopedByCreatorIDs(t *testing.T) {
 	mock := newMockPool(t)
 	repo := newDashboardRepo(mock)
 	ctx := context.Background()
-	scope := rbac.ActivityScope{CreatorIDs: []string{"user-1"}}
+	scope := rbac.ActivityScope{CreatorIDs: []string{dashTestUserID}}
 	filter := defaultFilter()
 
 	// 1 scope arg + 2 date args = 3
-	mock.ExpectQuery("SELECT status, COUNT\\(\\*\\) FROM activities").
+	mock.ExpectQuery(sqlSelectStatusCount).
 		WithArgs(anyArgs(3)...).
 		WillReturnRows(mock.NewRows([]string{"status", "count"}).
 			AddRow("planned", 2))
 
-	mock.ExpectQuery("SELECT activity_type, COUNT\\(\\*\\) FROM activities").
+	mock.ExpectQuery(sqlSelectTypeCount).
 		WithArgs(anyArgs(3)...).
 		WillReturnRows(mock.NewRows([]string{"activity_type", "count"}).
 			AddRow("visit", 2))
 
 	stats, err := repo.ActivityStats(ctx, scope, filter)
 	if err != nil {
-		t.Fatalf("unexpected error: %v", err)
+		t.Fatalf(dashErrUnexpected, err)
 	}
 	if stats.Total != 2 {
 		t.Errorf("expected total 2, got %d", stats.Total)
@@ -120,24 +135,24 @@ func TestActivityStats_WithUserAndTeamFilter(t *testing.T) {
 	filter := store.DashboardFilter{
 		DateFrom: testTime(),
 		DateTo:   testTime().Add(24 * time.Hour),
-		UserID:   strPtr("user-1"),
-		TeamID:   strPtr("team-1"),
+		UserID:   strPtr(dashTestUserID),
+		TeamID:   strPtr(dashTestTeamID),
 	}
 
 	// 2 date args + 1 user + 1 team = 4
-	mock.ExpectQuery("SELECT status, COUNT\\(\\*\\) FROM activities").
+	mock.ExpectQuery(sqlSelectStatusCount).
 		WithArgs(anyArgs(4)...).
 		WillReturnRows(mock.NewRows([]string{"status", "count"}).
 			AddRow("planned", 1))
 
-	mock.ExpectQuery("SELECT activity_type, COUNT\\(\\*\\) FROM activities").
+	mock.ExpectQuery(sqlSelectTypeCount).
 		WithArgs(anyArgs(4)...).
 		WillReturnRows(mock.NewRows([]string{"activity_type", "count"}).
 			AddRow("visit", 1))
 
 	stats, err := repo.ActivityStats(ctx, scope, filter)
 	if err != nil {
-		t.Fatalf("unexpected error: %v", err)
+		t.Fatalf(dashErrUnexpected, err)
 	}
 	if stats.Total != 1 {
 		t.Errorf("expected total 1, got %d", stats.Total)
@@ -151,13 +166,13 @@ func TestActivityStats_StatusQueryError(t *testing.T) {
 	ctx := context.Background()
 	scope := rbac.ActivityScope{AllActivities: true}
 
-	mock.ExpectQuery("SELECT status, COUNT\\(\\*\\) FROM activities").
+	mock.ExpectQuery(sqlSelectStatusCount).
 		WithArgs(anyArgs(2)...).
-		WillReturnError(fmt.Errorf("db error"))
+		WillReturnError(errors.New(dashTestDBError))
 
 	_, err := repo.ActivityStats(ctx, scope, defaultFilter())
 	if err == nil {
-		t.Fatal("expected error, got nil")
+		t.Fatal(dashErrExpectedError)
 	}
 }
 
@@ -169,17 +184,17 @@ func TestActivityStats_TypeQueryError(t *testing.T) {
 	scope := rbac.ActivityScope{AllActivities: true}
 	filter := defaultFilter()
 
-	mock.ExpectQuery("SELECT status, COUNT\\(\\*\\) FROM activities").
+	mock.ExpectQuery(sqlSelectStatusCount).
 		WithArgs(filter.DateFrom, filter.DateTo).
 		WillReturnRows(mock.NewRows([]string{"status", "count"}))
 
-	mock.ExpectQuery("SELECT activity_type, COUNT\\(\\*\\) FROM activities").
+	mock.ExpectQuery(sqlSelectTypeCount).
 		WithArgs(filter.DateFrom, filter.DateTo).
-		WillReturnError(fmt.Errorf("db error"))
+		WillReturnError(errors.New(dashTestDBError))
 
 	_, err := repo.ActivityStats(ctx, scope, filter)
 	if err == nil {
-		t.Fatal("expected error, got nil")
+		t.Fatal(dashErrExpectedError)
 	}
 }
 
@@ -195,17 +210,17 @@ func TestCoverageStats_AllScope(t *testing.T) {
 	filter := defaultFilter()
 
 	// Count total targets: no conditions for AllTargets.
-	mock.ExpectQuery("SELECT COUNT\\(\\*\\) FROM targets").
+	mock.ExpectQuery(sqlSelectCountTargets).
 		WillReturnRows(mock.NewRows([]string{"count"}).AddRow(100))
 
 	// Count visited targets: dateFrom + dateTo = 2 args
-	mock.ExpectQuery("SELECT COUNT\\(DISTINCT a.target_id\\) FROM activities a").
+	mock.ExpectQuery(sqlSelectDistinctTarget).
 		WithArgs(filter.DateFrom, filter.DateTo).
 		WillReturnRows(mock.NewRows([]string{"count"}).AddRow(40))
 
 	stats, err := repo.CoverageStats(ctx, scope, targetScope, filter)
 	if err != nil {
-		t.Fatalf("unexpected error: %v", err)
+		t.Fatalf(dashErrUnexpected, err)
 	}
 	if stats.TotalTargets != 100 {
 		t.Errorf("expected total targets 100, got %d", stats.TotalTargets)
@@ -225,7 +240,7 @@ func TestCoverageStats_EmptyTargetScope(t *testing.T) {
 
 	stats, err := repo.CoverageStats(ctx, scope, targetScope, defaultFilter())
 	if err != nil {
-		t.Fatalf("unexpected error: %v", err)
+		t.Fatalf(dashErrUnexpected, err)
 	}
 	if stats.TotalTargets != 0 {
 		t.Errorf("expected 0 total targets for empty scope, got %d", stats.TotalTargets)
@@ -242,12 +257,12 @@ func TestCoverageStats_EmptyActivityScope(t *testing.T) {
 	filter := defaultFilter()
 
 	// Count total targets.
-	mock.ExpectQuery("SELECT COUNT\\(\\*\\) FROM targets").
+	mock.ExpectQuery(sqlSelectCountTargets).
 		WillReturnRows(mock.NewRows([]string{"count"}).AddRow(50))
 
 	stats, err := repo.CoverageStats(ctx, scope, targetScope, filter)
 	if err != nil {
-		t.Fatalf("unexpected error: %v", err)
+		t.Fatalf(dashErrUnexpected, err)
 	}
 	if stats.TotalTargets != 50 {
 		t.Errorf("expected 50, got %d", stats.TotalTargets)
@@ -267,22 +282,22 @@ func TestCoverageStats_WithUserFilter(t *testing.T) {
 	filter := store.DashboardFilter{
 		DateFrom: testTime(),
 		DateTo:   testTime().Add(24 * time.Hour),
-		UserID:   strPtr("user-1"),
+		UserID:   strPtr(dashTestUserID),
 	}
 
 	// Target count: 1 user filter arg
-	mock.ExpectQuery("SELECT COUNT\\(\\*\\) FROM targets").
-		WithArgs("user-1").
+	mock.ExpectQuery(sqlSelectCountTargets).
+		WithArgs(dashTestUserID).
 		WillReturnRows(mock.NewRows([]string{"count"}).AddRow(20))
 
 	// Visited count: dateFrom + dateTo + userID = 3 args
-	mock.ExpectQuery("SELECT COUNT\\(DISTINCT a.target_id\\) FROM activities a").
+	mock.ExpectQuery(sqlSelectDistinctTarget).
 		WithArgs(anyArgs(3)...).
 		WillReturnRows(mock.NewRows([]string{"count"}).AddRow(10))
 
 	stats, err := repo.CoverageStats(ctx, scope, targetScope, filter)
 	if err != nil {
-		t.Fatalf("unexpected error: %v", err)
+		t.Fatalf(dashErrUnexpected, err)
 	}
 	if stats.TotalTargets != 20 {
 		t.Errorf("expected 20, got %d", stats.TotalTargets)
@@ -302,22 +317,22 @@ func TestCoverageStats_WithTeamFilter(t *testing.T) {
 	filter := store.DashboardFilter{
 		DateFrom: testTime(),
 		DateTo:   testTime().Add(24 * time.Hour),
-		TeamID:   strPtr("team-1"),
+		TeamID:   strPtr(dashTestTeamID),
 	}
 
 	// Target count: 1 team filter arg
-	mock.ExpectQuery("SELECT COUNT\\(\\*\\) FROM targets").
-		WithArgs("team-1").
+	mock.ExpectQuery(sqlSelectCountTargets).
+		WithArgs(dashTestTeamID).
 		WillReturnRows(mock.NewRows([]string{"count"}).AddRow(30))
 
 	// Visited count: dateFrom + dateTo + teamID = 3 args
-	mock.ExpectQuery("SELECT COUNT\\(DISTINCT a.target_id\\) FROM activities a").
+	mock.ExpectQuery(sqlSelectDistinctTarget).
 		WithArgs(anyArgs(3)...).
 		WillReturnRows(mock.NewRows([]string{"count"}).AddRow(15))
 
 	stats, err := repo.CoverageStats(ctx, scope, targetScope, filter)
 	if err != nil {
-		t.Fatalf("unexpected error: %v", err)
+		t.Fatalf(dashErrUnexpected, err)
 	}
 	if stats.TotalTargets != 30 {
 		t.Errorf("expected 30, got %d", stats.TotalTargets)
@@ -335,12 +350,12 @@ func TestCoverageStats_TargetCountError(t *testing.T) {
 	scope := rbac.ActivityScope{AllActivities: true}
 	targetScope := rbac.TargetScope{AllTargets: true}
 
-	mock.ExpectQuery("SELECT COUNT\\(\\*\\) FROM targets").
-		WillReturnError(fmt.Errorf("db error"))
+	mock.ExpectQuery(sqlSelectCountTargets).
+		WillReturnError(errors.New(dashTestDBError))
 
 	_, err := repo.CoverageStats(ctx, scope, targetScope, defaultFilter())
 	if err == nil {
-		t.Fatal("expected error, got nil")
+		t.Fatal(dashErrExpectedError)
 	}
 }
 
@@ -353,16 +368,16 @@ func TestCoverageStats_VisitedCountError(t *testing.T) {
 	targetScope := rbac.TargetScope{AllTargets: true}
 	filter := defaultFilter()
 
-	mock.ExpectQuery("SELECT COUNT\\(\\*\\) FROM targets").
+	mock.ExpectQuery(sqlSelectCountTargets).
 		WillReturnRows(mock.NewRows([]string{"count"}).AddRow(100))
 
-	mock.ExpectQuery("SELECT COUNT\\(DISTINCT a.target_id\\) FROM activities a").
+	mock.ExpectQuery(sqlSelectDistinctTarget).
 		WithArgs(filter.DateFrom, filter.DateTo).
-		WillReturnError(fmt.Errorf("db error"))
+		WillReturnError(errors.New(dashTestDBError))
 
 	_, err := repo.CoverageStats(ctx, scope, targetScope, filter)
 	if err == nil {
-		t.Fatal("expected error, got nil")
+		t.Fatal(dashErrExpectedError)
 	}
 }
 
@@ -378,7 +393,7 @@ func TestFrequencyStats_AllScope(t *testing.T) {
 	filter := defaultFilter()
 
 	// dateFrom + dateTo = 2 args
-	mock.ExpectQuery("SELECT t.fields").
+	mock.ExpectQuery(sqlSelectTFields).
 		WithArgs(filter.DateFrom, filter.DateTo).
 		WillReturnRows(mock.NewRows([]string{"classification", "target_count", "total_visits"}).
 			AddRow("A", 10, 50).
@@ -386,7 +401,7 @@ func TestFrequencyStats_AllScope(t *testing.T) {
 
 	result, err := repo.FrequencyStats(ctx, scope, targetScope, filter)
 	if err != nil {
-		t.Fatalf("unexpected error: %v", err)
+		t.Fatalf(dashErrUnexpected, err)
 	}
 	if len(result) != 2 {
 		t.Fatalf("expected 2 rows, got %d", len(result))
@@ -409,7 +424,7 @@ func TestFrequencyStats_EmptyTargetScope(t *testing.T) {
 
 	result, err := repo.FrequencyStats(ctx, scope, targetScope, defaultFilter())
 	if err != nil {
-		t.Fatalf("unexpected error: %v", err)
+		t.Fatalf(dashErrUnexpected, err)
 	}
 	if len(result) != 0 {
 		t.Errorf("expected empty result for empty target scope, got %d", len(result))
@@ -425,13 +440,13 @@ func TestFrequencyStats_QueryError(t *testing.T) {
 	targetScope := rbac.TargetScope{AllTargets: true}
 	filter := defaultFilter()
 
-	mock.ExpectQuery("SELECT t.fields").
+	mock.ExpectQuery(sqlSelectTFields).
 		WithArgs(filter.DateFrom, filter.DateTo).
-		WillReturnError(fmt.Errorf("db error"))
+		WillReturnError(errors.New(dashTestDBError))
 
 	_, err := repo.FrequencyStats(ctx, scope, targetScope, filter)
 	if err == nil {
-		t.Fatal("expected error, got nil")
+		t.Fatal(dashErrExpectedError)
 	}
 }
 
@@ -445,19 +460,19 @@ func TestFrequencyStats_WithFilters(t *testing.T) {
 	filter := store.DashboardFilter{
 		DateFrom: testTime(),
 		DateTo:   testTime().Add(24 * time.Hour),
-		UserID:   strPtr("user-1"),
-		TeamID:   strPtr("team-1"),
+		UserID:   strPtr(dashTestUserID),
+		TeamID:   strPtr(dashTestTeamID),
 	}
 
 	// userID + teamID on target + dateFrom + dateTo on activity = 4 args
-	mock.ExpectQuery("SELECT t.fields").
+	mock.ExpectQuery(sqlSelectTFields).
 		WithArgs(anyArgs(4)...).
 		WillReturnRows(mock.NewRows([]string{"classification", "target_count", "total_visits"}).
 			AddRow("A", 5, 20))
 
 	result, err := repo.FrequencyStats(ctx, scope, targetScope, filter)
 	if err != nil {
-		t.Fatalf("unexpected error: %v", err)
+		t.Fatalf(dashErrUnexpected, err)
 	}
 	if len(result) != 1 {
 		t.Fatalf("expected 1 row, got %d", len(result))
@@ -474,14 +489,14 @@ func TestFrequencyStats_ScanError(t *testing.T) {
 	filter := defaultFilter()
 
 	// Return wrong column types to trigger scan error
-	mock.ExpectQuery("SELECT t.fields").
+	mock.ExpectQuery(sqlSelectTFields).
 		WithArgs(filter.DateFrom, filter.DateTo).
 		WillReturnRows(mock.NewRows([]string{"classification", "target_count", "total_visits"}).
 			AddRow("A", "not-an-int", 50))
 
 	_, err := repo.FrequencyStats(ctx, scope, targetScope, filter)
 	if err == nil {
-		t.Fatal("expected scan error, got nil")
+		t.Fatal(dashErrExpectedError)
 	}
 }
 
@@ -499,13 +514,13 @@ func TestWeekendFieldActivities_AllScope(t *testing.T) {
 	sat := time.Date(2025, 3, 15, 0, 0, 0, 0, time.UTC)
 
 	// fieldTypes (1) + dateFrom + dateTo = 3 args
-	mock.ExpectQuery("SELECT DISTINCT due_date FROM activities").
+	mock.ExpectQuery(sqlSelectDistinctDue).
 		WithArgs(anyArgs(3)...).
 		WillReturnRows(mock.NewRows([]string{"due_date"}).AddRow(sat))
 
 	result, err := repo.WeekendFieldActivities(ctx, scope, fieldTypes, filter)
 	if err != nil {
-		t.Fatalf("unexpected error: %v", err)
+		t.Fatalf(dashErrUnexpected, err)
 	}
 	if len(result) != 1 {
 		t.Fatalf("expected 1, got %d", len(result))
@@ -524,7 +539,7 @@ func TestWeekendFieldActivities_EmptyScope(t *testing.T) {
 
 	result, err := repo.WeekendFieldActivities(ctx, scope, []string{"visit"}, defaultFilter())
 	if err != nil {
-		t.Fatalf("unexpected error: %v", err)
+		t.Fatalf(dashErrUnexpected, err)
 	}
 	if result != nil {
 		t.Errorf("expected nil for empty scope, got %v", result)
@@ -538,13 +553,13 @@ func TestWeekendFieldActivities_QueryError(t *testing.T) {
 	ctx := context.Background()
 	scope := rbac.ActivityScope{AllActivities: true}
 
-	mock.ExpectQuery("SELECT DISTINCT due_date FROM activities").
+	mock.ExpectQuery(sqlSelectDistinctDue).
 		WithArgs(anyArgs(3)...).
-		WillReturnError(fmt.Errorf("db error"))
+		WillReturnError(errors.New(dashTestDBError))
 
 	_, err := repo.WeekendFieldActivities(ctx, scope, []string{"visit"}, defaultFilter())
 	if err == nil {
-		t.Fatal("expected error, got nil")
+		t.Fatal(dashErrExpectedError)
 	}
 }
 
@@ -557,17 +572,17 @@ func TestWeekendFieldActivities_WithUserFilter(t *testing.T) {
 	filter := store.DashboardFilter{
 		DateFrom: testTime(),
 		DateTo:   testTime().Add(24 * time.Hour),
-		UserID:   strPtr("user-1"),
+		UserID:   strPtr(dashTestUserID),
 	}
 
 	// fieldTypes (1) + dateFrom + dateTo + userID = 4 args
-	mock.ExpectQuery("SELECT DISTINCT due_date FROM activities").
+	mock.ExpectQuery(sqlSelectDistinctDue).
 		WithArgs(anyArgs(4)...).
 		WillReturnRows(mock.NewRows([]string{"due_date"}))
 
 	result, err := repo.WeekendFieldActivities(ctx, scope, []string{"visit"}, filter)
 	if err != nil {
-		t.Fatalf("unexpected error: %v", err)
+		t.Fatalf(dashErrUnexpected, err)
 	}
 	if len(result) != 0 {
 		t.Errorf("expected 0, got %d", len(result))
@@ -586,13 +601,13 @@ func TestRecoveryActivities_AllScope(t *testing.T) {
 	date := testTime()
 
 	// recoveryType (1) + dateFrom + dateTo = 3 args
-	mock.ExpectQuery("SELECT due_date FROM activities").
+	mock.ExpectQuery(sqlSelectDueDate).
 		WithArgs(anyArgs(3)...).
 		WillReturnRows(mock.NewRows([]string{"due_date"}).AddRow(date))
 
 	result, err := repo.RecoveryActivities(ctx, scope, "recovery", filter)
 	if err != nil {
-		t.Fatalf("unexpected error: %v", err)
+		t.Fatalf(dashErrUnexpected, err)
 	}
 	if len(result) != 1 {
 		t.Fatalf("expected 1 date, got %d", len(result))
@@ -608,7 +623,7 @@ func TestRecoveryActivities_EmptyScope(t *testing.T) {
 
 	result, err := repo.RecoveryActivities(ctx, scope, "recovery", defaultFilter())
 	if err != nil {
-		t.Fatalf("unexpected error: %v", err)
+		t.Fatalf(dashErrUnexpected, err)
 	}
 	if result != nil {
 		t.Errorf("expected nil for empty scope, got %v", result)
@@ -622,13 +637,13 @@ func TestRecoveryActivities_QueryError(t *testing.T) {
 	ctx := context.Background()
 	scope := rbac.ActivityScope{AllActivities: true}
 
-	mock.ExpectQuery("SELECT due_date FROM activities").
+	mock.ExpectQuery(sqlSelectDueDate).
 		WithArgs(anyArgs(3)...).
-		WillReturnError(fmt.Errorf("db error"))
+		WillReturnError(errors.New(dashTestDBError))
 
 	_, err := repo.RecoveryActivities(ctx, scope, "recovery", defaultFilter())
 	if err == nil {
-		t.Fatal("expected error, got nil")
+		t.Fatal(dashErrExpectedError)
 	}
 }
 
@@ -637,17 +652,17 @@ func TestRecoveryActivities_ScopedByCreatorIDs(t *testing.T) {
 	mock := newMockPool(t)
 	repo := newDashboardRepo(mock)
 	ctx := context.Background()
-	scope := rbac.ActivityScope{CreatorIDs: []string{"user-1"}}
+	scope := rbac.ActivityScope{CreatorIDs: []string{dashTestUserID}}
 	filter := defaultFilter()
 
 	// recoveryType (1) + 1 scope arg + dateFrom + dateTo = 4 args
-	mock.ExpectQuery("SELECT due_date FROM activities").
+	mock.ExpectQuery(sqlSelectDueDate).
 		WithArgs(anyArgs(4)...).
 		WillReturnRows(mock.NewRows([]string{"due_date"}).AddRow(testTime()))
 
 	result, err := repo.RecoveryActivities(ctx, scope, "recovery", filter)
 	if err != nil {
-		t.Fatalf("unexpected error: %v", err)
+		t.Fatalf(dashErrUnexpected, err)
 	}
 	if len(result) != 1 {
 		t.Errorf("expected 1 date, got %d", len(result))
@@ -664,13 +679,13 @@ func TestRecoveryActivities_MultipleResults(t *testing.T) {
 	d1 := testTime()
 	d2 := testTime().Add(24 * time.Hour)
 
-	mock.ExpectQuery("SELECT due_date FROM activities").
+	mock.ExpectQuery(sqlSelectDueDate).
 		WithArgs(anyArgs(3)...).
 		WillReturnRows(mock.NewRows([]string{"due_date"}).AddRow(d1).AddRow(d2))
 
 	result, err := repo.RecoveryActivities(ctx, scope, "recovery", filter)
 	if err != nil {
-		t.Fatalf("unexpected error: %v", err)
+		t.Fatalf(dashErrUnexpected, err)
 	}
 	if len(result) != 2 {
 		t.Errorf("expected 2 dates, got %d", len(result))

@@ -25,7 +25,7 @@ export class ErrorBoundary extends Component<ErrorBoundaryProps, ErrorBoundarySt
     console.error('ErrorBoundary caught:', error, info.componentStack)
   }
 
-  private handleRetry = () => {
+  private readonly handleRetry = () => {
     this.setState({ hasError: false, error: null })
   }
 

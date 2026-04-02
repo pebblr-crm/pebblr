@@ -14,7 +14,10 @@ type userRepository struct {
 	pool dbPool
 }
 
-const userColumns = `id, external_id, email, name, role, avatar, online_status`
+const (
+	userColumns = `id, external_id, email, name, role, avatar, online_status`
+	errScanUser = "scanning user: %w"
+)
 
 func scanUser(row pgx.Row) (*domain.User, error) {
 	var u domain.User
@@ -23,7 +26,7 @@ func scanUser(row pgx.Row) (*domain.User, error) {
 		if errors.Is(err, pgx.ErrNoRows) {
 			return nil, store.ErrNotFound
 		}
-		return nil, fmt.Errorf("scanning user: %w", err)
+		return nil, fmt.Errorf(errScanUser, err)
 	}
 	return &u, nil
 }
@@ -63,7 +66,7 @@ func (r *userRepository) List(ctx context.Context) ([]*domain.User, error) {
 		var u domain.User
 		err := rows.Scan(&u.ID, &u.ExternalID, &u.Email, &u.Name, &u.Role, &u.Avatar, &u.OnlineStatus, &u.TeamIDs)
 		if err != nil {
-			return nil, fmt.Errorf("scanning user: %w", err)
+			return nil, fmt.Errorf(errScanUser, err)
 		}
 		users = append(users, &u)
 	}
@@ -107,7 +110,7 @@ func (r *userRepository) ListPaginated(ctx context.Context, page, limit int) (*s
 		var u domain.User
 		err := rows.Scan(&u.ID, &u.ExternalID, &u.Email, &u.Name, &u.Role, &u.Avatar, &u.OnlineStatus, &u.TeamIDs)
 		if err != nil {
-			return nil, fmt.Errorf("scanning user: %w", err)
+			return nil, fmt.Errorf(errScanUser, err)
 		}
 		users = append(users, &u)
 	}

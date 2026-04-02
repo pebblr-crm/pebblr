@@ -22,7 +22,7 @@ interface NavItem {
   roles: readonly string[]
 }
 
-export function Sidebar({ currentPath, onNavigate }: { currentPath: string; onNavigate?: () => void }) {
+export function Sidebar({ currentPath, onNavigate }: Readonly<{ currentPath: string; onNavigate?: () => void }>) {
   const { t } = useTranslation()
   const queryClient = useQueryClient()
   const { role, isDemoMode, demoLogout } = useAuth()

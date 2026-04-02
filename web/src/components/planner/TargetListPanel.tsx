@@ -9,20 +9,20 @@ import { Search, Info, GripVertical, CalendarPlus } from 'lucide-react'
 import type { Target } from '@/types/target'
 
 export interface TargetListPanelProps {
-  filteredTargets: Target[]
-  selectedTargetIds: Set<string>
-  hoveredTargetId: string | null
-  targetSearch: string
-  priorityFilter: string
-  visitMap: Map<string, string>
-  onTargetSearchChange: (value: string) => void
-  onPriorityFilterChange: (value: string) => void
-  onToggleTarget: (id: string) => void
-  onClearSelection: () => void
-  onHoverTarget: (id: string | null) => void
-  onDragTargetStart: (id: string) => void
-  onDragTargetEnd: () => void
-  onBulkSchedule: () => void
+  readonly filteredTargets: Target[]
+  readonly selectedTargetIds: Set<string>
+  readonly hoveredTargetId: string | null
+  readonly targetSearch: string
+  readonly priorityFilter: string
+  readonly visitMap: Map<string, string>
+  readonly onTargetSearchChange: (value: string) => void
+  readonly onPriorityFilterChange: (value: string) => void
+  readonly onToggleTarget: (id: string) => void
+  readonly onClearSelection: () => void
+  readonly onHoverTarget: (id: string | null) => void
+  readonly onDragTargetStart: (id: string) => void
+  readonly onDragTargetEnd: () => void
+  readonly onBulkSchedule: () => void
 }
 
 export function TargetListPanel({
@@ -176,21 +176,23 @@ export function TargetListPanel({
                 <li
                   key={t.id}
                   draggable
-                  role="button"
-                  tabIndex={0}
                   onDragStart={(e) => handleDragStart(e, t.id)}
                   onDragEnd={onDragTargetEnd}
-                  onClick={() => onToggleTarget(t.id)}
-                  onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); onToggleTarget(t.id) } }}
                   onMouseEnter={() => onHoverTarget(t.id)}
                   onMouseLeave={() => onHoverTarget(null)}
-                  className={`px-3 py-2 border-b border-slate-50 flex items-center gap-2 text-xs cursor-pointer transition-colors ${
+                  className={`border-b border-slate-50 flex text-xs transition-colors ${
                     isSelected
                       ? 'bg-teal-50 border-l-2 border-l-teal-500'
                       : isHovered
                         ? 'bg-slate-50'
                         : 'hover:bg-slate-50'
                   }`}
+                >
+                <button
+                  type="button"
+                  tabIndex={0}
+                  onClick={() => onToggleTarget(t.id)}
+                  className="px-3 py-2 flex items-center gap-2 w-full text-left cursor-pointer"
                 >
                   {isSelected && (
                     <GripVertical size={12} className="text-slate-400 shrink-0 cursor-grab" />
@@ -210,15 +212,12 @@ export function TargetListPanel({
                   </div>
                   <span
                     className={`text-[9px] font-bold uppercase px-1.5 py-0.5 rounded shrink-0 ${
-                      priority === 'a'
-                        ? 'bg-red-100 text-red-700'
-                        : priority === 'b'
-                          ? 'bg-amber-100 text-amber-700'
-                          : 'bg-slate-100 text-slate-600'
+                      { a: 'bg-red-100 text-red-700', b: 'bg-amber-100 text-amber-700', c: 'bg-slate-100 text-slate-600' }[priority] ?? 'bg-slate-100 text-slate-600'
                     }`}
                   >
                     {priority.toUpperCase()}
                   </span>
+                </button>
                 </li>
               )
             })}

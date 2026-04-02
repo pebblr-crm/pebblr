@@ -73,12 +73,15 @@ const HATCH_PATTERN = 'repeating-linear-gradient(45deg, transparent, transparent
 /** Compute blocker-based capacity constraints for a day */
 function computeCapacity(blockers: readonly Activity[], maxPerDay: number) {
   const blockerCapacity = blockers.reduce((sum, b) => {
-    return sum + (b.duration === 'full_day' ? 1.0 : 0.5)
+    return sum + (b.duration === 'full_day' ? 1 : 0.5)
   }, 0)
-  const cappedCapacity = Math.min(blockerCapacity, 1.0)
-  const isFullyBlocked = cappedCapacity >= 1.0
+  const cappedCapacity = Math.min(blockerCapacity, 1)
+  const isFullyBlocked = cappedCapacity >= 1
   const isHalfBlocked = cappedCapacity >= 0.5 && !isFullyBlocked
-  const maxVisits = isFullyBlocked ? 0 : isHalfBlocked ? Math.floor(maxPerDay / 2) : maxPerDay
+  let maxVisits: number
+  if (isFullyBlocked) maxVisits = 0
+  else if (isHalfBlocked) maxVisits = Math.floor(maxPerDay / 2)
+  else maxVisits = maxPerDay
   return { isFullyBlocked, isHalfBlocked, maxVisits }
 }
 

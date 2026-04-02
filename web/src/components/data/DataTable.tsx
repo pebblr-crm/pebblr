@@ -11,11 +11,11 @@ import { useState } from 'react'
 import { ChevronUp, ChevronDown } from 'lucide-react'
 
 interface DataTableProps<T> {
-  data: T[]
+  readonly data: T[]
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  columns: ColumnDef<T, any>[]
-  pageSize?: number
-  onRowClick?: (row: T) => void
+  readonly columns: ColumnDef<T, any>[]
+  readonly pageSize?: number
+  readonly onRowClick?: (row: T) => void
 }
 
 export function DataTable<T>({ data, columns, pageSize = 25, onRowClick }: DataTableProps<T>) {

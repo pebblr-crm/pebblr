@@ -75,7 +75,7 @@ function ConsolePage() {
   ]
 
   if (usersLoading) return <Spinner />
-  if (usersError) return <QueryError message="Failed to load configuration" onRetry={() => void refetchUsers()} />
+  if (usersError) return <QueryError message="Failed to load configuration" onRetry={() => { refetchUsers() }} />
 
   return (
     <div className="flex h-full flex-col md:flex-row">
@@ -168,7 +168,7 @@ function ConsolePage() {
               <div className="space-y-2">
                 {Object.entries(config.rules.frequency).map(([classification, required]) => (
                   <div key={classification} className="flex items-center justify-between">
-                    <Badge variant={classification === 'A' ? 'danger' : classification === 'B' ? 'warning' : 'default'}>
+                    <Badge variant={({ A: 'danger', B: 'warning' } as const)[classification] ?? 'default'}>
                       Class {classification}
                     </Badge>
                     <span className="text-sm text-slate-700">{required} visits/period</span>

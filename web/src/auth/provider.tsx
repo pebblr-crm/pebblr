@@ -60,7 +60,7 @@ function buildStaticUser(): AuthenticatedUser | null {
   }
 }
 
-export function AuthProvider({ children }: { children: ReactNode }) {
+export function AuthProvider({ children }: Readonly<{ children: ReactNode }>) {
   const isDemoMode = import.meta.env.VITE_DEMO_MODE === 'true'
 
   // Ref keeps the token accessible to the synchronous token-provider callback

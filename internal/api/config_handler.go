@@ -18,7 +18,7 @@ func NewConfigHandler(cfg *config.TenantConfig) *ConfigHandler {
 
 // Get handles GET /api/v1/config
 func (h *ConfigHandler) Get(w http.ResponseWriter, r *http.Request) {
-	if actor := requireActor(w, r); actor == nil {
+	if requireActor(w, r) == nil {
 		return
 	}
 

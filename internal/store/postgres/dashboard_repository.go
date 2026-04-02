@@ -10,6 +10,8 @@ import (
 	"github.com/pebblr/pebblr/internal/store"
 )
 
+const condDeletedNull = "deleted_at IS NULL"
+
 type dashboardRepository struct {
 	pool dbPool
 }
@@ -17,7 +19,7 @@ type dashboardRepository struct {
 // ActivityStats returns activity counts grouped by status and category for the given scope and filter.
 func (r *dashboardRepository) ActivityStats(ctx context.Context, scope rbac.ActivityScope, filter store.DashboardFilter) (*store.ActivityStats, error) {
 	qb := newQueryBuilder()
-	qb.addRaw("deleted_at IS NULL")
+	qb.addRaw(condDeletedNull)
 
 	if !qb.applyActivityScope("", scope) {
 		return &store.ActivityStats{ByStatus: map[string]int{}, ByCategory: map[string]int{}}, nil
@@ -218,7 +220,7 @@ func (r *dashboardRepository) FrequencyStats(ctx context.Context, scope rbac.Act
 // WeekendFieldActivities returns dates of field-category activities on weekends.
 func (r *dashboardRepository) WeekendFieldActivities(ctx context.Context, scope rbac.ActivityScope, fieldTypes []string, filter store.DashboardFilter) ([]store.WeekendActivity, error) {
 	qb := newQueryBuilder()
-	qb.addRaw("deleted_at IS NULL")
+	qb.addRaw(condDeletedNull)
 
 	// Weekend: extract DOW (0=Sun, 6=Sat)
 	qb.addRaw("EXTRACT(DOW FROM due_date) IN (0, 6)")
@@ -257,7 +259,7 @@ func (r *dashboardRepository) WeekendFieldActivities(ctx context.Context, scope 
 // RecoveryActivities returns dates of recovery-type activities taken.
 func (r *dashboardRepository) RecoveryActivities(ctx context.Context, scope rbac.ActivityScope, recoveryType string, filter store.DashboardFilter) ([]time.Time, error) {
 	qb := newQueryBuilder()
-	qb.addRaw("deleted_at IS NULL")
+	qb.addRaw(condDeletedNull)
 
 	qb.add("activity_type = $%d", recoveryType)
 

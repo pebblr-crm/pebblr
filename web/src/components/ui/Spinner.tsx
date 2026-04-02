@@ -1,4 +1,4 @@
-export function Spinner({ label = 'Loading...' }: { label?: string }) {
+export function Spinner({ label = 'Loading...' }: Readonly<{ label?: string }>) {
   return (
     <div className="flex items-center justify-center gap-2 p-8 text-slate-500">
       <div className="h-5 w-5 animate-spin rounded-full border-2 border-slate-300 border-t-teal-600" />

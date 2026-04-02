@@ -109,7 +109,7 @@ function AuditPage() {
   )
 
   if (isLoading) return <Spinner />
-  if (isError) return <QueryError message="Failed to load audit logs" onRetry={() => void refetch()} />
+  if (isError) return <QueryError message="Failed to load audit logs" onRetry={() => { refetch() }} />
 
   return (
     <div className="p-4 md:p-6">

@@ -9,9 +9,9 @@ const variants = {
 } as const
 
 interface BadgeProps {
-  variant?: keyof typeof variants
-  children: ReactNode
-  className?: string
+  readonly variant?: keyof typeof variants
+  readonly children: ReactNode
+  readonly className?: string
 }
 
 export function Badge({ variant = 'default', children, className = '' }: BadgeProps) {

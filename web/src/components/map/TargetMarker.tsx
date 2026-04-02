@@ -7,14 +7,14 @@ const priorityColors: Record<string, string> = {
 }
 
 interface TargetMarkerProps {
-  lng: number
-  lat: number
-  name: string
-  priority?: string
-  selected?: boolean
-  highlighted?: boolean
-  onClick?: () => void
-  onHover?: (hovered: boolean) => void
+  readonly lng: number
+  readonly lat: number
+  readonly name: string
+  readonly priority?: string
+  readonly selected?: boolean
+  readonly highlighted?: boolean
+  readonly onClick?: () => void
+  readonly onHover?: (hovered: boolean) => void
 }
 
 export function TargetMarker({

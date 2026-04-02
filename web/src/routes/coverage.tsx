@@ -52,7 +52,7 @@ function CoveragePage() {
   }, [])
 
   if (targetsLoading) return <Spinner />
-  if (targetsError) return <QueryError message="Failed to load coverage data" onRetry={() => void refetchTargets()} />
+  if (targetsError) return <QueryError message="Failed to load coverage data" onRetry={() => { refetchTargets() }} />
 
   const filterContent = (
     <>
@@ -75,7 +75,7 @@ function CoveragePage() {
 
       {/* Teams */}
       <div>
-        <label className="mb-2 block text-xs font-medium text-slate-500 uppercase">Team</label>
+        <span className="mb-2 block text-xs font-medium text-slate-500 uppercase">Team</span>
         <div className="space-y-1">
           {teams.map((team) => (
             <label key={team.id} className="flex items-center gap-2 rounded px-2 py-1.5 text-sm hover:bg-slate-50 cursor-pointer">
@@ -95,7 +95,7 @@ function CoveragePage() {
 
       {/* Priority */}
       <div>
-        <label className="mb-2 block text-xs font-medium text-slate-500 uppercase">Priority</label>
+        <span className="mb-2 block text-xs font-medium text-slate-500 uppercase">Priority</span>
         <div className="flex gap-2">
           {['a', 'b', 'c'].map((p) => (
             <button
@@ -174,9 +174,11 @@ function CoveragePage() {
 
       {/* Mobile filter overlay */}
       {filtersOpen && (
-        <div
-          className="fixed inset-0 z-40 bg-black/40 md:hidden"
+        <button
+          type="button"
+          className="fixed inset-0 z-40 bg-black/40 md:hidden cursor-default"
           onClick={() => setFiltersOpen(false)}
+          aria-label="Close filters"
         />
       )}
 

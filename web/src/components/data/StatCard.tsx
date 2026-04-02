@@ -1,15 +1,21 @@
 import { Card } from '@/components/ui/Card'
 
 interface StatCardProps {
-  label: string
-  value: string | number
-  subtitle?: string
-  trend?: 'up' | 'down' | 'neutral'
-  className?: string
+  readonly label: string
+  readonly value: string | number
+  readonly subtitle?: string
+  readonly trend?: 'up' | 'down' | 'neutral'
+  readonly className?: string
+}
+
+const trendColors: Record<string, string> = {
+  up: 'text-emerald-600',
+  down: 'text-red-600',
+  neutral: 'text-slate-500',
 }
 
 export function StatCard({ label, value, subtitle, trend, className = '' }: StatCardProps) {
-  const trendColor = trend === 'up' ? 'text-emerald-600' : trend === 'down' ? 'text-red-600' : 'text-slate-500'
+  const trendColor = trendColors[trend ?? 'neutral'] ?? 'text-slate-500'
   return (
     <Card className={className}>
       <p className="text-sm text-slate-500">{label}</p>

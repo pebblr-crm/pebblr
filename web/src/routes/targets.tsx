@@ -1,5 +1,5 @@
 import { useState, useMemo } from 'react'
-import { createRoute } from '@tanstack/react-router'
+import { createRoute, useNavigate } from '@tanstack/react-router'
 import { createColumnHelper } from '@tanstack/react-table'
 import { Route as rootRoute } from './__root'
 import { useTargets, useTargetFrequencyStatus } from '@/hooks/useTargets'
@@ -12,7 +12,6 @@ import { MapContainer } from '@/components/map/MapContainer'
 import { TargetMarker } from '@/components/map/TargetMarker'
 import { getLat, getLng, getClassification, getCity } from '@/lib/target-fields'
 import { Search, Filter, ExternalLink } from 'lucide-react'
-import { useNavigate } from '@tanstack/react-router'
 import type { Target } from '@/types/target'
 
 export const Route = createRoute({
@@ -82,7 +81,9 @@ function TargetsPage() {
           const v = info.getValue()
           if (v == null) return <span className="text-slate-400">-</span>
           const pct = Math.round(v)
-          const color = pct >= 80 ? 'text-emerald-600' : pct >= 50 ? 'text-amber-600' : 'text-red-600'
+          let color = 'text-red-600'
+          if (pct >= 80) color = 'text-emerald-600'
+          else if (pct >= 50) color = 'text-amber-600'
           return <span className={`font-medium ${color}`}>{pct}%</span>
         },
       }),
@@ -97,7 +98,7 @@ function TargetsPage() {
   )
 
   if (isLoading) return <Spinner />
-  if (isError) return <QueryError message="Failed to load targets" onRetry={() => void refetch()} />
+  if (isError) return <QueryError message="Failed to load targets" onRetry={() => { refetch() }} />
 
   return (
     <div className="flex h-full">
