@@ -54,7 +54,7 @@ function RepDrillDownPage() {
   const completionRate = stats?.total ? Math.round((completedCount / stats.total) * 100) : 0
 
   if (actLoading || targetLoading) return <Spinner />
-  if (actError || targetError) return <QueryError message="Failed to load rep data" onRetry={() => { void refetchAct(); void refetchTargets() }} />
+  if (actError || targetError) return <QueryError message="Failed to load rep data" onRetry={() => { refetchAct(); refetchTargets() }} />
 
   return (
     <div className="flex h-full flex-col">

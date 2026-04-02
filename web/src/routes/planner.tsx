@@ -185,9 +185,13 @@ function PlannerPage() {
       }))
     }
     if (dupCount > 0) {
-      const msg = dupCount === ids.size
-        ? `Already scheduled — ${dupCount === 1 ? 'target is' : `all ${dupCount} targets are`} already on this day`
-        : `${toAdd.length} added, ${dupCount} already on this day`
+      let msg: string
+      if (dupCount === ids.size) {
+        const subject = dupCount === 1 ? 'target is' : `all ${dupCount} targets are`
+        msg = `Already scheduled — ${subject} already on this day`
+      } else {
+        msg = `${toAdd.length} added, ${dupCount} already on this day`
+      }
       showToast(msg, 'warning')
     }
     setDragTargetId(null)
@@ -274,7 +278,7 @@ function PlannerPage() {
 
 
   if (targetsLoading || activitiesLoading) return <Spinner />
-  if (targetsError || activitiesError) return <QueryError message="Failed to load planner data" onRetry={() => { void refetchTargets(); void refetchActivities() }} />
+  if (targetsError || activitiesError) return <QueryError message="Failed to load planner data" onRetry={() => { refetchTargets(); refetchActivities() }} />
 
   const completedCount = stats?.byStatus?.realizat ?? 0
   const completionRate = stats?.total ? Math.round((completedCount / stats.total) * 100) : 0
@@ -469,8 +473,9 @@ function PlannerPage() {
         />
         {/* Visit type toggle */}
         <div>
-          <label id="field-bulk-visit-type" className="mb-1.5 block text-sm font-medium text-slate-700">Visit type</label>
-          <div role="group" aria-labelledby="field-bulk-visit-type" className="flex rounded-lg border border-slate-200 overflow-hidden">
+          <fieldset>
+          <legend className="mb-1.5 block text-sm font-medium text-slate-700">Visit type</legend>
+          <div className="flex rounded-lg border border-slate-200 overflow-hidden">
             <button
               type="button"
               onClick={() => setBulkVisitType('f2f')}
@@ -494,6 +499,7 @@ function PlannerPage() {
               Remote
             </button>
           </div>
+          </fieldset>
         </div>
         <div className="max-h-48 overflow-y-auto rounded-lg border border-slate-200">
           <ul className="divide-y divide-slate-100">
@@ -506,9 +512,7 @@ function PlannerPage() {
                   <span className={`w-2 h-2 rounded-full shrink-0 ${priorityDot[p] ?? priorityDot.c}`} />
                   <span className="text-sm text-slate-800 truncate flex-1">{t.name}</span>
                   <span className={`text-[9px] font-bold uppercase px-1.5 py-0.5 rounded shrink-0 ${
-                    p === 'a' ? 'bg-red-100 text-red-700'
-                      : p === 'b' ? 'bg-amber-100 text-amber-700'
-                        : 'bg-slate-100 text-slate-600'
+                    { a: 'bg-red-100 text-red-700', b: 'bg-amber-100 text-amber-700', c: 'bg-slate-100 text-slate-600' }[p] ?? 'bg-slate-100 text-slate-600'
                   }`}>{p.toUpperCase()}</span>
                 </li>
               )

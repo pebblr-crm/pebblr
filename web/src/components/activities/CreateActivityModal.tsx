@@ -10,7 +10,7 @@ import { Check } from 'lucide-react'
 const CORE_WIDGET_FIELDS = new Set(['duration', 'account_id'])
 const inputCls = 'w-full rounded-lg border border-slate-300 px-3 py-2 text-sm focus:border-teal-500 focus:outline-none focus:ring-1 focus:ring-teal-500'
 
-export function CreateActivityModal({ open, onClose }: { open: boolean; onClose: () => void }) {
+export function CreateActivityModal({ open, onClose }: Readonly<{ open: boolean; onClose: () => void }>) {
   const { data: config } = useConfig()
   const createActivity = useCreateActivity()
   const { data: recovery } = useRecoveryBalance({})
@@ -208,7 +208,7 @@ export function CreateActivityModal({ open, onClose }: { open: boolean; onClose:
             {recovery.balance === 0 && (
               <p className="text-xs text-red-600 font-medium mt-1.5">No recovery days available to claim.</p>
             )}
-            {recovery.intervals?.filter((iv) => !iv.claimed).length > 0 && (
+            {recovery.intervals?.filter((iv: { claimed: boolean }) => !iv.claimed).length > 0 && (
               <div className="mt-2 space-y-1">
                 <p className="text-[10px] font-medium text-slate-500 uppercase">Unclaimed windows</p>
                 {recovery.intervals.filter((iv) => !iv.claimed).map((iv) => (

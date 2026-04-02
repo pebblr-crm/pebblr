@@ -2,10 +2,10 @@ import { type ReactNode } from 'react'
 import { APIProvider, Map } from '@vis.gl/react-google-maps'
 
 interface MapContainerProps {
-  center?: [number, number]
-  zoom?: number
-  className?: string
-  children?: ReactNode
+  readonly center?: [number, number]
+  readonly zoom?: number
+  readonly className?: string
+  readonly children?: ReactNode
 }
 
 const API_KEY = import.meta.env.VITE_GOOGLE_MAPS_API_KEY ?? ''

@@ -3,8 +3,8 @@ import { Sidebar } from './Sidebar'
 import { Menu } from 'lucide-react'
 
 interface AppShellProps {
-  children: ReactNode
-  currentPath: string
+  readonly children: ReactNode
+  readonly currentPath: string
 }
 
 export function AppShell({ children, currentPath }: AppShellProps) {
@@ -30,9 +30,11 @@ export function AppShell({ children, currentPath }: AppShellProps) {
 
       {/* Mobile overlay */}
       {sidebarOpen && (
-        <div
-          className="fixed inset-0 z-40 bg-black/40 md:hidden"
+        <button
+          type="button"
+          className="fixed inset-0 z-40 bg-black/40 md:hidden cursor-default"
           onClick={() => setSidebarOpen(false)}
+          aria-label="Close sidebar"
         />
       )}
 

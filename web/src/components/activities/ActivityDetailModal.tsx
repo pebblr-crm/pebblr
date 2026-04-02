@@ -99,7 +99,7 @@ export function ActivityDetailModal({ activityId, onClose }: ActivityDetailModal
     saveFieldsThen(() => {
       patchStatus.mutate(
         { id: activity.id, status: nextStatus },
-        { onSuccess: () => { void refetch() } },
+        { onSuccess: () => { refetch() } },
       )
     })
   }
@@ -125,7 +125,7 @@ export function ActivityDetailModal({ activityId, onClose }: ActivityDetailModal
     setValidationErrors([])
     saveFieldsThen(() => {
       submitActivity.mutate(activity.id, {
-        onSuccess: () => { void refetch() },
+        onSuccess: () => { refetch() },
         onError: (err) => {
           const apiErr = err as Error & { fields?: Array<{ field: string; message: string }> }
           if (apiErr.fields) setValidationErrors(apiErr.fields)

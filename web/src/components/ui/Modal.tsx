@@ -27,7 +27,7 @@ export function Modal({ open, onClose, title, children, footer }: ModalProps) {
 
   return (
     <div role="dialog" aria-modal="true" aria-label={title} className="fixed inset-0 z-50 flex items-end justify-center sm:items-center">
-      <div className="fixed inset-0 bg-black/40" role="presentation" onClick={onClose} onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') onClose() }} />
+      <button type="button" className="fixed inset-0 bg-black/40 cursor-default" onClick={onClose} aria-label="Close dialog" />
       <div className="relative flex max-h-[90vh] w-full flex-col rounded-t-2xl bg-white shadow-xl sm:max-w-lg sm:rounded-2xl">
         <div className="flex items-center justify-between border-b border-slate-200 px-4 py-3">
           <h2 className="text-base font-semibold text-slate-900">{title}</h2>

@@ -14,8 +14,8 @@ const sizes = {
 } as const
 
 interface ButtonProps extends ButtonHTMLAttributes<HTMLButtonElement> {
-  variant?: keyof typeof variants
-  size?: keyof typeof sizes
+  readonly variant?: keyof typeof variants
+  readonly size?: keyof typeof sizes
 }
 
 export function Button({ variant = 'primary', size = 'md', className = '', ...props }: ButtonProps) {

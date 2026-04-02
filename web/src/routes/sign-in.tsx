@@ -67,8 +67,9 @@ function SignInPage() {
 
           <form className="space-y-4" onSubmit={(e) => e.preventDefault()}>
             <div>
-              <label className="mb-1 block text-sm font-medium text-slate-700">Email</label>
+              <label htmlFor="sign-in-email" className="mb-1 block text-sm font-medium text-slate-700">Email</label>
               <input
+                id="sign-in-email"
                 type="email"
                 placeholder="name@company.com"
                 className="w-full rounded-lg border border-slate-300 px-3 py-2.5 text-sm focus:border-teal-500 focus:outline-none focus:ring-1 focus:ring-teal-500"
@@ -76,8 +77,9 @@ function SignInPage() {
               />
             </div>
             <div>
-              <label className="mb-1 block text-sm font-medium text-slate-700">Password</label>
+              <label htmlFor="sign-in-password" className="mb-1 block text-sm font-medium text-slate-700">Password</label>
               <input
+                id="sign-in-password"
                 type="password"
                 placeholder="Enter your password"
                 className="w-full rounded-lg border border-slate-300 px-3 py-2.5 text-sm focus:border-teal-500 focus:outline-none focus:ring-1 focus:ring-teal-500"

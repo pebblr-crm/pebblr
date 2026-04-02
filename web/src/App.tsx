@@ -73,7 +73,7 @@ interface DemoAccount {
   role: string
 }
 
-function DemoGate({ children }: { children: ReactNode }) {
+function DemoGate({ children }: Readonly<{ children: ReactNode }>) {
   const { user, isDemoMode, demoLogin } = useAuth()
   const [accounts, setAccounts] = useState<DemoAccount[]>([])
 

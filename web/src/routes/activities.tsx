@@ -225,7 +225,7 @@ function ActivitiesPage() {
   const hasMore = mobileCount < activities.length
 
   if (isLoading) return <Spinner />
-  if (isError) return <QueryError message="Failed to load activities" onRetry={() => void refetch()} />
+  if (isError) return <QueryError message="Failed to load activities" onRetry={() => { refetch() }} />
 
   const renderActivityCard = (activity: Activity) => (
     <ActivityCard

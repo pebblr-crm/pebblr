@@ -115,7 +115,7 @@ function DashboardPage() {
         header: 'Classification',
         cell: (info) => {
           const v = info.getValue()
-          const variant = v === 'A' ? 'danger' : v === 'B' ? 'warning' : 'default'
+          const variant = ({ A: 'danger', B: 'warning' } as const)[v] ?? 'default'
           return <Badge variant={variant}>{v}</Badge>
         },
       }),
@@ -126,7 +126,9 @@ function DashboardPage() {
         header: 'Compliance',
         cell: (info) => {
           const v = Math.round(info.getValue())
-          const color = v >= 80 ? 'text-emerald-600' : v >= 50 ? 'text-amber-600' : 'text-red-600'
+          let color = 'text-red-600'
+          if (v >= 80) color = 'text-emerald-600'
+          else if (v >= 50) color = 'text-amber-600'
           return <span className={`font-semibold ${color}`}>{v}%</span>
         },
       }),
@@ -135,7 +137,7 @@ function DashboardPage() {
   )
 
   if (statsLoading) return <Spinner />
-  if (statsError) return <QueryError message="Failed to load dashboard data" onRetry={() => void refetchStats()} />
+  if (statsError) return <QueryError message="Failed to load dashboard data" onRetry={() => { refetchStats() }} />
 
   const completedCount = stats?.byStatus?.realizat ?? 0
   const completionRate = stats?.total ? Math.round((completedCount / stats.total) * 100) : 0
@@ -311,15 +313,15 @@ function DashboardPage() {
 /* ── Calendar Body ── */
 
 interface CalendarBodyProps {
-  viewMode: 'week' | 'month'
-  repLoading: boolean
-  selectedRep: string
-  weekStart: Date
-  activities: Activity[]
-  monthDate: Date
-  onWeekClick: (mondayStr: string) => void
-  selectedRepName: string
-  onActivityClick: (activity: Activity) => void
+  readonly viewMode: 'week' | 'month'
+  readonly repLoading: boolean
+  readonly selectedRep: string
+  readonly weekStart: Date
+  readonly activities: Activity[]
+  readonly monthDate: Date
+  readonly onWeekClick: (mondayStr: string) => void
+  readonly selectedRepName: string
+  readonly onActivityClick: (activity: Activity) => void
 }
 
 function CalendarBody({ viewMode, repLoading, selectedRep, weekStart, activities, monthDate, onWeekClick, selectedRepName, onActivityClick }: CalendarBodyProps) {
@@ -416,11 +418,11 @@ function MonthGrid({ monthDate, activities, onWeekClick, selectedRep, repName }:
         </div>
 
         {/* Weeks */}
-        {weeks.map((week, wi) => {
+        {weeks.map((week) => {
           const weekMonday = formatDate(week[0])
           return (
             <button
-              key={wi}
+              key={weekMonday}
               type="button"
               className="grid grid-cols-7 border-b border-slate-100 last:border-0 cursor-pointer hover:bg-slate-50/50 transition-colors w-full text-left"
               onClick={() => onWeekClick(weekMonday)}
@@ -435,7 +437,7 @@ function MonthGrid({ monthDate, activities, onWeekClick, selectedRep, repName }:
                   <div
                     key={dateStr}
                     className={`min-h-[80px] p-2 border-r border-slate-100 last:border-0 ${
-                      !isCurrentMonth ? 'bg-slate-50/50' : ''
+                      isCurrentMonth ? '' : 'bg-slate-50/50'
                     }`}
                   >
                     <div className={`text-xs font-medium mb-1 ${

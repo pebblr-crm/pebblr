@@ -75,7 +75,7 @@ function TargetDetailPage() {
   const TargetIcon = target?.targetType === 'doctor' ? Stethoscope : Building2
 
   if (isLoading) return <Spinner />
-  if (isError || !target) return <QueryError message="Failed to load target" onRetry={() => void refetch()} />
+  if (isError || !target) return <QueryError message="Failed to load target" onRetry={() => { refetch() }} />
 
   return (
     <div className="flex h-full flex-col bg-slate-50">
@@ -226,7 +226,13 @@ function TargetDetailPage() {
                                       {str(activity.fields.visit_type) === 'f2f' ? 'In person' : 'Remote'}
                                     </span>
                                   )}
-                                  <Badge variant={activity.status === 'realizat' || activity.status === 'completed' ? 'success' : activity.status === 'anulat' || activity.status === 'cancelled' ? 'danger' : 'primary'}>
+                                  <Badge variant={
+                                    activity.status === 'realizat' || activity.status === 'completed'
+                                      ? 'success'
+                                      : activity.status === 'anulat' || activity.status === 'cancelled'
+                                        ? 'danger'
+                                        : 'primary'
+                                  }>
                                     {activity.status}
                                   </Badge>
                                 </div>
@@ -296,12 +302,12 @@ function TargetDetailPage() {
 
 /* ── Schedule Visit Modal ── */
 
-function ScheduleVisitModal({ open, onClose, targetId, targetName }: {
+function ScheduleVisitModal({ open, onClose, targetId, targetName }: Readonly<{
   open: boolean
   onClose: () => void
   targetId: string
   targetName: string
-}) {
+}>) {
   const { data: config } = useConfig()
   const createActivity = useCreateActivity()
   const [dueDate, setDueDate] = useState(() => new Date().toISOString().slice(0, 10))
@@ -363,8 +369,9 @@ function ScheduleVisitModal({ open, onClose, targetId, targetName }: {
           />
         </div>
         <div>
-          <label id="field-visit-type" className="mb-1.5 block text-sm font-medium text-slate-700">Visit Type</label>
-          <div role="group" aria-labelledby="field-visit-type" className="flex rounded-lg border border-slate-200 overflow-hidden">
+          <fieldset>
+          <legend className="mb-1.5 block text-sm font-medium text-slate-700">Visit Type</legend>
+          <div className="flex rounded-lg border border-slate-200 overflow-hidden">
             {visitTypes.map((vt) => (
               <button
                 key={vt.key}
@@ -380,6 +387,7 @@ function ScheduleVisitModal({ open, onClose, targetId, targetName }: {
               </button>
             ))}
           </div>
+          </fieldset>
         </div>
       </div>
     </Modal>

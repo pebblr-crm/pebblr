@@ -14,6 +14,23 @@ import (
 	"github.com/pebblr/pebblr/internal/store"
 )
 
+const (
+	testUserID1          = "user-1"
+	testTeamID1          = "team-1"
+	sqlSelectActivities  = "SELECT .+ FROM activities a LEFT JOIN targets t"
+	errUnexpected        = "unexpected error: %v"
+	errExpectedIDActOne  = "expected ID act-1, got %s"
+	testActMissing       = "act-missing"
+	errExpectedNotFound  = "expected ErrNotFound, got: %v"
+	errExpectedError     = "expected error, got nil"
+	sqlSelectCount       = "SELECT COUNT\\(\\*\\)"
+	errExpectedTotal1    = "expected total 1, got %d"
+	errExpectedTotal0    = "expected total 0, got %d"
+	testDBError          = "db error"
+	sqlUpdateDeletedAt   = "UPDATE activities SET deleted_at"
+	sqlSelectExists      = "SELECT EXISTS"
+)
+
 func activityRow(mock pgxmock.PgxPoolIface) *pgxmock.Rows {
 	now := testTime()
 	fields := map[string]any{"notes": "test"}
@@ -31,8 +48,8 @@ func activityRow(mock pgxmock.PgxPoolIface) *pgxmock.Rows {
 	}).AddRow(
 		"act-1", "visit", "Morning visit", "planned", now, "full_day",
 		"week-1", fieldsJSON,
-		"tgt-1", "Pharmacy A", "user-1",
-		"", "team-1",
+		"tgt-1", "Pharmacy A", testUserID1,
+		"", testTeamID1,
 		(*time.Time)(nil), now, now, (*time.Time)(nil),
 		"pharmacy", targetFieldsJSON,
 	)
@@ -59,16 +76,16 @@ func TestActivityGet_Success(t *testing.T) {
 	repo := newActivityRepo(mock)
 	ctx := context.Background()
 
-	mock.ExpectQuery("SELECT .+ FROM activities a LEFT JOIN targets t").
+	mock.ExpectQuery(sqlSelectActivities).
 		WithArgs("act-1").
 		WillReturnRows(activityRow(mock))
 
 	a, err := repo.Get(ctx, "act-1")
 	if err != nil {
-		t.Fatalf("unexpected error: %v", err)
+		t.Fatalf(errUnexpected, err)
 	}
 	if a.ID != "act-1" {
-		t.Errorf("expected ID act-1, got %s", a.ID)
+		t.Errorf(errExpectedIDActOne, a.ID)
 	}
 	if a.ActivityType != "visit" {
 		t.Errorf("expected activity_type visit, got %s", a.ActivityType)
@@ -90,13 +107,13 @@ func TestActivityGet_NotFound(t *testing.T) {
 	repo := newActivityRepo(mock)
 	ctx := context.Background()
 
-	mock.ExpectQuery("SELECT .+ FROM activities a LEFT JOIN targets t").
-		WithArgs("act-missing").
+	mock.ExpectQuery(sqlSelectActivities).
+		WithArgs(testActMissing).
 		WillReturnRows(emptyActivityRows(mock))
 
-	_, err := repo.Get(ctx, "act-missing")
+	_, err := repo.Get(ctx, testActMissing)
 	if !errors.Is(err, store.ErrNotFound) {
-		t.Errorf("expected ErrNotFound, got: %v", err)
+		t.Errorf(errExpectedNotFound, err)
 	}
 }
 
@@ -106,13 +123,13 @@ func TestActivityGet_DBError(t *testing.T) {
 	repo := newActivityRepo(mock)
 	ctx := context.Background()
 
-	mock.ExpectQuery("SELECT .+ FROM activities a LEFT JOIN targets t").
+	mock.ExpectQuery(sqlSelectActivities).
 		WithArgs("act-1").
 		WillReturnError(fmt.Errorf("connection refused"))
 
 	_, err := repo.Get(ctx, "act-1")
 	if err == nil {
-		t.Fatal("expected error, got nil")
+		t.Fatal(errExpectedError)
 	}
 }
 
@@ -124,19 +141,19 @@ func TestActivityList_AllActivities(t *testing.T) {
 	scope := rbac.ActivityScope{AllActivities: true}
 
 	// All scope, no filters: count query has 0 args, list query has 2 (limit, offset)
-	mock.ExpectQuery("SELECT COUNT\\(\\*\\)").
+	mock.ExpectQuery(sqlSelectCount).
 		WillReturnRows(mock.NewRows([]string{"count"}).AddRow(1))
 
-	mock.ExpectQuery("SELECT .+ FROM activities a LEFT JOIN targets t").
+	mock.ExpectQuery(sqlSelectActivities).
 		WithArgs(anyArgs(2)...).
 		WillReturnRows(activityRow(mock))
 
 	page, err := repo.List(ctx, scope, store.ActivityFilter{}, 1, 20)
 	if err != nil {
-		t.Fatalf("unexpected error: %v", err)
+		t.Fatalf(errUnexpected, err)
 	}
 	if page.Total != 1 {
-		t.Errorf("expected total 1, got %d", page.Total)
+		t.Errorf(errExpectedTotal1, page.Total)
 	}
 	if len(page.Activities) != 1 {
 		t.Errorf("expected 1 activity, got %d", len(page.Activities))
@@ -154,10 +171,10 @@ func TestActivityList_EmptyScope(t *testing.T) {
 
 	page, err := repo.List(ctx, scope, store.ActivityFilter{}, 1, 20)
 	if err != nil {
-		t.Fatalf("unexpected error: %v", err)
+		t.Fatalf(errUnexpected, err)
 	}
 	if page.Total != 0 {
-		t.Errorf("expected total 0, got %d", page.Total)
+		t.Errorf(errExpectedTotal0, page.Total)
 	}
 	if len(page.Activities) != 0 {
 		t.Errorf("expected 0 activities, got %d", len(page.Activities))
@@ -169,23 +186,23 @@ func TestActivityList_ScopedByCreatorIDs(t *testing.T) {
 	mock := newMockPool(t)
 	repo := newActivityRepo(mock)
 	ctx := context.Background()
-	scope := rbac.ActivityScope{CreatorIDs: []string{"user-1"}}
+	scope := rbac.ActivityScope{CreatorIDs: []string{testUserID1}}
 
 	// 1 scope arg for count; 1 scope arg + 2 pagination for list
-	mock.ExpectQuery("SELECT COUNT\\(\\*\\)").
-		WithArgs("user-1").
+	mock.ExpectQuery(sqlSelectCount).
+		WithArgs(testUserID1).
 		WillReturnRows(mock.NewRows([]string{"count"}).AddRow(1))
 
-	mock.ExpectQuery("SELECT .+ FROM activities a LEFT JOIN targets t").
-		WithArgs("user-1", 20, 0).
+	mock.ExpectQuery(sqlSelectActivities).
+		WithArgs(testUserID1, 20, 0).
 		WillReturnRows(activityRow(mock))
 
 	page, err := repo.List(ctx, scope, store.ActivityFilter{}, 1, 20)
 	if err != nil {
-		t.Fatalf("unexpected error: %v", err)
+		t.Fatalf(errUnexpected, err)
 	}
 	if page.Total != 1 {
-		t.Errorf("expected total 1, got %d", page.Total)
+		t.Errorf(errExpectedTotal1, page.Total)
 	}
 }
 
@@ -194,22 +211,22 @@ func TestActivityList_ScopedByTeamIDs(t *testing.T) {
 	mock := newMockPool(t)
 	repo := newActivityRepo(mock)
 	ctx := context.Background()
-	scope := rbac.ActivityScope{TeamIDs: []string{"team-1"}}
+	scope := rbac.ActivityScope{TeamIDs: []string{testTeamID1}}
 
-	mock.ExpectQuery("SELECT COUNT\\(\\*\\)").
-		WithArgs("team-1").
+	mock.ExpectQuery(sqlSelectCount).
+		WithArgs(testTeamID1).
 		WillReturnRows(mock.NewRows([]string{"count"}).AddRow(0))
 
-	mock.ExpectQuery("SELECT .+ FROM activities a LEFT JOIN targets t").
-		WithArgs("team-1", 20, 0).
+	mock.ExpectQuery(sqlSelectActivities).
+		WithArgs(testTeamID1, 20, 0).
 		WillReturnRows(emptyActivityRows(mock))
 
 	page, err := repo.List(ctx, scope, store.ActivityFilter{}, 1, 20)
 	if err != nil {
-		t.Fatalf("unexpected error: %v", err)
+		t.Fatalf(errUnexpected, err)
 	}
 	if page.Total != 0 {
-		t.Errorf("expected total 0, got %d", page.Total)
+		t.Errorf(errExpectedTotal0, page.Total)
 	}
 }
 
@@ -225,29 +242,29 @@ func TestActivityList_WithFilters(t *testing.T) {
 	filter := store.ActivityFilter{
 		ActivityType: strPtr("visit"),
 		Status:       strPtr("planned"),
-		CreatorID:    strPtr("user-1"),
+		CreatorID:    strPtr(testUserID1),
 		TargetID:     strPtr("tgt-1"),
-		TeamID:       strPtr("team-1"),
+		TeamID:       strPtr(testTeamID1),
 		DateFrom:     &dateFrom,
 		DateTo:       &dateTo,
 	}
 
 	// 7 filter args for count
-	mock.ExpectQuery("SELECT COUNT\\(\\*\\)").
-		WithArgs("visit", "planned", "user-1", "tgt-1", "team-1", dateFrom, dateTo).
+	mock.ExpectQuery(sqlSelectCount).
+		WithArgs("visit", "planned", testUserID1, "tgt-1", testTeamID1, dateFrom, dateTo).
 		WillReturnRows(mock.NewRows([]string{"count"}).AddRow(1))
 
 	// 7 filter args + 2 pagination for list
-	mock.ExpectQuery("SELECT .+ FROM activities a LEFT JOIN targets t").
-		WithArgs("visit", "planned", "user-1", "tgt-1", "team-1", dateFrom, dateTo, 20, 0).
+	mock.ExpectQuery(sqlSelectActivities).
+		WithArgs("visit", "planned", testUserID1, "tgt-1", testTeamID1, dateFrom, dateTo, 20, 0).
 		WillReturnRows(activityRow(mock))
 
 	page, err := repo.List(ctx, scope, filter, 1, 20)
 	if err != nil {
-		t.Fatalf("unexpected error: %v", err)
+		t.Fatalf(errUnexpected, err)
 	}
 	if page.Total != 1 {
-		t.Errorf("expected total 1, got %d", page.Total)
+		t.Errorf(errExpectedTotal1, page.Total)
 	}
 }
 
@@ -258,17 +275,17 @@ func TestActivityList_PaginationDefaults(t *testing.T) {
 	ctx := context.Background()
 	scope := rbac.ActivityScope{AllActivities: true}
 
-	mock.ExpectQuery("SELECT COUNT\\(\\*\\)").
+	mock.ExpectQuery(sqlSelectCount).
 		WillReturnRows(mock.NewRows([]string{"count"}).AddRow(0))
 
 	// page=0 and limit=0 should be normalized to page=1, limit=20
-	mock.ExpectQuery("SELECT .+ FROM activities a LEFT JOIN targets t").
+	mock.ExpectQuery(sqlSelectActivities).
 		WithArgs(anyArgs(2)...).
 		WillReturnRows(emptyActivityRows(mock))
 
 	page, err := repo.List(ctx, scope, store.ActivityFilter{}, 0, 0)
 	if err != nil {
-		t.Fatalf("unexpected error: %v", err)
+		t.Fatalf(errUnexpected, err)
 	}
 	if page.Page != 1 {
 		t.Errorf("expected page 1, got %d", page.Page)
@@ -285,17 +302,17 @@ func TestActivityList_LimitClamp(t *testing.T) {
 	ctx := context.Background()
 	scope := rbac.ActivityScope{AllActivities: true}
 
-	mock.ExpectQuery("SELECT COUNT\\(\\*\\)").
+	mock.ExpectQuery(sqlSelectCount).
 		WillReturnRows(mock.NewRows([]string{"count"}).AddRow(0))
 
-	mock.ExpectQuery("SELECT .+ FROM activities a LEFT JOIN targets t").
+	mock.ExpectQuery(sqlSelectActivities).
 		WithArgs(anyArgs(2)...).
 		WillReturnRows(emptyActivityRows(mock))
 
 	// limit > 200 should be clamped to 20
 	page, err := repo.List(ctx, scope, store.ActivityFilter{}, 1, 999)
 	if err != nil {
-		t.Fatalf("unexpected error: %v", err)
+		t.Fatalf(errUnexpected, err)
 	}
 	if page.Limit != 20 {
 		t.Errorf("expected limit 20, got %d", page.Limit)
@@ -309,12 +326,12 @@ func TestActivityList_CountError(t *testing.T) {
 	ctx := context.Background()
 	scope := rbac.ActivityScope{AllActivities: true}
 
-	mock.ExpectQuery("SELECT COUNT\\(\\*\\)").
-		WillReturnError(fmt.Errorf("db error"))
+	mock.ExpectQuery(sqlSelectCount).
+		WillReturnError(errors.New(testDBError))
 
 	_, err := repo.List(ctx, scope, store.ActivityFilter{}, 1, 20)
 	if err == nil {
-		t.Fatal("expected error, got nil")
+		t.Fatal(errExpectedError)
 	}
 }
 
@@ -325,16 +342,16 @@ func TestActivityList_QueryError(t *testing.T) {
 	ctx := context.Background()
 	scope := rbac.ActivityScope{AllActivities: true}
 
-	mock.ExpectQuery("SELECT COUNT\\(\\*\\)").
+	mock.ExpectQuery(sqlSelectCount).
 		WillReturnRows(mock.NewRows([]string{"count"}).AddRow(1))
 
-	mock.ExpectQuery("SELECT .+ FROM activities a LEFT JOIN targets t").
+	mock.ExpectQuery(sqlSelectActivities).
 		WithArgs(anyArgs(2)...).
-		WillReturnError(fmt.Errorf("db error"))
+		WillReturnError(errors.New(testDBError))
 
 	_, err := repo.List(ctx, scope, store.ActivityFilter{}, 1, 20)
 	if err == nil {
-		t.Fatal("expected error, got nil")
+		t.Fatal(errExpectedError)
 	}
 }
 
@@ -365,10 +382,10 @@ func TestActivityCreate_Success(t *testing.T) {
 
 	created, err := repo.Create(ctx, a)
 	if err != nil {
-		t.Fatalf("unexpected error: %v", err)
+		t.Fatalf(errUnexpected, err)
 	}
 	if created.ID != "act-1" {
-		t.Errorf("expected ID act-1, got %s", created.ID)
+		t.Errorf(errExpectedIDActOne, created.ID)
 	}
 }
 
@@ -401,11 +418,11 @@ func TestActivityCreate_DBError(t *testing.T) {
 
 	mock.ExpectQuery("WITH ins AS").
 		WithArgs(anyArgs(12)...).
-		WillReturnError(fmt.Errorf("db error"))
+		WillReturnError(errors.New(testDBError))
 
 	_, err := repo.Create(ctx, a)
 	if err == nil {
-		t.Fatal("expected error, got nil")
+		t.Fatal(errExpectedError)
 	}
 }
 
@@ -435,10 +452,10 @@ func TestActivityUpdate_Success(t *testing.T) {
 
 	updated, err := repo.Update(ctx, a)
 	if err != nil {
-		t.Fatalf("unexpected error: %v", err)
+		t.Fatalf(errUnexpected, err)
 	}
 	if updated.ID != "act-1" {
-		t.Errorf("expected ID act-1, got %s", updated.ID)
+		t.Errorf(errExpectedIDActOne, updated.ID)
 	}
 }
 
@@ -459,7 +476,7 @@ func TestActivityUpdate_NotFound(t *testing.T) {
 
 	_, err := repo.Update(ctx, a)
 	if !errors.Is(err, store.ErrNotFound) {
-		t.Errorf("expected ErrNotFound, got: %v", err)
+		t.Errorf(errExpectedNotFound, err)
 	}
 }
 
@@ -486,13 +503,13 @@ func TestActivitySoftDelete_Success(t *testing.T) {
 	repo := newActivityRepo(mock)
 	ctx := context.Background()
 
-	mock.ExpectExec("UPDATE activities SET deleted_at").
+	mock.ExpectExec(sqlUpdateDeletedAt).
 		WithArgs("act-1").
 		WillReturnResult(pgxmock.NewResult("UPDATE", 1))
 
 	err := repo.SoftDelete(ctx, "act-1")
 	if err != nil {
-		t.Fatalf("unexpected error: %v", err)
+		t.Fatalf(errUnexpected, err)
 	}
 }
 
@@ -502,13 +519,13 @@ func TestActivitySoftDelete_NotFound(t *testing.T) {
 	repo := newActivityRepo(mock)
 	ctx := context.Background()
 
-	mock.ExpectExec("UPDATE activities SET deleted_at").
-		WithArgs("act-missing").
+	mock.ExpectExec(sqlUpdateDeletedAt).
+		WithArgs(testActMissing).
 		WillReturnResult(pgxmock.NewResult("UPDATE", 0))
 
-	err := repo.SoftDelete(ctx, "act-missing")
+	err := repo.SoftDelete(ctx, testActMissing)
 	if !errors.Is(err, store.ErrNotFound) {
-		t.Errorf("expected ErrNotFound, got: %v", err)
+		t.Errorf(errExpectedNotFound, err)
 	}
 }
 
@@ -518,13 +535,13 @@ func TestActivitySoftDelete_DBError(t *testing.T) {
 	repo := newActivityRepo(mock)
 	ctx := context.Background()
 
-	mock.ExpectExec("UPDATE activities SET deleted_at").
+	mock.ExpectExec(sqlUpdateDeletedAt).
 		WithArgs("act-1").
-		WillReturnError(fmt.Errorf("db error"))
+		WillReturnError(errors.New(testDBError))
 
 	err := repo.SoftDelete(ctx, "act-1")
 	if err == nil {
-		t.Fatal("expected error, got nil")
+		t.Fatal(errExpectedError)
 	}
 }
 
@@ -536,12 +553,12 @@ func TestActivityCountByDate_Success(t *testing.T) {
 	date := testTime()
 
 	mock.ExpectQuery("SELECT COUNT\\(\\*\\) FROM activities").
-		WithArgs("user-1", date).
+		WithArgs(testUserID1, date).
 		WillReturnRows(mock.NewRows([]string{"count"}).AddRow(3))
 
-	count, err := repo.CountByDate(ctx, "user-1", date)
+	count, err := repo.CountByDate(ctx, testUserID1, date)
 	if err != nil {
-		t.Fatalf("unexpected error: %v", err)
+		t.Fatalf(errUnexpected, err)
 	}
 	if count != 3 {
 		t.Errorf("expected 3, got %d", count)
@@ -556,12 +573,12 @@ func TestActivityCountByDate_DBError(t *testing.T) {
 	date := testTime()
 
 	mock.ExpectQuery("SELECT COUNT\\(\\*\\) FROM activities").
-		WithArgs("user-1", date).
-		WillReturnError(fmt.Errorf("db error"))
+		WithArgs(testUserID1, date).
+		WillReturnError(errors.New(testDBError))
 
-	_, err := repo.CountByDate(ctx, "user-1", date)
+	_, err := repo.CountByDate(ctx, testUserID1, date)
 	if err == nil {
-		t.Fatal("expected error, got nil")
+		t.Fatal(errExpectedError)
 	}
 }
 
@@ -572,9 +589,9 @@ func TestActivityHasActivityWithTypes_EmptyTypes(t *testing.T) {
 	repo := newActivityRepo(mock)
 	ctx := context.Background()
 
-	has, err := repo.HasActivityWithTypes(ctx, "user-1", testTime(), []string{})
+	has, err := repo.HasActivityWithTypes(ctx, testUserID1, testTime(), []string{})
 	if err != nil {
-		t.Fatalf("unexpected error: %v", err)
+		t.Fatalf(errUnexpected, err)
 	}
 	if has {
 		t.Error("expected false for empty types")
@@ -588,13 +605,13 @@ func TestActivityHasActivityWithTypes_True(t *testing.T) {
 	ctx := context.Background()
 	date := testTime()
 
-	mock.ExpectQuery("SELECT EXISTS").
-		WithArgs("user-1", date, []string{"visit", "call"}).
+	mock.ExpectQuery(sqlSelectExists).
+		WithArgs(testUserID1, date, []string{"visit", "call"}).
 		WillReturnRows(mock.NewRows([]string{"exists"}).AddRow(true))
 
-	has, err := repo.HasActivityWithTypes(ctx, "user-1", date, []string{"visit", "call"})
+	has, err := repo.HasActivityWithTypes(ctx, testUserID1, date, []string{"visit", "call"})
 	if err != nil {
-		t.Fatalf("unexpected error: %v", err)
+		t.Fatalf(errUnexpected, err)
 	}
 	if !has {
 		t.Error("expected true")
@@ -608,13 +625,13 @@ func TestActivityHasActivityWithTypes_False(t *testing.T) {
 	ctx := context.Background()
 	date := testTime()
 
-	mock.ExpectQuery("SELECT EXISTS").
-		WithArgs("user-1", date, []string{"visit"}).
+	mock.ExpectQuery(sqlSelectExists).
+		WithArgs(testUserID1, date, []string{"visit"}).
 		WillReturnRows(mock.NewRows([]string{"exists"}).AddRow(false))
 
-	has, err := repo.HasActivityWithTypes(ctx, "user-1", date, []string{"visit"})
+	has, err := repo.HasActivityWithTypes(ctx, testUserID1, date, []string{"visit"})
 	if err != nil {
-		t.Fatalf("unexpected error: %v", err)
+		t.Fatalf(errUnexpected, err)
 	}
 	if has {
 		t.Error("expected false")
@@ -627,13 +644,13 @@ func TestActivityHasActivityWithTypes_DBError(t *testing.T) {
 	repo := newActivityRepo(mock)
 	ctx := context.Background()
 
-	mock.ExpectQuery("SELECT EXISTS").
-		WithArgs("user-1", testTime(), []string{"visit"}).
-		WillReturnError(fmt.Errorf("db error"))
+	mock.ExpectQuery(sqlSelectExists).
+		WithArgs(testUserID1, testTime(), []string{"visit"}).
+		WillReturnError(errors.New(testDBError))
 
-	_, err := repo.HasActivityWithTypes(ctx, "user-1", testTime(), []string{"visit"})
+	_, err := repo.HasActivityWithTypes(ctx, testUserID1, testTime(), []string{"visit"})
 	if err == nil {
-		t.Fatal("expected error, got nil")
+		t.Fatal(errExpectedError)
 	}
 }
 
@@ -654,8 +671,8 @@ func TestScanActivity_NoTarget(t *testing.T) {
 	}).AddRow(
 		"act-2", "admin", "", "planned", now, "half_day",
 		"", fieldsJSON,
-		"", "", "user-1",
-		"", "team-1",
+		"", "", testUserID1,
+		"", testTeamID1,
 		(*time.Time)(nil), now, now, (*time.Time)(nil),
 		"", []byte("{}"),
 	)
@@ -666,7 +683,7 @@ func TestScanActivity_NoTarget(t *testing.T) {
 	row := mock.QueryRow(context.Background(), "SELECT", "dummy")
 	a, err := scanActivity(row)
 	if err != nil {
-		t.Fatalf("unexpected error: %v", err)
+		t.Fatalf(errUnexpected, err)
 	}
 	if a.TargetSummary != nil {
 		t.Error("expected TargetSummary to be nil when target_id is empty")
@@ -679,24 +696,24 @@ func TestActivityList_CombinedScopeCreatorsAndTeams(t *testing.T) {
 	repo := newActivityRepo(mock)
 	ctx := context.Background()
 	scope := rbac.ActivityScope{
-		CreatorIDs: []string{"user-1"},
-		TeamIDs:    []string{"team-1"},
+		CreatorIDs: []string{testUserID1},
+		TeamIDs:    []string{testTeamID1},
 	}
 
 	// 2 scope args for count; 2 scope args + 2 pagination for list
-	mock.ExpectQuery("SELECT COUNT\\(\\*\\)").
-		WithArgs("user-1", "team-1").
+	mock.ExpectQuery(sqlSelectCount).
+		WithArgs(testUserID1, testTeamID1).
 		WillReturnRows(mock.NewRows([]string{"count"}).AddRow(0))
 
-	mock.ExpectQuery("SELECT .+ FROM activities a LEFT JOIN targets t").
-		WithArgs("user-1", "team-1", 20, 0).
+	mock.ExpectQuery(sqlSelectActivities).
+		WithArgs(testUserID1, testTeamID1, 20, 0).
 		WillReturnRows(emptyActivityRows(mock))
 
 	page, err := repo.List(ctx, scope, store.ActivityFilter{}, 1, 20)
 	if err != nil {
-		t.Fatalf("unexpected error: %v", err)
+		t.Fatalf(errUnexpected, err)
 	}
 	if page.Total != 0 {
-		t.Errorf("expected total 0, got %d", page.Total)
+		t.Errorf(errExpectedTotal0, page.Total)
 	}
 }

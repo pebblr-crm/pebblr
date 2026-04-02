@@ -10,8 +10,8 @@ import (
 	"strings"
 
 	"github.com/golang-migrate/migrate/v4"
-	_ "github.com/golang-migrate/migrate/v4/database/postgres"
-	_ "github.com/golang-migrate/migrate/v4/source/file"
+	_ "github.com/golang-migrate/migrate/v4/database/postgres" // Register postgres database driver for migrate
+	_ "github.com/golang-migrate/migrate/v4/source/file"       // Register file source driver for migrate
 )
 
 func main() {
