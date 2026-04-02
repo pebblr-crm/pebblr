@@ -2,6 +2,7 @@ package auth
 
 import (
 	"context"
+	"fmt"
 	"net/http"
 	"strings"
 )
@@ -17,13 +18,13 @@ func Middleware(authenticator Authenticator) func(http.Handler) http.Handler {
 		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 			token, ok := bearerToken(r)
 			if !ok {
-				http.Error(w, `{"error":{"code":"UNAUTHORIZED","message":"missing or invalid authorization header"}}`, http.StatusUnauthorized)
+				writeJSONError(w, http.StatusUnauthorized, "UNAUTHORIZED", "missing or invalid authorization header")
 				return
 			}
 
 			claims, err := authenticator.ValidateToken(r.Context(), token)
 			if err != nil {
-				http.Error(w, `{"error":{"code":"UNAUTHORIZED","message":"invalid token"}}`, http.StatusUnauthorized)
+				writeJSONError(w, http.StatusUnauthorized, "UNAUTHORIZED", "invalid token")
 				return
 			}
 
@@ -43,6 +44,14 @@ func WithClaims(ctx context.Context, claims *UserClaims) context.Context {
 func ClaimsFromContext(ctx context.Context) *UserClaims {
 	claims, _ := ctx.Value(claimsKey).(*UserClaims)
 	return claims
+}
+
+// writeJSONError writes a structured JSON error response with the correct Content-Type.
+// This is used in auth middleware where the api package's writeError is not available.
+func writeJSONError(w http.ResponseWriter, status int, code, message string) {
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(status)
+	_, _ = fmt.Fprintf(w, `{"error":{"code":%q,"message":%q}}`, code, message)
 }
 
 // bearerToken extracts the Bearer token from the Authorization header.

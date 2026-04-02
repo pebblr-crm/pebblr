@@ -12,7 +12,6 @@ import (
 	"github.com/go-chi/chi/v5"
 	"github.com/pebblr/pebblr/internal/config"
 	"github.com/pebblr/pebblr/internal/domain"
-	"github.com/pebblr/pebblr/internal/rbac"
 	"github.com/pebblr/pebblr/internal/service"
 	"github.com/pebblr/pebblr/internal/store"
 )
@@ -186,9 +185,8 @@ func parseActivityFilter(r *http.Request) store.ActivityFilter {
 
 // List handles GET /api/v1/activities
 func (h *ActivityHandler) List(w http.ResponseWriter, r *http.Request) {
-	actor, err := rbac.UserFromContext(r.Context())
-	if err != nil {
-		writeError(w, http.StatusUnauthorized, "UNAUTHORIZED", errMissingUser)
+	actor := requireActor(w, r)
+	if actor == nil {
 		return
 	}
 
@@ -269,9 +267,8 @@ func decodeActivityRequest(w http.ResponseWriter, r *http.Request) *domain.Activ
 
 // Create handles POST /api/v1/activities
 func (h *ActivityHandler) Create(w http.ResponseWriter, r *http.Request) {
-	actor, err := rbac.UserFromContext(r.Context())
-	if err != nil {
-		writeError(w, http.StatusUnauthorized, "UNAUTHORIZED", errMissingUser)
+	actor := requireActor(w, r)
+	if actor == nil {
 		return
 	}
 
@@ -294,9 +291,8 @@ func (h *ActivityHandler) Create(w http.ResponseWriter, r *http.Request) {
 
 // Get handles GET /api/v1/activities/{id}
 func (h *ActivityHandler) Get(w http.ResponseWriter, r *http.Request) {
-	actor, err := rbac.UserFromContext(r.Context())
-	if err != nil {
-		writeError(w, http.StatusUnauthorized, "UNAUTHORIZED", errMissingUser)
+	actor := requireActor(w, r)
+	if actor == nil {
 		return
 	}
 
@@ -315,9 +311,8 @@ func (h *ActivityHandler) Get(w http.ResponseWriter, r *http.Request) {
 
 // Update handles PUT /api/v1/activities/{id}
 func (h *ActivityHandler) Update(w http.ResponseWriter, r *http.Request) {
-	actor, err := rbac.UserFromContext(r.Context())
-	if err != nil {
-		writeError(w, http.StatusUnauthorized, "UNAUTHORIZED", errMissingUser)
+	actor := requireActor(w, r)
+	if actor == nil {
 		return
 	}
 
@@ -342,9 +337,8 @@ func (h *ActivityHandler) Update(w http.ResponseWriter, r *http.Request) {
 
 // Delete handles DELETE /api/v1/activities/{id}
 func (h *ActivityHandler) Delete(w http.ResponseWriter, r *http.Request) {
-	actor, err := rbac.UserFromContext(r.Context())
-	if err != nil {
-		writeError(w, http.StatusUnauthorized, "UNAUTHORIZED", errMissingUser)
+	actor := requireActor(w, r)
+	if actor == nil {
 		return
 	}
 
@@ -359,9 +353,8 @@ func (h *ActivityHandler) Delete(w http.ResponseWriter, r *http.Request) {
 
 // Submit handles POST /api/v1/activities/{id}/submit
 func (h *ActivityHandler) Submit(w http.ResponseWriter, r *http.Request) {
-	actor, err := rbac.UserFromContext(r.Context())
-	if err != nil {
-		writeError(w, http.StatusUnauthorized, "UNAUTHORIZED", errMissingUser)
+	actor := requireActor(w, r)
+	if actor == nil {
 		return
 	}
 
@@ -440,9 +433,8 @@ func parsePatchFields(raw json.RawMessage, patch *domain.ActivityPatch) string {
 // Only fields present in the request body are updated; absent fields are left untouched.
 // When the "fields" key is present, its sub-keys are merged individually.
 func (h *ActivityHandler) Patch(w http.ResponseWriter, r *http.Request) {
-	actor, err := rbac.UserFromContext(r.Context())
-	if err != nil {
-		writeError(w, http.StatusUnauthorized, "UNAUTHORIZED", errMissingUser)
+	actor := requireActor(w, r)
+	if actor == nil {
 		return
 	}
 
@@ -527,9 +519,8 @@ func buildActivityPatch(raw map[string]json.RawMessage) (result *domain.Activity
 // BatchCreate handles POST /api/v1/activities/batch
 // Creates multiple visit activities from a list of {targetId, dueDate} pairs.
 func (h *ActivityHandler) BatchCreate(w http.ResponseWriter, r *http.Request) {
-	actor, err := rbac.UserFromContext(r.Context())
-	if err != nil {
-		writeError(w, http.StatusUnauthorized, "UNAUTHORIZED", errMissingUser)
+	actor := requireActor(w, r)
+	if actor == nil {
 		return
 	}
 
@@ -598,9 +589,8 @@ func (h *ActivityHandler) BatchCreate(w http.ResponseWriter, r *http.Request) {
 
 // CloneWeek handles POST /api/v1/activities/clone-week
 func (h *ActivityHandler) CloneWeek(w http.ResponseWriter, r *http.Request) {
-	actor, err := rbac.UserFromContext(r.Context())
-	if err != nil {
-		writeError(w, http.StatusUnauthorized, "UNAUTHORIZED", errMissingUser)
+	actor := requireActor(w, r)
+	if actor == nil {
 		return
 	}
 
@@ -637,9 +627,8 @@ func (h *ActivityHandler) CloneWeek(w http.ResponseWriter, r *http.Request) {
 
 // PatchStatus handles PATCH /api/v1/activities/{id}/status
 func (h *ActivityHandler) PatchStatus(w http.ResponseWriter, r *http.Request) {
-	actor, err := rbac.UserFromContext(r.Context())
-	if err != nil {
-		writeError(w, http.StatusUnauthorized, "UNAUTHORIZED", errMissingUser)
+	actor := requireActor(w, r)
+	if actor == nil {
 		return
 	}
 

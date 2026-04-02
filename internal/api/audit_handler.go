@@ -9,7 +9,6 @@ import (
 
 	"github.com/go-chi/chi/v5"
 	"github.com/pebblr/pebblr/internal/domain"
-	"github.com/pebblr/pebblr/internal/rbac"
 	"github.com/pebblr/pebblr/internal/service"
 	"github.com/pebblr/pebblr/internal/store"
 )
@@ -53,9 +52,8 @@ func mapAuditServiceError(w http.ResponseWriter, err error) {
 
 // List handles GET /api/v1/audit
 func (h *AuditHandler) List(w http.ResponseWriter, r *http.Request) {
-	actor, err := rbac.UserFromContext(r.Context())
-	if err != nil {
-		writeError(w, http.StatusUnauthorized, "UNAUTHORIZED", errMissingUser)
+	actor := requireActor(w, r)
+	if actor == nil {
 		return
 	}
 
@@ -105,9 +103,8 @@ type updateStatusRequest struct {
 
 // UpdateStatus handles PATCH /api/v1/audit/{id}/status
 func (h *AuditHandler) UpdateStatus(w http.ResponseWriter, r *http.Request) {
-	actor, err := rbac.UserFromContext(r.Context())
-	if err != nil {
-		writeError(w, http.StatusUnauthorized, "UNAUTHORIZED", errMissingUser)
+	actor := requireActor(w, r)
+	if actor == nil {
 		return
 	}
 

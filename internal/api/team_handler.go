@@ -7,7 +7,6 @@ import (
 
 	"github.com/go-chi/chi/v5"
 	"github.com/pebblr/pebblr/internal/domain"
-	"github.com/pebblr/pebblr/internal/rbac"
 	"github.com/pebblr/pebblr/internal/store"
 )
 
@@ -59,9 +58,7 @@ func mapTeamServiceError(w http.ResponseWriter, err error) {
 
 // List handles GET /api/v1/teams
 func (h *TeamHandler) List(w http.ResponseWriter, r *http.Request) {
-	_, err := rbac.UserFromContext(r.Context())
-	if err != nil {
-		writeError(w, http.StatusUnauthorized, "UNAUTHORIZED", "missing authenticated user")
+	if actor := requireActor(w, r); actor == nil {
 		return
 	}
 
@@ -75,16 +72,14 @@ func (h *TeamHandler) List(w http.ResponseWriter, r *http.Request) {
 		teams = []*domain.Team{}
 	}
 
-	w.Header().Set("Content-Type", "application/json")
+	w.Header().Set(headerContentType, contentTypeJSON)
 	w.WriteHeader(http.StatusOK)
 	writeJSON(w, r, teamListResponse{Items: teams, Total: len(teams)})
 }
 
 // Get handles GET /api/v1/teams/{id}
 func (h *TeamHandler) Get(w http.ResponseWriter, r *http.Request) {
-	_, err := rbac.UserFromContext(r.Context())
-	if err != nil {
-		writeError(w, http.StatusUnauthorized, "UNAUTHORIZED", "missing authenticated user")
+	if actor := requireActor(w, r); actor == nil {
 		return
 	}
 
@@ -104,7 +99,7 @@ func (h *TeamHandler) Get(w http.ResponseWriter, r *http.Request) {
 		members = []*domain.User{}
 	}
 
-	w.Header().Set("Content-Type", "application/json")
+	w.Header().Set(headerContentType, contentTypeJSON)
 	w.WriteHeader(http.StatusOK)
 	writeJSON(w, r, teamDetailResponse{Team: team, Members: members})
 }

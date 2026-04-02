@@ -8,7 +8,6 @@ import (
 
 	"github.com/go-chi/chi/v5"
 	"github.com/pebblr/pebblr/internal/domain"
-	"github.com/pebblr/pebblr/internal/rbac"
 	"github.com/pebblr/pebblr/internal/service"
 	"github.com/pebblr/pebblr/internal/store"
 )
@@ -65,9 +64,8 @@ func mapTerritoryServiceError(w http.ResponseWriter, err error) {
 
 // List handles GET /api/v1/territories
 func (h *TerritoryHandler) List(w http.ResponseWriter, r *http.Request) {
-	actor, err := rbac.UserFromContext(r.Context())
-	if err != nil {
-		writeError(w, http.StatusUnauthorized, "UNAUTHORIZED", errMissingUser)
+	actor := requireActor(w, r)
+	if actor == nil {
 		return
 	}
 
@@ -86,9 +84,8 @@ func (h *TerritoryHandler) List(w http.ResponseWriter, r *http.Request) {
 
 // Get handles GET /api/v1/territories/{id}
 func (h *TerritoryHandler) Get(w http.ResponseWriter, r *http.Request) {
-	actor, err := rbac.UserFromContext(r.Context())
-	if err != nil {
-		writeError(w, http.StatusUnauthorized, "UNAUTHORIZED", errMissingUser)
+	actor := requireActor(w, r)
+	if actor == nil {
 		return
 	}
 
@@ -105,9 +102,8 @@ func (h *TerritoryHandler) Get(w http.ResponseWriter, r *http.Request) {
 
 // Create handles POST /api/v1/territories
 func (h *TerritoryHandler) Create(w http.ResponseWriter, r *http.Request) {
-	actor, err := rbac.UserFromContext(r.Context())
-	if err != nil {
-		writeError(w, http.StatusUnauthorized, "UNAUTHORIZED", errMissingUser)
+	actor := requireActor(w, r)
+	if actor == nil {
 		return
 	}
 
@@ -137,9 +133,8 @@ func (h *TerritoryHandler) Create(w http.ResponseWriter, r *http.Request) {
 
 // Update handles PUT /api/v1/territories/{id}
 func (h *TerritoryHandler) Update(w http.ResponseWriter, r *http.Request) {
-	actor, err := rbac.UserFromContext(r.Context())
-	if err != nil {
-		writeError(w, http.StatusUnauthorized, "UNAUTHORIZED", errMissingUser)
+	actor := requireActor(w, r)
+	if actor == nil {
 		return
 	}
 
@@ -171,9 +166,8 @@ func (h *TerritoryHandler) Update(w http.ResponseWriter, r *http.Request) {
 
 // Delete handles DELETE /api/v1/territories/{id}
 func (h *TerritoryHandler) Delete(w http.ResponseWriter, r *http.Request) {
-	actor, err := rbac.UserFromContext(r.Context())
-	if err != nil {
-		writeError(w, http.StatusUnauthorized, "UNAUTHORIZED", errMissingUser)
+	actor := requireActor(w, r)
+	if actor == nil {
 		return
 	}
 
