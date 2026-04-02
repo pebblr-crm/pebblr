@@ -1,8 +1,12 @@
 import { useState, useEffect, useCallback, type ReactNode } from 'react'
-import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
+import { QueryClient, QueryClientProvider, MutationCache } from '@tanstack/react-query'
 import { createRouter, RouterProvider } from '@tanstack/react-router'
 import { AuthProvider } from '@/auth/provider'
 import { useAuth } from '@/auth/context'
+import { GlobalToast } from '@/components/ui/GlobalToast'
+import { ErrorBoundary } from '@/components/ui/ErrorBoundary'
+import { emitToast } from '@/lib/toast-store'
+import { ApiError } from '@/types/api'
 import '@/i18n'
 
 import { Route as rootRoute } from '@/routes/__root'
@@ -40,7 +44,20 @@ declare module '@tanstack/react-router' {
   }
 }
 
+const mutationCache = new MutationCache({
+  onError: (error) => {
+    if (error instanceof ApiError) {
+      emitToast(error.message, 'error')
+    } else if (error instanceof Error) {
+      emitToast(error.message || 'An unexpected error occurred', 'error')
+    } else {
+      emitToast('An unexpected error occurred', 'error')
+    }
+  },
+})
+
 const queryClient = new QueryClient({
+  mutationCache,
   defaultOptions: {
     queries: {
       staleTime: 30_000,
@@ -111,12 +128,15 @@ function DemoGate({ children }: { children: ReactNode }) {
 
 export function App() {
   return (
-    <AuthProvider>
-      <QueryClientProvider client={queryClient}>
-        <DemoGate>
-          <RouterProvider router={router} />
-        </DemoGate>
-      </QueryClientProvider>
-    </AuthProvider>
+    <ErrorBoundary>
+      <AuthProvider>
+        <QueryClientProvider client={queryClient}>
+          <GlobalToast />
+          <DemoGate>
+            <RouterProvider router={router} />
+          </DemoGate>
+        </QueryClientProvider>
+      </AuthProvider>
+    </ErrorBoundary>
   )
 }

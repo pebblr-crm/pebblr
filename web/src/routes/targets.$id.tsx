@@ -9,6 +9,7 @@ import { Badge } from '@/components/ui/Badge'
 import { Card } from '@/components/ui/Card'
 import { Button } from '@/components/ui/Button'
 import { Spinner } from '@/components/ui/Spinner'
+import { QueryError } from '@/components/ui/QueryError'
 import { Modal } from '@/components/ui/Modal'
 import { MapContainer } from '@/components/map/MapContainer'
 import { TargetMarker } from '@/components/map/TargetMarker'
@@ -29,7 +30,7 @@ export const Route = createRoute({
 function TargetDetailPage() {
   const { id } = useParams({ from: '/targets/$id' })
   const navigate = useNavigate()
-  const { data: target, isLoading } = useTarget(id)
+  const { data: target, isLoading, isError, refetch } = useTarget(id)
   const { data: activityData } = useActivities({ targetId: id, limit: 50 })
   const { data: visitStatusData } = useTargetVisitStatus()
   const { data: config } = useConfig()
@@ -73,14 +74,15 @@ function TargetDetailPage() {
   // Target icon
   const TargetIcon = target?.targetType === 'doctor' ? Stethoscope : Building2
 
-  if (isLoading || !target) return <Spinner />
+  if (isLoading) return <Spinner />
+  if (isError || !target) return <QueryError message="Failed to load target" onRetry={() => void refetch()} />
 
   return (
     <div className="flex h-full flex-col bg-slate-50">
       {/* Breadcrumbs & actions bar */}
       <div className="px-4 py-3 bg-white border-b border-slate-200 flex flex-col sm:flex-row sm:items-center justify-between gap-3 sticky top-0 z-30 shadow-sm md:px-8">
         <div className="flex items-center gap-2 text-sm">
-          <button onClick={() => navigate({ to: '/targets' })} className="text-slate-400 hover:text-slate-600">
+          <button onClick={() => navigate({ to: '/targets' })} className="text-slate-400 hover:text-slate-600" aria-label="Back to targets">
             <ArrowLeft size={18} />
           </button>
           <button onClick={() => navigate({ to: '/targets' })} className="text-slate-500 hover:text-slate-700">Targets</button>

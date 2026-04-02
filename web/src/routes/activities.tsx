@@ -11,6 +11,7 @@ import { useAuth } from '@/auth/context'
 import { Badge } from '@/components/ui/Badge'
 import { Button } from '@/components/ui/Button'
 import { Spinner } from '@/components/ui/Spinner'
+import { QueryError } from '@/components/ui/QueryError'
 import { Modal } from '@/components/ui/Modal'
 import { statusVariant, priorityStyle } from '@/lib/styles'
 import { str } from '@/lib/helpers'
@@ -516,7 +517,7 @@ function ActivitiesPage() {
     [usersData],
   )
 
-  const { data, isLoading } = useActivities({
+  const { data, isLoading, isError, refetch } = useActivities({
     activityType: typeFilter || undefined,
     status: statusFilter || undefined,
     creatorId: repFilter || undefined,
@@ -551,6 +552,7 @@ function ActivitiesPage() {
   const hasMore = mobileCount < activities.length
 
   if (isLoading) return <Spinner />
+  if (isError) return <QueryError message="Failed to load activities" onRetry={() => void refetch()} />
 
   const renderActivityCard = (activity: Activity) => (
     <ActivityCard

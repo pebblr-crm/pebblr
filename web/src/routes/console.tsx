@@ -10,6 +10,7 @@ import { DataTable } from '@/components/data/DataTable'
 import { Badge } from '@/components/ui/Badge'
 import { Card } from '@/components/ui/Card'
 import { Spinner } from '@/components/ui/Spinner'
+import { QueryError } from '@/components/ui/QueryError'
 import { Users, Building2, MapPinned, Sliders } from 'lucide-react'
 import type { User } from '@/types/user'
 
@@ -31,7 +32,7 @@ const userColumnHelper = createColumnHelper<User>()
 
 function ConsolePage() {
   const [section, setSection] = useState<Section>('users')
-  const { data: usersData, isLoading: usersLoading } = useUsers()
+  const { data: usersData, isLoading: usersLoading, isError: usersError, refetch: refetchUsers } = useUsers()
   const { data: teamsData } = useTeams()
   const { data: territoriesData } = useTerritories()
   const { data: config } = useConfig()
@@ -74,6 +75,7 @@ function ConsolePage() {
   ]
 
   if (usersLoading) return <Spinner />
+  if (usersError) return <QueryError message="Failed to load configuration" onRetry={() => void refetchUsers()} />
 
   return (
     <div className="flex h-full flex-col md:flex-row">

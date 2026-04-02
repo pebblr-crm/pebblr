@@ -11,6 +11,7 @@ import { StatCard } from '@/components/data/StatCard'
 import { Badge } from '@/components/ui/Badge'
 import { Button } from '@/components/ui/Button'
 import { Spinner } from '@/components/ui/Spinner'
+import { QueryError } from '@/components/ui/QueryError'
 import { getMonday, addDays, formatDate } from '@/lib/dates'
 import { ArrowLeft, ChevronLeft, ChevronRight, Info } from 'lucide-react'
 
@@ -30,13 +31,13 @@ function RepDrillDownPage() {
   const dateFrom = formatDate(weekStart)
   const dateTo = formatDate(weekEnd)
 
-  const { data: activityData, isLoading: actLoading } = useActivities({
+  const { data: activityData, isLoading: actLoading, isError: actError, refetch: refetchAct } = useActivities({
     creatorId: repId,
     dateFrom,
     dateTo,
     limit: 200,
   })
-  const { data: targetData, isLoading: targetLoading } = useTargets({ assignee: repId, limit: 500 })
+  const { data: targetData, isLoading: targetLoading, isError: targetError, refetch: refetchTargets } = useTargets({ assignee: repId, limit: 500 })
   const { data: stats } = useActivityStats({ userId: repId, dateFrom, dateTo })
   const { data: coverage } = useCoverage({ userId: repId, dateFrom, dateTo })
 
@@ -54,6 +55,7 @@ function RepDrillDownPage() {
   const completionRate = stats?.total ? Math.round((completedCount / stats.total) * 100) : 0
 
   if (actLoading || targetLoading) return <Spinner />
+  if (actError || targetError) return <QueryError message="Failed to load rep data" onRetry={() => { void refetchAct(); void refetchTargets() }} />
 
   return (
     <div className="flex h-full flex-col">
@@ -68,7 +70,7 @@ function RepDrillDownPage() {
       {/* Header */}
       <div className="flex flex-wrap items-center justify-between gap-2 border-b border-slate-200 bg-white px-4 py-3 md:px-6">
         <div className="flex items-center gap-3">
-          <a href="/dashboard" className="text-slate-400 hover:text-slate-600">
+          <a href="/dashboard" className="text-slate-400 hover:text-slate-600" aria-label="Back to dashboard">
             <ArrowLeft size={20} />
           </a>
           <div>
@@ -80,13 +82,13 @@ function RepDrillDownPage() {
         </div>
 
         <div className="flex items-center gap-1 rounded-lg border border-slate-200 bg-slate-50">
-          <button onClick={prevWeek} className="p-1.5 hover:bg-slate-100 rounded-l-lg">
+          <button onClick={prevWeek} className="p-1.5 hover:bg-slate-100 rounded-l-lg" aria-label="Previous week">
             <ChevronLeft size={16} />
           </button>
           <span className="px-2 text-xs font-medium text-slate-700 md:px-3 md:text-sm">
             {weekStart.toLocaleDateString('en-GB', { month: 'short', day: 'numeric' })} — {weekEnd.toLocaleDateString('en-GB', { month: 'short', day: 'numeric' })}
           </span>
-          <button onClick={nextWeek} className="p-1.5 hover:bg-slate-100 rounded-r-lg">
+          <button onClick={nextWeek} className="p-1.5 hover:bg-slate-100 rounded-r-lg" aria-label="Next week">
             <ChevronRight size={16} />
           </button>
         </div>

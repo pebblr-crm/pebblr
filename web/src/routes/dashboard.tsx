@@ -14,6 +14,7 @@ import { DataTable } from '@/components/data/DataTable'
 import { Badge } from '@/components/ui/Badge'
 import { Card } from '@/components/ui/Card'
 import { Spinner } from '@/components/ui/Spinner'
+import { QueryError } from '@/components/ui/QueryError'
 import { Button } from '@/components/ui/Button'
 import { getMonday, addDays, formatDate } from '@/lib/dates'
 import { ChevronLeft, ChevronRight, CalendarDays, Users, CalendarRange } from 'lucide-react'
@@ -58,7 +59,7 @@ function DashboardPage() {
   const [monthDate, setMonthDate] = useState(() => new Date())
   const [detailActivityId, setDetailActivityId] = useState<string | null>(null)
 
-  const { data: stats, isLoading: statsLoading } = useActivityStats({})
+  const { data: stats, isLoading: statsLoading, isError: statsError, refetch: refetchStats } = useActivityStats({})
   const { data: coverage } = useCoverage({})
   const { data: frequency } = useFrequency({})
   const { data: recovery } = useRecoveryBalance({})
@@ -134,6 +135,7 @@ function DashboardPage() {
   )
 
   if (statsLoading) return <Spinner />
+  if (statsError) return <QueryError message="Failed to load dashboard data" onRetry={() => void refetchStats()} />
 
   const completedCount = stats?.byStatus?.realizat ?? 0
   const completionRate = stats?.total ? Math.round((completedCount / stats.total) * 100) : 0
@@ -221,7 +223,7 @@ function DashboardPage() {
 
             <div className="flex items-center gap-2">
               <div className="flex items-center gap-1 rounded-lg border border-slate-200 bg-white">
-                <button onClick={viewMode === 'week' ? prevWeek : prevMonth} className="p-1.5 hover:bg-slate-100 rounded-l-lg">
+                <button onClick={viewMode === 'week' ? prevWeek : prevMonth} className="p-1.5 hover:bg-slate-100 rounded-l-lg" aria-label="Previous period">
                   <ChevronLeft size={16} />
                 </button>
                 <span className="px-3 text-sm font-medium text-slate-700">
@@ -230,7 +232,7 @@ function DashboardPage() {
                     : monthDate.toLocaleDateString('en-GB', { month: 'long', year: 'numeric' })
                   }
                 </span>
-                <button onClick={viewMode === 'week' ? nextWeek : nextMonth} className="p-1.5 hover:bg-slate-100 rounded-r-lg">
+                <button onClick={viewMode === 'week' ? nextWeek : nextMonth} className="p-1.5 hover:bg-slate-100 rounded-r-lg" aria-label="Next period">
                   <ChevronRight size={16} />
                 </button>
               </div>
