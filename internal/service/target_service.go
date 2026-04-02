@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"log/slog"
+	"sync"
 	"time"
 
 	"github.com/pebblr/pebblr/internal/config"
@@ -12,6 +13,11 @@ import (
 	"github.com/pebblr/pebblr/internal/rbac"
 	"github.com/pebblr/pebblr/internal/store"
 )
+
+// geocodeConcurrency is the maximum number of concurrent geocoding requests
+// during a target import. This prevents flooding the upstream API while still
+// completing much faster than sequential geocoding.
+const geocodeConcurrency = 5
 
 const errGettingTarget = "getting target: %w"
 
@@ -189,13 +195,20 @@ func (s *TargetService) Import(ctx context.Context, actor *domain.User, targets 
 }
 
 // geocodeTargets enriches targets with lat/lng from their address fields.
-// Geocoding failures are logged but do not block the import.
+// Geocoding runs concurrently (up to geocodeConcurrency goroutines) so that
+// large imports are not blocked by sequential API calls. Individual failures
+// are logged but do not block the import.
 func (s *TargetService) geocodeTargets(ctx context.Context, targets []*domain.Target) {
+	// Collect targets that need geocoding.
+	type geocodeJob struct {
+		target *domain.Target
+		addr   string
+	}
+	var jobs []geocodeJob
 	for _, t := range targets {
 		if t.Fields == nil {
 			continue
 		}
-		// Skip if already geocoded.
 		if _, hasLat := t.Fields["lat"]; hasLat {
 			continue
 		}
@@ -203,15 +216,36 @@ func (s *TargetService) geocodeTargets(ctx context.Context, targets []*domain.Ta
 		if addr == "" {
 			continue
 		}
-		result, err := s.geocoder.Geocode(ctx, addr)
-		if err != nil {
-			slog.Warn("geocoding failed, skipping", "target", t.Name, "address", addr, "err", err)
-			continue
-		}
-		t.Fields["lat"] = result.Lat
-		t.Fields["lng"] = result.Lng
-		t.Fields["formatted_address"] = result.FormattedAddress
+		jobs = append(jobs, geocodeJob{target: t, addr: addr})
 	}
+	if len(jobs) == 0 {
+		return
+	}
+
+	sem := make(chan struct{}, geocodeConcurrency)
+	var wg sync.WaitGroup
+
+	for i := range jobs {
+		job := jobs[i]
+		wg.Add(1)
+		sem <- struct{}{} // acquire
+		go func() {
+			defer wg.Done()
+			defer func() { <-sem }() // release
+
+			result, err := s.geocoder.Geocode(ctx, job.addr)
+			if err != nil {
+				slog.Warn("geocoding failed, skipping", "target", job.target.Name, "address", job.addr, "err", err)
+				return
+			}
+			// Each goroutine writes to its own target's Fields map — no shared
+			// state across goroutines — so no mutex needed.
+			job.target.Fields["lat"] = result.Lat
+			job.target.Fields["lng"] = result.Lng
+			job.target.Fields["formatted_address"] = result.FormattedAddress
+		}()
+	}
+	wg.Wait()
 }
 
 // buildAddress assembles a geocodable address string from target fields.
