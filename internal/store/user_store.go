@@ -6,6 +6,14 @@ import (
 	"github.com/pebblr/pebblr/internal/domain"
 )
 
+// UserPage holds a paginated result set of users.
+type UserPage struct {
+	Users []*domain.User
+	Total int
+	Page  int
+	Limit int
+}
+
 // UserRepository provides access to user records.
 type UserRepository interface {
 	// GetByID retrieves a user by their internal ID.
@@ -15,7 +23,12 @@ type UserRepository interface {
 	GetByExternalID(ctx context.Context, externalID string) (*domain.User, error)
 
 	// List returns all users. Intended for admin/manager views.
+	//
+	// Deprecated: Use ListPaginated for new code.
 	List(ctx context.Context) ([]*domain.User, error)
+
+	// ListPaginated returns a paginated list of users.
+	ListPaginated(ctx context.Context, page, limit int) (*UserPage, error)
 
 	// Upsert creates or updates a user record based on ExternalID.
 	// Used to sync user details from OIDC claims on login.

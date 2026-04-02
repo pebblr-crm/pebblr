@@ -115,6 +115,10 @@ func (r *stubUserRepo) List(_ context.Context) ([]*domain.User, error) {
 	return nil, nil
 }
 
+func (r *stubUserRepo) ListPaginated(_ context.Context, _, _ int) (*store.UserPage, error) {
+	return &store.UserPage{}, nil
+}
+
 func (r *stubUserRepo) Upsert(_ context.Context, u *domain.User) (*domain.User, error) {
 	return u, nil
 }
