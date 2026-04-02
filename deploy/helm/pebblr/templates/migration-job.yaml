@@ -21,18 +21,12 @@ spec:
       automountServiceAccountToken: false
       restartPolicy: Never
       securityContext:
-        runAsNonRoot: true
-        runAsUser: 1000
-        fsGroup: 1000
+        {{- include "pebblr.podSecurityContext" . | nindent 8 }}
       volumes:
-        - name: secrets
-          secret:
-            secretName: {{ include "pebblr.secretName" . }}
-            defaultMode: 0400
+        {{- include "pebblr.secretsVolume" . | nindent 8 }}
       containers:
         - name: migrate
-          image: "{{ .Values.image.repository }}:{{ .Values.image.tag | default .Chart.AppVersion }}"
-          imagePullPolicy: {{ .Values.image.pullPolicy }}
+          {{- include "pebblr.image" . | nindent 10 }}
           command:
             - /app/migrate
             - -dsn-file
@@ -40,9 +34,7 @@ spec:
             - -migrations-path
             - /app/migrations
           volumeMounts:
-            - name: secrets
-              mountPath: {{ .Values.secrets.mountPath }}
-              readOnly: true
+            {{- include "pebblr.secretsVolumeMount" . | nindent 12 }}
           resources:
             requests:
               cpu: 100m
@@ -51,8 +43,4 @@ spec:
               cpu: 200m
               memory: 128Mi
           securityContext:
-            allowPrivilegeEscalation: false
-            readOnlyRootFilesystem: true
-            capabilities:
-              drop:
-                - ALL
+            {{- include "pebblr.containerSecurityContext" . | nindent 12 }}
