@@ -127,7 +127,7 @@ func (b *targetQueryBuilder) applyFilter(filter store.TargetFilter) {
 		b.addCondition("team_id::TEXT = $%d", *filter.TeamID)
 	}
 	if filter.Query != nil {
-		b.addCondition("name ILIKE $%d", "%"+*filter.Query+"%")
+		b.addCondition("name ILIKE $%d", "%"+escapeILIKE(*filter.Query)+"%")
 	}
 }
 
@@ -217,23 +217,45 @@ func (r *targetRepository) Update(ctx context.Context, t *domain.Target) (*domai
 	return scanTarget(row)
 }
 
+// upsertBatchSize is the maximum number of targets to upsert in a single
+// database transaction. This prevents unbounded transactions that hold locks
+// for too long and risk OOM on very large imports.
+const upsertBatchSize = 500
+
 func (r *targetRepository) Upsert(ctx context.Context, targets []*domain.Target) (*store.ImportResult, error) {
 	if len(targets) == 0 {
 		return &store.ImportResult{}, nil
 	}
 
+	result := &store.ImportResult{}
+
+	for i := 0; i < len(targets); i += upsertBatchSize {
+		end := i + upsertBatchSize
+		if end > len(targets) {
+			end = len(targets)
+		}
+		batch := targets[i:end]
+
+		if err := r.upsertBatch(ctx, batch, result); err != nil {
+			return nil, err
+		}
+	}
+
+	return result, nil
+}
+
+// upsertBatch processes a single batch of targets within one transaction.
+func (r *targetRepository) upsertBatch(ctx context.Context, batch []*domain.Target, result *store.ImportResult) error {
 	tx, err := r.pool.Begin(ctx)
 	if err != nil {
-		return nil, fmt.Errorf("beginning import transaction: %w", err)
+		return fmt.Errorf("beginning import transaction: %w", err)
 	}
 	defer tx.Rollback(ctx) //nolint:errcheck // rollback after commit is a no-op
 
-	result := &store.ImportResult{}
-
-	for _, t := range targets {
+	for _, t := range batch {
 		fieldsJSON, err := json.Marshal(t.Fields)
 		if err != nil {
-			return nil, fmt.Errorf(errFmtMarshalTargetFields, err)
+			return fmt.Errorf(errFmtMarshalTargetFields, err)
 		}
 
 		var isNew bool
@@ -252,7 +274,7 @@ func (r *targetRepository) Upsert(ctx context.Context, targets []*domain.Target)
 
 		imported, err := scanTargetWithFlag(row, &isNew)
 		if err != nil {
-			return nil, fmt.Errorf("upserting target %q: %w", t.ExternalID, err)
+			return fmt.Errorf("upserting target %q: %w", t.ExternalID, err)
 		}
 
 		result.Imported = append(result.Imported, imported)
@@ -264,10 +286,10 @@ func (r *targetRepository) Upsert(ctx context.Context, targets []*domain.Target)
 	}
 
 	if err := tx.Commit(ctx); err != nil {
-		return nil, fmt.Errorf("committing import transaction: %w", err)
+		return fmt.Errorf("committing import transaction: %w", err)
 	}
 
-	return result, nil
+	return nil
 }
 
 // targetScopeResult holds the output of building a target RBAC scope clause.

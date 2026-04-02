@@ -73,6 +73,51 @@ func (r *userRepository) List(ctx context.Context) ([]*domain.User, error) {
 	return users, nil
 }
 
+func (r *userRepository) ListPaginated(ctx context.Context, page, limit int) (*store.UserPage, error) {
+	if page < 1 {
+		page = 1
+	}
+	if limit < 1 || limit > 200 {
+		limit = 20
+	}
+	offset := (page - 1) * limit
+
+	var total int
+	if err := r.pool.QueryRow(ctx, `SELECT COUNT(*) FROM users`).Scan(&total); err != nil {
+		return nil, fmt.Errorf("counting users: %w", err)
+	}
+
+	rows, err := r.pool.Query(ctx,
+		`SELECT u.id, u.external_id, u.email, u.name, u.role, u.avatar, u.online_status,
+		        COALESCE(array_agg(tm.team_id::TEXT) FILTER (WHERE tm.team_id IS NOT NULL), '{}')
+		 FROM users u
+		 LEFT JOIN team_members tm ON u.id = tm.user_id
+		 GROUP BY u.id
+		 ORDER BY u.name
+		 LIMIT $1 OFFSET $2`,
+		limit, offset,
+	)
+	if err != nil {
+		return nil, fmt.Errorf("querying users: %w", err)
+	}
+	defer rows.Close()
+
+	var users []*domain.User
+	for rows.Next() {
+		var u domain.User
+		err := rows.Scan(&u.ID, &u.ExternalID, &u.Email, &u.Name, &u.Role, &u.Avatar, &u.OnlineStatus, &u.TeamIDs)
+		if err != nil {
+			return nil, fmt.Errorf("scanning user: %w", err)
+		}
+		users = append(users, &u)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, fmt.Errorf("iterating users: %w", err)
+	}
+
+	return &store.UserPage{Users: users, Total: total, Page: page, Limit: limit}, nil
+}
+
 func (r *userRepository) Upsert(ctx context.Context, user *domain.User) (*domain.User, error) {
 	row := r.pool.QueryRow(ctx,
 		`INSERT INTO users (external_id, email, name, role, avatar, online_status)

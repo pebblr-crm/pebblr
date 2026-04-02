@@ -21,12 +21,24 @@ func NewUserService(users store.UserRepository) *UserService {
 }
 
 // List returns all users.
+//
+// Deprecated: Use ListPaginated for new code. This method loads all users into
+// memory and should not be used for large user sets.
 func (s *UserService) List(ctx context.Context) ([]*domain.User, error) {
 	users, err := s.users.List(ctx)
 	if err != nil {
 		return nil, fmt.Errorf("listing users: %w", err)
 	}
 	return users, nil
+}
+
+// ListPaginated returns a paginated list of users.
+func (s *UserService) ListPaginated(ctx context.Context, page, limit int) (*store.UserPage, error) {
+	result, err := s.users.ListPaginated(ctx, page, limit)
+	if err != nil {
+		return nil, fmt.Errorf("listing users: %w", err)
+	}
+	return result, nil
 }
 
 // Get retrieves a user by their internal ID.
