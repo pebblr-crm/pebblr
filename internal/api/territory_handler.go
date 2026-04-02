@@ -78,6 +78,7 @@ func (h *TerritoryHandler) List(w http.ResponseWriter, r *http.Request) {
 	}
 
 	w.Header().Set(headerContentType, contentTypeJSON)
+	w.WriteHeader(http.StatusOK)
 	writeJSON(w, r, map[string]any{
 		"items": territories,
 		"total": len(territories),
@@ -100,6 +101,7 @@ func (h *TerritoryHandler) Get(w http.ResponseWriter, r *http.Request) {
 	}
 
 	w.Header().Set(headerContentType, contentTypeJSON)
+	w.WriteHeader(http.StatusOK)
 	writeJSON(w, r, territory)
 }
 
@@ -166,6 +168,7 @@ func (h *TerritoryHandler) Update(w http.ResponseWriter, r *http.Request) {
 	}
 
 	w.Header().Set(headerContentType, contentTypeJSON)
+	w.WriteHeader(http.StatusOK)
 	writeJSON(w, r, updated)
 }
 

@@ -23,12 +23,12 @@ type RouterConfig struct {
 	DashboardHandler *DashboardHandler
 	TeamHandler      *TeamHandler
 	UserHandler      *UserHandler
-	ConfigHandler      *ConfigHandler
-	CollectionHandler  *CollectionHandler
-	TerritoryHandler   *TerritoryHandler
-	AuditHandler       *AuditHandler
-	DemoHandler        *demo.Handler
-	WebDistPath        string
+	ConfigHandler    *ConfigHandler
+	CollectionHandler *CollectionHandler
+	TerritoryHandler *TerritoryHandler
+	AuditHandler     *AuditHandler
+	DemoHandler      *demo.Handler
+	WebDistPath      string
 }
 
 // NewRouter constructs and returns the application HTTP router.

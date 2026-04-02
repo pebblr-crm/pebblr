@@ -101,6 +101,7 @@ func (h *CollectionHandler) List(w http.ResponseWriter, r *http.Request) {
 	}
 
 	w.Header().Set(headerContentType, contentTypeJSON)
+	w.WriteHeader(http.StatusOK)
 	writeJSON(w, r, map[string]any{"items": result})
 }
 
@@ -120,6 +121,7 @@ func (h *CollectionHandler) Get(w http.ResponseWriter, r *http.Request) {
 	}
 
 	w.Header().Set(headerContentType, contentTypeJSON)
+	w.WriteHeader(http.StatusOK)
 	writeJSON(w, r, c)
 }
 
@@ -146,6 +148,7 @@ func (h *CollectionHandler) Update(w http.ResponseWriter, r *http.Request) {
 	}
 
 	w.Header().Set(headerContentType, contentTypeJSON)
+	w.WriteHeader(http.StatusOK)
 	writeJSON(w, r, c)
 }
 

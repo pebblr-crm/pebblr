@@ -91,6 +91,7 @@ func (h *AuditHandler) List(w http.ResponseWriter, r *http.Request) {
 	}
 
 	w.Header().Set(headerContentType, contentTypeJSON)
+	w.WriteHeader(http.StatusOK)
 	writeJSON(w, r, map[string]any{
 		"items": entries,
 		"total": total,

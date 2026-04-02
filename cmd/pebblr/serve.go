@@ -127,12 +127,12 @@ func serve(configPath, authProvider string) error {
 		DashboardHandler: dashboardHandler,
 		TeamHandler:      teamHandler,
 		UserHandler:      userHandler,
-		ConfigHandler:      configHandler,
-		CollectionHandler:  collectionHandler,
-		TerritoryHandler:   territoryHandler,
-		AuditHandler:       auditHandler,
-		DemoHandler:        demoHandler,
-		WebDistPath:        webDistPath,
+		ConfigHandler:     configHandler,
+		CollectionHandler: collectionHandler,
+		TerritoryHandler:  territoryHandler,
+		AuditHandler:      auditHandler,
+		DemoHandler:       demoHandler,
+		WebDistPath:       webDistPath,
 	})
 
 	srv := &http.Server{
