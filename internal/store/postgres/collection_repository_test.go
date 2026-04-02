@@ -102,7 +102,7 @@ func TestCollectionGet_DBError(t *testing.T) {
 
 	mock.ExpectQuery(querySelectCollection).
 		WithArgs("col-1").
-		WillReturnError(fmt.Errorf(errDBMsg))
+		WillReturnError(errors.New(errDBMsg))
 
 	_, err := repo.Get(ctx, "col-1")
 	if err == nil {
@@ -175,7 +175,7 @@ func TestCollectionList_DBError(t *testing.T) {
 	ctx := context.Background()
 
 	mock.ExpectQuery(querySelectCollection).
-		WillReturnError(fmt.Errorf(errDBMsg))
+		WillReturnError(errors.New(errDBMsg))
 
 	_, err := repo.List(ctx, store.CollectionFilter{})
 	if err == nil {
@@ -329,7 +329,7 @@ func TestCollectionDelete_DBError(t *testing.T) {
 
 	mock.ExpectExec(queryDeleteCollection).
 		WithArgs("col-1").
-		WillReturnError(fmt.Errorf(errDBMsg))
+		WillReturnError(errors.New(errDBMsg))
 
 	err := repo.Delete(ctx, "col-1")
 	if err == nil {

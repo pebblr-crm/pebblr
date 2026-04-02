@@ -182,7 +182,7 @@ func TestTerritoryList_DBError(t *testing.T) {
 	ctx := context.Background()
 
 	mock.ExpectQuery(querySelectTerritory).
-		WillReturnError(fmt.Errorf(errDBMsg))
+		WillReturnError(errors.New(errDBMsg))
 
 	_, err := repo.List(ctx, store.TerritoryFilter{})
 	if err == nil {
@@ -255,7 +255,7 @@ func TestTerritoryCreate_DBError(t *testing.T) {
 
 	mock.ExpectQuery(queryInsertTerritory).
 		WithArgs(anyArgs(4)...).
-		WillReturnError(fmt.Errorf(errDBMsg))
+		WillReturnError(errors.New(errDBMsg))
 
 	_, err := repo.Create(ctx, ter)
 	if err == nil {
@@ -323,7 +323,7 @@ func TestTerritoryUpdate_DBError(t *testing.T) {
 
 	mock.ExpectQuery(queryUpdateTerritory).
 		WithArgs(anyArgs(5)...).
-		WillReturnError(fmt.Errorf(errDBMsg))
+		WillReturnError(errors.New(errDBMsg))
 
 	_, err := repo.Update(ctx, ter)
 	if err == nil {
@@ -373,7 +373,7 @@ func TestTerritoryDelete_DBError(t *testing.T) {
 
 	mock.ExpectExec(queryDeleteTerritory).
 		WithArgs("ter-1").
-		WillReturnError(fmt.Errorf(errDBMsg))
+		WillReturnError(errors.New(errDBMsg))
 
 	err := repo.Delete(ctx, "ter-1")
 	if err == nil {

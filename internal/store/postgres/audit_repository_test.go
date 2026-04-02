@@ -4,7 +4,6 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
-	"fmt"
 	"testing"
 	"time"
 
@@ -117,7 +116,7 @@ func TestAuditRecord_DBError(t *testing.T) {
 
 	mock.ExpectExec(queryInsertAudit).
 		WithArgs(anyArgs(6)...).
-		WillReturnError(fmt.Errorf(errDBMsg))
+		WillReturnError(errors.New(errDBMsg))
 
 	err := repo.Record(ctx, entry)
 	if err == nil {
@@ -176,7 +175,7 @@ func TestAuditListByEntity_DBError(t *testing.T) {
 
 	mock.ExpectQuery(querySelectAudit).
 		WithArgs("activity", "act-1").
-		WillReturnError(fmt.Errorf(errDBMsg))
+		WillReturnError(errors.New(errDBMsg))
 
 	_, err := repo.ListByEntity(ctx, "activity", "act-1")
 	if err == nil {
@@ -255,7 +254,7 @@ func TestAuditList_CountError(t *testing.T) {
 	ctx := context.Background()
 
 	mock.ExpectQuery(auditSelectCount).
-		WillReturnError(fmt.Errorf(errDBMsg))
+		WillReturnError(errors.New(errDBMsg))
 
 	_, _, err := repo.List(ctx, store.AuditFilter{})
 	if err == nil {
@@ -274,7 +273,7 @@ func TestAuditList_QueryError(t *testing.T) {
 
 	mock.ExpectQuery(querySelectAudit).
 		WithArgs(anyArgs(1)...).
-		WillReturnError(fmt.Errorf(errDBMsg))
+		WillReturnError(errors.New(errDBMsg))
 
 	_, _, err := repo.List(ctx, store.AuditFilter{})
 	if err == nil {
@@ -324,7 +323,7 @@ func TestAuditUpdateStatus_DBError(t *testing.T) {
 
 	mock.ExpectExec(queryUpdateStatus).
 		WithArgs("accepted", testAdminID, testAuditID).
-		WillReturnError(fmt.Errorf(errDBMsg))
+		WillReturnError(errors.New(errDBMsg))
 
 	err := repo.UpdateStatus(ctx, testAuditID, "accepted", testAdminID)
 	if err == nil {
