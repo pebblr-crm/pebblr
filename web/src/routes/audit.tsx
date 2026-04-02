@@ -110,9 +110,9 @@ function AuditPage() {
   const pendingCount = useMemo(() => entries.filter((e) => e.status === 'pending').length, [entries])
 
   const renderReviewActions = useCallback(
-    ({ row }: { row: { original: AuditEntry } }) => (
+    ({ row: { original } }: { row: { original: AuditEntry } }) => (
       <ReviewActionsCell
-        entry={row.original}
+        entry={original}
         onAccept={(id) => updateStatus.mutate({ id, status: 'accepted' })}
         onFalsePositive={(id) => updateStatus.mutate({ id, status: 'false_positive' })}
       />

@@ -320,7 +320,7 @@ func TestTerritory_Update_EmptyNameInvalid(t *testing.T) {
 func TestTerritory_Update_ManagerOtherTeamForbidden(t *testing.T) {
 	t.Parallel()
 	ter := sampleTerritory()
-	ter.TeamID = "team-99"
+	ter.TeamID = testTeam99ID
 	repo := &stubTerritoryRepo{territory: ter}
 	svc := service.NewTerritoryService(repo)
 
@@ -373,7 +373,7 @@ func TestTerritory_Delete_RepForbidden(t *testing.T) {
 func TestTerritory_Delete_ManagerOtherTeamForbidden(t *testing.T) {
 	t.Parallel()
 	ter := sampleTerritory()
-	ter.TeamID = "team-99"
+	ter.TeamID = testTeam99ID
 	repo := &stubTerritoryRepo{territory: ter}
 	svc := service.NewTerritoryService(repo)
 
