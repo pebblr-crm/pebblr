@@ -71,6 +71,12 @@ jobs:
       - name: Test
         run: make e2e
 
+      - name: Install Playwright browsers
+        run: cd web && bunx playwright install --with-deps chromium
+
+      - name: Frontend E2E tests
+        run: make e2e-web-integration
+
       - name: Debug
         if: failure()
         run: |
