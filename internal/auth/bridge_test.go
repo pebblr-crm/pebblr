@@ -49,6 +49,72 @@ func TestClaimsBridge_SetsUser(t *testing.T) {
 	}
 }
 
+func TestClaimsBridge_MultiRole_PicksHighest(t *testing.T) {
+	t.Parallel()
+	claims := &auth.UserClaims{
+		Sub:     "user-multi",
+		Email:   "multi@example.com",
+		Name:    "Multi-Role User",
+		Roles:   []domain.Role{domain.RoleRep, domain.RoleAdmin, domain.RoleManager},
+		TeamIDs: []string{"team-1"},
+	}
+
+	var got *domain.User
+	handler := auth.ClaimsBridge(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		var err error
+		got, err = rbac.UserFromContext(r.Context())
+		if err != nil {
+			t.Fatalf("UserFromContext error: %v", err)
+		}
+		w.WriteHeader(http.StatusOK)
+	}))
+
+	req := httptest.NewRequest("GET", "/", http.NoBody)
+	req = req.WithContext(auth.WithClaims(req.Context(), claims))
+	rec := httptest.NewRecorder()
+	handler.ServeHTTP(rec, req)
+
+	if rec.Code != http.StatusOK {
+		t.Fatalf("expected 200, got %d", rec.Code)
+	}
+	if got.Role != domain.RoleAdmin {
+		t.Errorf("expected highest role admin, got %q", got.Role)
+	}
+}
+
+func TestClaimsBridge_EmptyRoles_DefaultsToRep(t *testing.T) {
+	t.Parallel()
+	claims := &auth.UserClaims{
+		Sub:     "user-norole",
+		Email:   "norole@example.com",
+		Name:    "No Role User",
+		Roles:   []domain.Role{},
+		TeamIDs: []string{},
+	}
+
+	var got *domain.User
+	handler := auth.ClaimsBridge(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		var err error
+		got, err = rbac.UserFromContext(r.Context())
+		if err != nil {
+			t.Fatalf("UserFromContext error: %v", err)
+		}
+		w.WriteHeader(http.StatusOK)
+	}))
+
+	req := httptest.NewRequest("GET", "/", http.NoBody)
+	req = req.WithContext(auth.WithClaims(req.Context(), claims))
+	rec := httptest.NewRecorder()
+	handler.ServeHTTP(rec, req)
+
+	if rec.Code != http.StatusOK {
+		t.Fatalf("expected 200, got %d", rec.Code)
+	}
+	if got.Role != domain.RoleRep {
+		t.Errorf("expected default role rep, got %q", got.Role)
+	}
+}
+
 func TestClaimsBridge_NoClaims_Returns401(t *testing.T) {
 	t.Parallel()
 	handler := auth.ClaimsBridge(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
@@ -61,5 +127,9 @@ func TestClaimsBridge_NoClaims_Returns401(t *testing.T) {
 
 	if rec.Code != http.StatusUnauthorized {
 		t.Fatalf("expected 401, got %d", rec.Code)
+	}
+	ct := rec.Header().Get("Content-Type")
+	if ct != "application/json" {
+		t.Errorf("expected Content-Type application/json, got %q", ct)
 	}
 }

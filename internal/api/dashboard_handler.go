@@ -7,7 +7,6 @@ import (
 
 	"github.com/go-chi/chi/v5"
 	"github.com/pebblr/pebblr/internal/domain"
-	"github.com/pebblr/pebblr/internal/rbac"
 	"github.com/pebblr/pebblr/internal/service"
 	"github.com/pebblr/pebblr/internal/store"
 )
@@ -106,9 +105,8 @@ func parseDashboardFilter(r *http.Request) (store.DashboardFilter, error) {
 
 // ActivityStats handles GET /api/v1/dashboard/activities
 func (h *DashboardHandler) ActivityStats(w http.ResponseWriter, r *http.Request) {
-	actor, err := rbac.UserFromContext(r.Context())
-	if err != nil {
-		writeError(w, http.StatusUnauthorized, "UNAUTHORIZED", errMissingUser)
+	actor := requireActor(w, r)
+	if actor == nil {
 		return
 	}
 
@@ -131,9 +129,8 @@ func (h *DashboardHandler) ActivityStats(w http.ResponseWriter, r *http.Request)
 
 // Coverage handles GET /api/v1/dashboard/coverage
 func (h *DashboardHandler) Coverage(w http.ResponseWriter, r *http.Request) {
-	actor, err := rbac.UserFromContext(r.Context())
-	if err != nil {
-		writeError(w, http.StatusUnauthorized, "UNAUTHORIZED", errMissingUser)
+	actor := requireActor(w, r)
+	if actor == nil {
 		return
 	}
 
@@ -156,9 +153,8 @@ func (h *DashboardHandler) Coverage(w http.ResponseWriter, r *http.Request) {
 
 // RecoveryBalance handles GET /api/v1/dashboard/recovery
 func (h *DashboardHandler) RecoveryBalance(w http.ResponseWriter, r *http.Request) {
-	actor, err := rbac.UserFromContext(r.Context())
-	if err != nil {
-		writeError(w, http.StatusUnauthorized, "UNAUTHORIZED", errMissingUser)
+	actor := requireActor(w, r)
+	if actor == nil {
 		return
 	}
 
@@ -181,9 +177,8 @@ func (h *DashboardHandler) RecoveryBalance(w http.ResponseWriter, r *http.Reques
 
 // Frequency handles GET /api/v1/dashboard/frequency
 func (h *DashboardHandler) Frequency(w http.ResponseWriter, r *http.Request) {
-	actor, err := rbac.UserFromContext(r.Context())
-	if err != nil {
-		writeError(w, http.StatusUnauthorized, "UNAUTHORIZED", errMissingUser)
+	actor := requireActor(w, r)
+	if actor == nil {
 		return
 	}
 

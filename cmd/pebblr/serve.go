@@ -154,6 +154,7 @@ func serve(configPath, authProvider string) error {
 		logger.Info("starting server", "addr", srv.Addr)
 		if err := srv.ListenAndServe(); err != nil && !errors.Is(err, http.ErrServerClosed) {
 			listenErr <- err
+			cancel()
 		}
 		close(listenErr)
 	}()
@@ -229,11 +230,14 @@ func readOptionalSecret(path string) (string, error) {
 func buildAuthenticator(ctx context.Context, logger *slog.Logger, provider, secretPath string, users demo.UserLister) (auth.Authenticator, *demo.Handler, error) {
 	switch provider {
 	case "static":
+		if env := os.Getenv("PEBBLR_ENV"); env == "production" {
+			return nil, nil, fmt.Errorf("static auth provider is not allowed in production (PEBBLR_ENV=%s)", env)
+		}
 		jwtSecret, err := readSecretFile(secretPath + "/jwt-secret")
 		if err != nil {
 			return nil, nil, fmt.Errorf("reading jwt secret: %w", err)
 		}
-		logger.Info("using static token authenticator")
+		logger.Info("using static token authenticator (dev/test only)")
 		return auth.NewStaticAuthenticator(jwtSecret), nil, nil
 
 	case "azuread":
@@ -259,6 +263,9 @@ func buildAuthenticator(ctx context.Context, logger *slog.Logger, provider, secr
 		return a, nil, nil
 
 	case "demo":
+		if env := os.Getenv("PEBBLR_ENV"); env == "production" {
+			return nil, nil, fmt.Errorf("demo auth provider is not allowed in production (PEBBLR_ENV=%s)", env)
+		}
 		signingKey, _ := readOptionalSecret(secretPath + "/demo-signing-key")
 		a, err := demo.New([]byte(signingKey))
 		if err != nil {
