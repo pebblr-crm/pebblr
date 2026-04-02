@@ -11,15 +11,15 @@ podAnnotations: {}
 
 database:
   host: postgres.pebblr-db.svc.cluster.local
-  port: "5432"
+  port: 5432
   name: pebblr
   user: pebblr
   sslMode: disable
 
 auth:
-  tenantId: e2e-placeholder
-  clientId: e2e-placeholder
-  issuerUrl: https://login.microsoftonline.com/e2e-placeholder/v2.0
+  tenantId: "e2e-placeholder"
+  clientId: "e2e-placeholder"
+  issuerUrl: "https://login.microsoftonline.com/e2e-placeholder/v2.0"
 
 gateway:
   enabled: false

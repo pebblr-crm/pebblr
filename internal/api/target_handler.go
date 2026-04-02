@@ -383,7 +383,7 @@ func (h *TargetHandler) FrequencyStatus(w http.ResponseWriter, r *http.Request) 
 	}
 
 	w.Header().Set(headerContentType, contentTypeJSON)
-	_ = json.NewEncoder(w).Encode(map[string]any{"items": result})
+	writeJSON(w, r, map[string]any{"items": result})
 }
 
 // VisitStatus handles GET /api/v1/targets/visit-status

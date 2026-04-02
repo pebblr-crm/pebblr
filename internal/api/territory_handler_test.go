@@ -15,6 +15,8 @@ import (
 	"github.com/pebblr/pebblr/internal/store"
 )
 
+const testTeamID = "team-1"
+
 // --- stub TerritoryService ---
 
 type stubTerritorySvc struct {
@@ -75,8 +77,8 @@ func (s *stubTerritorySvc) Delete(_ context.Context, actor *domain.User, id stri
 
 func defaultTerritories() []*domain.Territory {
 	return []*domain.Territory{
-		{ID: "t-1", Name: "Bucharest North", TeamID: "team-1", Region: "Bucharest"},
-		{ID: "t-2", Name: "Bucharest South", TeamID: "team-1", Region: "Bucharest"},
+		{ID: "t-1", Name: "Bucharest North", TeamID: testTeamID, Region: "Bucharest"},
+		{ID: "t-2", Name: "Bucharest South", TeamID: testTeamID, Region: "Bucharest"},
 	}
 }
 
@@ -150,7 +152,7 @@ func TestTerritoryCreate_Admin_Returns201(t *testing.T) {
 	t.Parallel()
 	body, _ := json.Marshal(map[string]any{
 		"name":   "Cluj Region",
-		"teamId": "team-1",
+		"teamId": testTeamID,
 		"region": "Cluj",
 	})
 	req := httptest.NewRequest(http.MethodPost, "/", bytes.NewReader(body))
@@ -166,7 +168,7 @@ func TestTerritoryCreate_Rep_Returns403(t *testing.T) {
 	t.Parallel()
 	body, _ := json.Marshal(map[string]any{
 		"name":   "Test",
-		"teamId": "team-1",
+		"teamId": testTeamID,
 	})
 	req := httptest.NewRequest(http.MethodPost, "/", bytes.NewReader(body))
 	w := httptest.NewRecorder()

@@ -184,10 +184,3 @@ func unmarshalJSONValue(data []byte, label string) (map[string]any, error) {
 	return m, nil
 }
 
-// nullJSONIfNil returns nil if the map is nil (stores NULL in db), otherwise the marshalled JSON.
-func nullJSONIfNil(m map[string]any, marshalled []byte) []byte {
-	if m == nil {
-		return nil
-	}
-	return marshalled
-}

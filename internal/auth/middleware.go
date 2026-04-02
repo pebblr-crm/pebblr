@@ -33,6 +33,14 @@ func Middleware(authenticator Authenticator) func(http.Handler) http.Handler {
 	}
 }
 
+// writeJSONError writes a structured JSON error response with the correct
+// Content-Type header. This avoids http.Error which sets text/plain.
+func writeJSONError(w http.ResponseWriter, status int, code, message string) {
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(status)
+	_, _ = w.Write([]byte(`{"error":{"code":"` + code + `","message":"` + message + `"}}`))
+}
+
 // WithClaims stores UserClaims in the context.
 func WithClaims(ctx context.Context, claims *UserClaims) context.Context {
 	return context.WithValue(ctx, claimsKey, claims)

@@ -14,9 +14,9 @@ database:
   sslMode: disable
 
 auth:
-  tenantId: local-placeholder
-  clientId: local-placeholder
-  issuerUrl: https://login.microsoftonline.com/local-placeholder/v2.0
+  tenantId: "local-placeholder"
+  clientId: "local-placeholder"
+  issuerUrl: "https://login.microsoftonline.com/local-placeholder/v2.0"
 
 gateway:
   enabled: true

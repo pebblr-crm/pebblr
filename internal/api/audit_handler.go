@@ -91,7 +91,7 @@ func (h *AuditHandler) List(w http.ResponseWriter, r *http.Request) {
 	}
 
 	w.Header().Set(headerContentType, contentTypeJSON)
-	_ = json.NewEncoder(w).Encode(map[string]any{
+	writeJSON(w, r, map[string]any{
 		"items": entries,
 		"total": total,
 		"page":  filter.Page,

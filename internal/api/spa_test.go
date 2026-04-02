@@ -12,12 +12,14 @@ import (
 	"github.com/pebblr/pebblr/internal/auth"
 )
 
+const webIndexContent = "web-index"
+
 // setupSPADir creates a temp dist directory with an index.html and a static asset.
 func setupSPADir(t *testing.T) string {
 	t.Helper()
 
 	dir := t.TempDir()
-	if err := os.WriteFile(filepath.Join(dir, "index.html"), []byte("web-index"), 0o644); err != nil {
+	if err := os.WriteFile(filepath.Join(dir, "index.html"), []byte(webIndexContent), 0o644); err != nil {
 		t.Fatal(err)
 	}
 	if err := os.MkdirAll(filepath.Join(dir, "assets"), 0o755); err != nil {
@@ -46,8 +48,8 @@ func TestSPA_ServesIndex(t *testing.T) {
 	w := httptest.NewRecorder()
 	router.ServeHTTP(w, req)
 
-	if w.Body.String() != "web-index" {
-		t.Errorf("expected web-index, got %q", w.Body.String())
+	if w.Body.String() != webIndexContent {
+		t.Errorf("expected %s, got %q", webIndexContent, w.Body.String())
 	}
 }
 
@@ -73,8 +75,8 @@ func TestSPA_FallbackToIndex(t *testing.T) {
 	w := httptest.NewRecorder()
 	router.ServeHTTP(w, req)
 
-	if w.Body.String() != "web-index" {
-		t.Errorf("expected web-index for SPA fallback, got %q", w.Body.String())
+	if w.Body.String() != webIndexContent {
+		t.Errorf("expected %s for SPA fallback, got %q", webIndexContent, w.Body.String())
 	}
 }
 
