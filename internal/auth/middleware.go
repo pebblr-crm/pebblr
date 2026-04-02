@@ -53,14 +53,6 @@ func ClaimsFromContext(ctx context.Context) *UserClaims {
 	return claims
 }
 
-// writeJSONError writes a structured JSON error response with the correct Content-Type.
-// This avoids http.Error which sets Content-Type to text/plain.
-func writeJSONError(w http.ResponseWriter, status int, code, message string) {
-	w.Header().Set("Content-Type", "application/json")
-	w.WriteHeader(status)
-	_, _ = w.Write([]byte(`{"error":{"code":"` + code + `","message":"` + message + `"}}`))
-}
-
 // bearerToken extracts the Bearer token from the Authorization header.
 func bearerToken(r *http.Request) (string, bool) {
 	h := r.Header.Get("Authorization")
