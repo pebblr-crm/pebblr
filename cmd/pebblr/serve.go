@@ -163,7 +163,7 @@ func serve(configPath, authProvider string) error {
 		return fmt.Errorf("shutdown: %w", err)
 	}
 
-	fmt.Println("server stopped")
+	logger.Info("server stopped")
 	return nil
 }
 
