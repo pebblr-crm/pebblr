@@ -15,6 +15,19 @@ type territoryRepository struct {
 	pool dbPool
 }
 
+// unmarshalBoundary decodes a JSON byte slice into a territory boundary map.
+// Returns nil if the input is empty.
+func unmarshalBoundary(data []byte) (map[string]any, error) {
+	if len(data) == 0 {
+		return nil, nil
+	}
+	m := make(map[string]any)
+	if err := json.Unmarshal(data, &m); err != nil {
+		return nil, fmt.Errorf("unmarshalling territory boundary: %w", err)
+	}
+	return m, nil
+}
+
 func (r *territoryRepository) Get(ctx context.Context, id string) (*domain.Territory, error) {
 	var t domain.Territory
 	var boundaryJSON []byte
@@ -136,16 +149,4 @@ func (r *territoryRepository) Delete(ctx context.Context, id string) error {
 		return store.ErrNotFound
 	}
 	return nil
-}
-
-// unmarshalBoundary decodes a JSON boundary into a map, returning nil for empty data.
-func unmarshalBoundary(data []byte) (map[string]any, error) {
-	if len(data) == 0 {
-		return nil, nil
-	}
-	m := make(map[string]any)
-	if err := json.Unmarshal(data, &m); err != nil {
-		return nil, fmt.Errorf("unmarshalling territory boundary: %w", err)
-	}
-	return m, nil
 }

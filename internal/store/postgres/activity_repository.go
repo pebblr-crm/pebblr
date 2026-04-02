@@ -104,39 +104,17 @@ func (b *activityQueryBuilder) whereClause() string {
 	return " WHERE " + strings.Join(b.conditions, " AND ")
 }
 
-// buildActivityScopeConditions applies RBAC scope conditions to the query builder.
+// applyScope applies RBAC scope conditions to the query builder.
 // Returns false if the scope excludes all activities (empty result).
 func (b *activityQueryBuilder) applyScope(scope rbac.ActivityScope) bool {
-	if scope.AllActivities {
+	scopeSQL, outArgs, nextIdx := activityScopeConditionsAliased("a", scope, b.args, b.argIdx)
+	b.args = outArgs
+	b.argIdx = nextIdx
+	if scopeSQL != "" {
+		b.conditions = append(b.conditions, scopeSQL)
 		return true
 	}
-
-	var scopeParts []string
-	if len(scope.CreatorIDs) > 0 {
-		placeholders := make([]string, len(scope.CreatorIDs))
-		for i, id := range scope.CreatorIDs {
-			placeholders[i] = fmt.Sprintf("$%d", b.argIdx)
-			b.args = append(b.args, id)
-			b.argIdx++
-		}
-		joined := strings.Join(placeholders, ",")
-		scopeParts = append(scopeParts, fmt.Sprintf("(a.creator_id::TEXT = ANY(ARRAY[%s]) OR a.joint_visit_user_id::TEXT = ANY(ARRAY[%s]))",
-			joined, joined))
-	}
-	if len(scope.TeamIDs) > 0 {
-		placeholders := make([]string, len(scope.TeamIDs))
-		for i, id := range scope.TeamIDs {
-			placeholders[i] = fmt.Sprintf("$%d", b.argIdx)
-			b.args = append(b.args, id)
-			b.argIdx++
-		}
-		scopeParts = append(scopeParts, fmt.Sprintf("a.team_id::TEXT = ANY(ARRAY[%s])", strings.Join(placeholders, ",")))
-	}
-	if len(scopeParts) == 0 {
-		return false
-	}
-	b.conditions = append(b.conditions, "("+strings.Join(scopeParts, " OR ")+")")
-	return true
+	return scope.AllActivities
 }
 
 // applyActivityFilter adds filter conditions to the query builder.
