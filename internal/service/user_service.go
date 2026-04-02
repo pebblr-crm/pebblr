@@ -8,7 +8,7 @@ import (
 	"github.com/pebblr/pebblr/internal/store"
 )
 
-// UserService handles user read operations.
+// UserService handles user read operations with role-based access control.
 type UserService struct {
 	users store.UserRepository
 }
@@ -18,17 +18,41 @@ func NewUserService(users store.UserRepository) *UserService {
 	return &UserService{users: users}
 }
 
-// List returns all users.
-func (s *UserService) List(ctx context.Context) ([]*domain.User, error) {
-	users, err := s.users.List(ctx)
-	if err != nil {
-		return nil, fmt.Errorf("listing users: %w", err)
+// List returns users visible to the actor. Admins and managers see all users;
+// reps see only themselves.
+func (s *UserService) List(ctx context.Context, actor *domain.User) ([]*domain.User, error) {
+	switch actor.Role {
+	case domain.RoleAdmin, domain.RoleManager:
+		users, err := s.users.List(ctx)
+		if err != nil {
+			return nil, fmt.Errorf("listing users: %w", err)
+		}
+		return users, nil
+	case domain.RoleRep:
+		user, err := s.users.GetByID(ctx, actor.ID)
+		if err != nil {
+			return nil, fmt.Errorf("getting own user: %w", err)
+		}
+		return []*domain.User{user}, nil
+	default:
+		return nil, ErrForbidden
 	}
-	return users, nil
 }
 
-// Get retrieves a user by their internal ID.
-func (s *UserService) Get(ctx context.Context, id string) (*domain.User, error) {
+// Get retrieves a user by their internal ID. Admins and managers may view any
+// user; reps may only view themselves.
+func (s *UserService) Get(ctx context.Context, actor *domain.User, id string) (*domain.User, error) {
+	switch actor.Role {
+	case domain.RoleAdmin, domain.RoleManager:
+		// permitted to view any user
+	case domain.RoleRep:
+		if actor.ID != id {
+			return nil, ErrForbidden
+		}
+	default:
+		return nil, ErrForbidden
+	}
+
 	user, err := s.users.GetByID(ctx, id)
 	if err != nil {
 		return nil, fmt.Errorf("getting user: %w", err)
