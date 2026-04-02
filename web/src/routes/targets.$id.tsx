@@ -227,11 +227,7 @@ function TargetDetailPage() {
                                     </span>
                                   )}
                                   <Badge variant={
-                                    activity.status === 'realizat' || activity.status === 'completed'
-                                      ? 'success'
-                                      : activity.status === 'anulat' || activity.status === 'cancelled'
-                                        ? 'danger'
-                                        : 'primary'
+                                    ({ realizat: 'success', completed: 'success', anulat: 'danger', cancelled: 'danger' } as const)[activity.status] ?? 'primary'
                                   }>
                                     {activity.status}
                                   </Badge>

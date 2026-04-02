@@ -371,8 +371,8 @@ func TestActivityCreate_Success(t *testing.T) {
 		Routing:      "week-1",
 		Fields:       map[string]any{"notes": "test"},
 		TargetID:     "tgt-1",
-		CreatorID:    "user-1",
-		TeamID:       "team-1",
+		CreatorID:    testUserID1,
+		TeamID:       testTeamID1,
 	}
 
 	// Create has 12 args
@@ -441,8 +441,8 @@ func TestActivityUpdate_Success(t *testing.T) {
 		Duration:     "full_day",
 		Fields:       map[string]any{"notes": "updated"},
 		TargetID:     "tgt-1",
-		CreatorID:    "user-1",
-		TeamID:       "team-1",
+		CreatorID:    testUserID1,
+		TeamID:       testTeamID1,
 	}
 
 	// Update has 12 args

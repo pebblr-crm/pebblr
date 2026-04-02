@@ -32,8 +32,6 @@ export function TargetMarker({
       onClick={onClick}
     >
       <div
-        role="img"
-        aria-label={name}
         onMouseEnter={() => onHover?.(true)}
         onMouseLeave={() => onHover?.(false)}
         style={{

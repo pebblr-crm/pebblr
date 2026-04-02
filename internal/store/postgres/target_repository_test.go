@@ -116,7 +116,7 @@ func TestTargetGet_DBError(t *testing.T) {
 
 	_, err := repo.Get(ctx, "tgt-1")
 	if err == nil {
-		t.Fatal("expected error, got nil")
+		t.Fatal(tgtErrExpectedError)
 	}
 }
 
@@ -131,7 +131,7 @@ func TestTargetList_AllTargets(t *testing.T) {
 		WillReturnRows(mock.NewRows([]string{"count"}).AddRow(1))
 
 	// AllTargets, no filters: 2 pagination args
-	mock.ExpectQuery("SELECT .+ FROM targets").
+	mock.ExpectQuery(sqlSelectTargets).
 		WithArgs(anyArgs(2)...).
 		WillReturnRows(targetRow(mock))
 
@@ -140,7 +140,7 @@ func TestTargetList_AllTargets(t *testing.T) {
 		t.Fatalf(tgtErrUnexpected, err)
 	}
 	if page.Total != 1 {
-		t.Errorf("expected total 1, got %d", page.Total)
+		t.Errorf(tgtErrExpectedTotal1, page.Total)
 	}
 	if len(page.Targets) != 1 {
 		t.Errorf("expected 1 target, got %d", len(page.Targets))
@@ -176,7 +176,7 @@ func TestTargetList_ScopedByAssigneeIDs(t *testing.T) {
 		WithArgs(tgtTestUserID).
 		WillReturnRows(mock.NewRows([]string{"count"}).AddRow(1))
 
-	mock.ExpectQuery("SELECT .+ FROM targets").
+	mock.ExpectQuery(sqlSelectTargets).
 		WithArgs(tgtTestUserID, 20, 0).
 		WillReturnRows(targetRow(mock))
 
@@ -185,7 +185,7 @@ func TestTargetList_ScopedByAssigneeIDs(t *testing.T) {
 		t.Fatalf(tgtErrUnexpected, err)
 	}
 	if page.Total != 1 {
-		t.Errorf("expected total 1, got %d", page.Total)
+		t.Errorf(tgtErrExpectedTotal1, page.Total)
 	}
 }
 
@@ -200,7 +200,7 @@ func TestTargetList_ScopedByTeamIDs(t *testing.T) {
 		WithArgs(tgtTestTeamID).
 		WillReturnRows(mock.NewRows([]string{"count"}).AddRow(0))
 
-	mock.ExpectQuery("SELECT .+ FROM targets").
+	mock.ExpectQuery(sqlSelectTargets).
 		WithArgs(tgtTestTeamID, 20, 0).
 		WillReturnRows(emptyTargetRows(mock))
 
@@ -231,7 +231,7 @@ func TestTargetList_WithFilters(t *testing.T) {
 		WithArgs("pharmacy", tgtTestUserID, tgtTestTeamID, "%Pharm%").
 		WillReturnRows(mock.NewRows([]string{"count"}).AddRow(1))
 
-	mock.ExpectQuery("SELECT .+ FROM targets").
+	mock.ExpectQuery(sqlSelectTargets).
 		WithArgs("pharmacy", tgtTestUserID, tgtTestTeamID, "%Pharm%", 20, 0).
 		WillReturnRows(targetRow(mock))
 
@@ -240,7 +240,7 @@ func TestTargetList_WithFilters(t *testing.T) {
 		t.Fatalf(tgtErrUnexpected, err)
 	}
 	if page.Total != 1 {
-		t.Errorf("expected total 1, got %d", page.Total)
+		t.Errorf(tgtErrExpectedTotal1, page.Total)
 	}
 }
 
@@ -254,7 +254,7 @@ func TestTargetList_PaginationDefaults(t *testing.T) {
 	mock.ExpectQuery("SELECT COUNT\\(\\*\\) FROM targets").
 		WillReturnRows(mock.NewRows([]string{"count"}).AddRow(0))
 
-	mock.ExpectQuery("SELECT .+ FROM targets").
+	mock.ExpectQuery(sqlSelectTargets).
 		WithArgs(anyArgs(2)...).
 		WillReturnRows(emptyTargetRows(mock))
 
@@ -278,11 +278,11 @@ func TestTargetList_CountError(t *testing.T) {
 	scope := rbac.TargetScope{AllTargets: true}
 
 	mock.ExpectQuery("SELECT COUNT\\(\\*\\) FROM targets").
-		WillReturnError(fmt.Errorf("db error"))
+		WillReturnError(errors.New(tgtTestDBError))
 
 	_, err := repo.List(ctx, scope, store.TargetFilter{}, 1, 20)
 	if err == nil {
-		t.Fatal("expected error, got nil")
+		t.Fatal(tgtErrExpectedError)
 	}
 }
 
@@ -296,13 +296,13 @@ func TestTargetList_QueryError(t *testing.T) {
 	mock.ExpectQuery("SELECT COUNT\\(\\*\\) FROM targets").
 		WillReturnRows(mock.NewRows([]string{"count"}).AddRow(1))
 
-	mock.ExpectQuery("SELECT .+ FROM targets").
+	mock.ExpectQuery(sqlSelectTargets).
 		WithArgs(anyArgs(2)...).
-		WillReturnError(fmt.Errorf("db error"))
+		WillReturnError(errors.New(tgtTestDBError))
 
 	_, err := repo.List(ctx, scope, store.TargetFilter{}, 1, 20)
 	if err == nil {
-		t.Fatal("expected error, got nil")
+		t.Fatal(tgtErrExpectedError)
 	}
 }
 
@@ -315,7 +315,7 @@ func TestTargetCreate_Success(t *testing.T) {
 	tgt := &domain.Target{
 		ExternalID: "EXT-002",
 		TargetType: "doctor",
-		Name:       "Dr. Smith",
+		Name:       tgtTestDrSmith,
 		Fields:     map[string]any{"specialty": "cardiology"},
 		AssigneeID: tgtTestUserID,
 		TeamID:     tgtTestTeamID,
@@ -324,14 +324,14 @@ func TestTargetCreate_Success(t *testing.T) {
 	now := testTime()
 	fieldsJSON, _ := json.Marshal(map[string]any{"specialty": "cardiology"})
 	// Create has 7 args
-	mock.ExpectQuery("INSERT INTO targets").
+	mock.ExpectQuery(sqlInsertTargets).
 		WithArgs(anyArgs(7)...).
 		WillReturnRows(mock.NewRows([]string{
 			"id", "external_id", "target_type", "name", "fields",
 			"assignee_id", "team_id",
 			"imported_at", "created_at", "updated_at",
 		}).AddRow(
-			"tgt-2", "EXT-002", "doctor", "Dr. Smith", fieldsJSON,
+			"tgt-2", "EXT-002", "doctor", tgtTestDrSmith, fieldsJSON,
 			tgtTestUserID, tgtTestTeamID,
 			(*time.Time)(nil), now, now,
 		))
@@ -343,7 +343,7 @@ func TestTargetCreate_Success(t *testing.T) {
 	if created.ID != "tgt-2" {
 		t.Errorf("expected ID tgt-2, got %s", created.ID)
 	}
-	if created.Name != "Dr. Smith" {
+	if created.Name != tgtTestDrSmith {
 		t.Errorf("expected name Dr. Smith, got %s", created.Name)
 	}
 }
@@ -360,7 +360,7 @@ func TestTargetCreate_MarshalError(t *testing.T) {
 
 	_, err := repo.Create(ctx, tgt)
 	if err == nil {
-		t.Fatal("expected marshal error, got nil")
+		t.Fatal(tgtErrMarshalError)
 	}
 }
 
@@ -374,13 +374,13 @@ func TestTargetCreate_DBError(t *testing.T) {
 		Fields: map[string]any{},
 	}
 
-	mock.ExpectQuery("INSERT INTO targets").
+	mock.ExpectQuery(sqlInsertTargets).
 		WithArgs(anyArgs(7)...).
-		WillReturnError(fmt.Errorf("db error"))
+		WillReturnError(errors.New(tgtTestDBError))
 
 	_, err := repo.Create(ctx, tgt)
 	if err == nil {
-		t.Fatal("expected error, got nil")
+		t.Fatal(tgtErrExpectedError)
 	}
 }
 
@@ -393,7 +393,7 @@ func TestTargetUpdate_Success(t *testing.T) {
 	tgt := &domain.Target{
 		ID:         "tgt-1",
 		TargetType: "pharmacy",
-		Name:       "Updated Pharmacy",
+		Name:       tgtUpdatedPharmacy,
 		Fields:     map[string]any{"city": "Cluj"},
 		AssigneeID: "user-2",
 		TeamID:     tgtTestTeamID,
@@ -409,7 +409,7 @@ func TestTargetUpdate_Success(t *testing.T) {
 			"assignee_id", "team_id",
 			"imported_at", "created_at", "updated_at",
 		}).AddRow(
-			"tgt-1", "", "pharmacy", "Updated Pharmacy", fieldsJSON,
+			"tgt-1", "", "pharmacy", tgtUpdatedPharmacy, fieldsJSON,
 			"user-2", tgtTestTeamID,
 			(*time.Time)(nil), now, now,
 		))
@@ -418,7 +418,7 @@ func TestTargetUpdate_Success(t *testing.T) {
 	if err != nil {
 		t.Fatalf(tgtErrUnexpected, err)
 	}
-	if updated.Name != "Updated Pharmacy" {
+	if updated.Name != tgtUpdatedPharmacy {
 		t.Errorf("expected name Updated Pharmacy, got %s", updated.Name)
 	}
 }
@@ -458,7 +458,7 @@ func TestTargetUpdate_MarshalError(t *testing.T) {
 
 	_, err := repo.Update(ctx, tgt)
 	if err == nil {
-		t.Fatal("expected marshal error, got nil")
+		t.Fatal(tgtErrMarshalError)
 	}
 }
 
@@ -499,7 +499,7 @@ func TestTargetUpsert_Success(t *testing.T) {
 
 	mock.ExpectBegin()
 	// Upsert has 6 args
-	mock.ExpectQuery("INSERT INTO targets").
+	mock.ExpectQuery(sqlInsertTargets).
 		WithArgs(anyArgs(6)...).
 		WillReturnRows(mock.NewRows([]string{
 			"id", "external_id", "target_type", "name", "fields",
@@ -539,7 +539,7 @@ func TestTargetUpsert_BeginError(t *testing.T) {
 
 	_, err := repo.Upsert(ctx, []*domain.Target{{Fields: map[string]any{}}})
 	if err == nil {
-		t.Fatal("expected error, got nil")
+		t.Fatal(tgtErrExpectedError)
 	}
 }
 
@@ -562,7 +562,7 @@ func TestTargetUpsert_CommitError(t *testing.T) {
 	fieldsJSON, _ := json.Marshal(map[string]any{})
 
 	mock.ExpectBegin()
-	mock.ExpectQuery("INSERT INTO targets").
+	mock.ExpectQuery(sqlInsertTargets).
 		WithArgs(anyArgs(6)...).
 		WillReturnRows(mock.NewRows([]string{
 			"id", "external_id", "target_type", "name", "fields",
@@ -580,7 +580,7 @@ func TestTargetUpsert_CommitError(t *testing.T) {
 
 	_, err := repo.Upsert(ctx, targets)
 	if err == nil {
-		t.Fatal("expected error, got nil")
+		t.Fatal(tgtErrExpectedError)
 	}
 }
 
@@ -599,7 +599,7 @@ func TestTargetUpsert_MarshalError(t *testing.T) {
 
 	_, err := repo.Upsert(ctx, targets)
 	if err == nil {
-		t.Fatal("expected marshal error, got nil")
+		t.Fatal(tgtErrMarshalError)
 	}
 }
 
@@ -641,7 +641,7 @@ func TestTargetVisitStatus_Success(t *testing.T) {
 	now := testTime()
 	scope := rbac.TargetScope{AllTargets: true}
 
-	mock.ExpectQuery("SELECT t.id::TEXT, MAX\\(a.due_date\\)").
+	mock.ExpectQuery(sqlSelectVisitStatus).
 		WithArgs([]string{"visit"}).
 		WillReturnRows(mock.NewRows([]string{"target_id", "last_visit_date"}).
 			AddRow("tgt-1", now))
@@ -651,7 +651,7 @@ func TestTargetVisitStatus_Success(t *testing.T) {
 		t.Fatalf(tgtErrUnexpected, err)
 	}
 	if len(result) != 1 {
-		t.Fatalf("expected 1 result, got %d", len(result))
+		t.Fatalf(tgtErrExpected1Result, len(result))
 	}
 	if result[0].TargetID != "tgt-1" {
 		t.Errorf("expected tgt-1, got %s", result[0].TargetID)
@@ -667,7 +667,7 @@ func TestTargetVisitStatus_WithScopedAssignees(t *testing.T) {
 	scope := rbac.TargetScope{AssigneeIDs: []string{tgtTestUserID}}
 
 	// 1 scope arg + 1 fieldTypes arg = 2
-	mock.ExpectQuery("SELECT t.id::TEXT, MAX\\(a.due_date\\)").
+	mock.ExpectQuery(sqlSelectVisitStatus).
 		WithArgs(anyArgs(2)...).
 		WillReturnRows(mock.NewRows([]string{"target_id", "last_visit_date"}).
 			AddRow("tgt-1", now))
@@ -677,7 +677,7 @@ func TestTargetVisitStatus_WithScopedAssignees(t *testing.T) {
 		t.Fatalf(tgtErrUnexpected, err)
 	}
 	if len(result) != 1 {
-		t.Fatalf("expected 1 result, got %d", len(result))
+		t.Fatalf(tgtErrExpected1Result, len(result))
 	}
 }
 
@@ -688,13 +688,13 @@ func TestTargetVisitStatus_DBError(t *testing.T) {
 	ctx := context.Background()
 	scope := rbac.TargetScope{AllTargets: true}
 
-	mock.ExpectQuery("SELECT t.id::TEXT, MAX\\(a.due_date\\)").
+	mock.ExpectQuery(sqlSelectVisitStatus).
 		WithArgs([]string{"visit"}).
-		WillReturnError(fmt.Errorf("db error"))
+		WillReturnError(errors.New(tgtTestDBError))
 
 	_, err := repo.VisitStatus(ctx, scope, []string{"visit"})
 	if err == nil {
-		t.Fatal("expected error, got nil")
+		t.Fatal(tgtErrExpectedError)
 	}
 }
 
@@ -747,7 +747,7 @@ func TestTargetFrequencyStatus_Success(t *testing.T) {
 		t.Fatalf(tgtErrUnexpected, err)
 	}
 	if len(result) != 1 {
-		t.Fatalf("expected 1 result, got %d", len(result))
+		t.Fatalf(tgtErrExpected1Result, len(result))
 	}
 	if result[0].Classification != "A" {
 		t.Errorf("expected classification A, got %s", result[0].Classification)
@@ -766,11 +766,11 @@ func TestTargetFrequencyStatus_DBError(t *testing.T) {
 
 	mock.ExpectQuery("SELECT t.id::TEXT, t.fields").
 		WithArgs([]string{"visit"}, testTime(), testTime()).
-		WillReturnError(fmt.Errorf("db error"))
+		WillReturnError(errors.New(tgtTestDBError))
 
 	_, err := repo.FrequencyStatus(ctx, scope, []string{"visit"}, testTime(), testTime())
 	if err == nil {
-		t.Fatal("expected error, got nil")
+		t.Fatal(tgtErrExpectedError)
 	}
 }
 
@@ -798,7 +798,7 @@ func TestBuildTargetScopeConditions_WithAssignees(t *testing.T) {
 	scope := rbac.TargetScope{AssigneeIDs: []string{"u1", "u2"}}
 	result := buildTargetScopeConditions(scope, "t.", 1)
 	if result.empty {
-		t.Error("expected empty=false")
+		t.Error(tgtErrExpectedEmpty)
 	}
 	if len(result.conditions) != 1 {
 		t.Errorf("expected 1 condition, got %d", len(result.conditions))
@@ -816,7 +816,7 @@ func TestBuildTargetScopeConditions_WithTeams(t *testing.T) {
 	scope := rbac.TargetScope{TeamIDs: []string{"t1"}}
 	result := buildTargetScopeConditions(scope, "", 5)
 	if result.empty {
-		t.Error("expected empty=false")
+		t.Error(tgtErrExpectedEmpty)
 	}
 	if result.argIdx != 6 {
 		t.Errorf("expected argIdx 6, got %d", result.argIdx)
@@ -828,7 +828,7 @@ func TestBuildTargetScopeConditions_AssigneesAndTeams(t *testing.T) {
 	scope := rbac.TargetScope{AssigneeIDs: []string{"u1"}, TeamIDs: []string{"t1"}}
 	result := buildTargetScopeConditions(scope, "t.", 1)
 	if result.empty {
-		t.Error("expected empty=false")
+		t.Error(tgtErrExpectedEmpty)
 	}
 	// The shared scope builder produces a single combined "(assignee OR team)" condition.
 	if len(result.conditions) != 1 {
