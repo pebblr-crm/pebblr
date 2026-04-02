@@ -14,6 +14,7 @@ import { Modal } from '@/components/ui/Modal'
 import { ActivityDetailModal } from '@/components/activities/ActivityDetailModal'
 import { useToast } from '@/components/ui/Toast'
 import { getMonday, addDays, formatDate } from '@/lib/dates'
+import { getLat, getLng, getClassification } from '@/lib/target-fields'
 import { priorityDot } from '@/lib/styles'
 import { daysAgo } from '@/lib/helpers'
 import {
@@ -34,23 +35,6 @@ export const Route = createRoute({
   path: '/planner',
   component: PlannerPage,
 })
-
-/* ── Helpers ── */
-
-function getLat(fields: Record<string, unknown>): number | null {
-  const v = fields.lat
-  return typeof v === 'number' ? v : null
-}
-
-function getLng(fields: Record<string, unknown>): number | null {
-  const v = fields.lng
-  return typeof v === 'number' ? v : null
-}
-
-function getClassification(fields: Record<string, unknown>): string {
-  return ((fields.potential as string) ?? 'c').toLowerCase()
-}
-
 
 /* ── Main page ── */
 

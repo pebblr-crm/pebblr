@@ -10,6 +10,7 @@ import { TargetMarker } from '@/components/map/TargetMarker'
 import { Card } from '@/components/ui/Card'
 import { Button } from '@/components/ui/Button'
 import { Spinner } from '@/components/ui/Spinner'
+import { getLat, getLng, getClassification } from '@/lib/target-fields'
 import { RotateCcw, SlidersHorizontal, X } from 'lucide-react'
 
 export const Route = createRoute({
@@ -17,20 +18,6 @@ export const Route = createRoute({
   path: '/coverage',
   component: CoveragePage,
 })
-
-function getLat(fields: Record<string, unknown>): number | null {
-  const v = fields.lat
-  return typeof v === 'number' ? v : null
-}
-
-function getLng(fields: Record<string, unknown>): number | null {
-  const v = fields.lng
-  return typeof v === 'number' ? v : null
-}
-
-function getClassification(fields: Record<string, unknown>): string {
-  return ((fields.potential as string) ?? 'c').toLowerCase()
-}
 
 function CoveragePage() {
   const [teamFilter, setTeamFilter] = useState('')

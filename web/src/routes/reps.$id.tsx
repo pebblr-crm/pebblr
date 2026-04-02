@@ -12,6 +12,7 @@ import { Badge } from '@/components/ui/Badge'
 import { Button } from '@/components/ui/Button'
 import { Spinner } from '@/components/ui/Spinner'
 import { getMonday, addDays, formatDate } from '@/lib/dates'
+import { getLat, getLng, getClassification } from '@/lib/target-fields'
 import { ArrowLeft, ChevronLeft, ChevronRight, Info } from 'lucide-react'
 
 export const Route = createRoute({
@@ -19,20 +20,6 @@ export const Route = createRoute({
   path: '/reps/$id',
   component: RepDrillDownPage,
 })
-
-function getLat(fields: Record<string, unknown>): number | null {
-  const v = fields.lat
-  return typeof v === 'number' ? v : null
-}
-
-function getLng(fields: Record<string, unknown>): number | null {
-  const v = fields.lng
-  return typeof v === 'number' ? v : null
-}
-
-function getClassification(fields: Record<string, unknown>): string {
-  return ((fields.potential as string) ?? 'c').toLowerCase()
-}
 
 function RepDrillDownPage() {
   const { id: repId } = useParams({ from: '/reps/$id' })
