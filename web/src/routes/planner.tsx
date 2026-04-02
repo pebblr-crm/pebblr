@@ -17,6 +17,7 @@ import { useToast } from '@/components/ui/Toast'
 import { getMonday, addDays, formatDate } from '@/lib/dates'
 import { priorityDot } from '@/lib/styles'
 import { daysAgo } from '@/lib/helpers'
+import { getLat, getLng, getClassification } from '@/lib/target-fields'
 import {
   ChevronLeft,
   ChevronRight,
@@ -35,11 +36,6 @@ export const Route = createRoute({
   path: '/planner',
   component: PlannerPage,
 })
-
-/* ── Helpers ── */
-
-import { getLat, getLng, getClassification } from '@/lib/target-fields'
-
 
 /* ── Main page ── */
 

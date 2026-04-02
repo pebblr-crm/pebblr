@@ -1,5 +1,6 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { api } from '@/api/client'
+import { buildQuery } from '@/lib/query'
 import type { Activity, CreateActivityInput, ActivityListParams } from '@/types/activity'
 import type { PaginatedResponse } from '@/types/api'
 
@@ -10,25 +11,20 @@ export const activityKeys = {
   detail: (id: string) => [...activityKeys.all, 'detail', id] as const,
 }
 
-function buildQuery(params: ActivityListParams): string {
-  const qs = new URLSearchParams()
-  if (params.page !== undefined) qs.set('page', String(params.page))
-  if (params.limit !== undefined) qs.set('limit', String(params.limit))
-  if (params.activityType) qs.set('activityType', params.activityType)
-  if (params.status) qs.set('status', params.status)
-  if (params.creatorId) qs.set('creatorId', params.creatorId)
-  if (params.targetId) qs.set('targetId', params.targetId)
-  if (params.teamId) qs.set('teamId', params.teamId)
-  if (params.dateFrom) qs.set('dateFrom', params.dateFrom)
-  if (params.dateTo) qs.set('dateTo', params.dateTo)
-  const q = qs.toString()
-  return q ? `/activities?${q}` : '/activities'
-}
-
 export function useActivities(params: ActivityListParams = {}) {
   return useQuery({
     queryKey: activityKeys.list(params),
-    queryFn: () => api.get<PaginatedResponse<Activity>>(buildQuery(params)),
+    queryFn: () => api.get<PaginatedResponse<Activity>>(buildQuery('/activities', {
+      page: params.page,
+      limit: params.limit,
+      activityType: params.activityType,
+      status: params.status,
+      creatorId: params.creatorId,
+      targetId: params.targetId,
+      teamId: params.teamId,
+      dateFrom: params.dateFrom,
+      dateTo: params.dateTo,
+    })),
   })
 }
 

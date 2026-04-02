@@ -1,5 +1,6 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { api } from '@/api/client'
+import { buildQuery } from '@/lib/query'
 import type { Target, TargetListParams, CreateTargetInput, TargetFrequencyItem } from '@/types/target'
 import type { PaginatedResponse } from '@/types/api'
 
@@ -12,21 +13,16 @@ export const targetKeys = {
   frequencyStatus: () => [...targetKeys.all, 'frequency-status'] as const,
 }
 
-function buildQuery(params: TargetListParams): string {
-  const qs = new URLSearchParams()
-  if (params.page !== undefined) qs.set('page', String(params.page))
-  if (params.limit !== undefined) qs.set('limit', String(params.limit))
-  if (params.type) qs.set('type', params.type)
-  if (params.assignee) qs.set('assignee', params.assignee)
-  if (params.q) qs.set('q', params.q)
-  const q = qs.toString()
-  return q ? `/targets?${q}` : '/targets'
-}
-
 export function useTargets(params: TargetListParams = {}) {
   return useQuery({
     queryKey: targetKeys.list(params),
-    queryFn: () => api.get<PaginatedResponse<Target>>(buildQuery(params)),
+    queryFn: () => api.get<PaginatedResponse<Target>>(buildQuery('/targets', {
+      page: params.page,
+      limit: params.limit,
+      type: params.type,
+      assignee: params.assignee,
+      q: params.q,
+    })),
   })
 }
 

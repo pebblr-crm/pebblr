@@ -12,14 +12,13 @@ import { Button } from '@/components/ui/Button'
 import { Spinner } from '@/components/ui/Spinner'
 import { QueryError } from '@/components/ui/QueryError'
 import { RotateCcw, SlidersHorizontal, X } from 'lucide-react'
+import { getLat, getLng, getClassification } from '@/lib/target-fields'
 
 export const Route = createRoute({
   getParentRoute: () => rootRoute,
   path: '/coverage',
   component: CoveragePage,
 })
-
-import { getLat, getLng, getClassification } from '@/lib/target-fields'
 
 function CoveragePage() {
   const [teamFilter, setTeamFilter] = useState('')

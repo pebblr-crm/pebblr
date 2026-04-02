@@ -10,6 +10,7 @@ import { Spinner } from '@/components/ui/Spinner'
 import { QueryError } from '@/components/ui/QueryError'
 import { MapContainer } from '@/components/map/MapContainer'
 import { TargetMarker } from '@/components/map/TargetMarker'
+import { getLat, getLng, getClassification, getCity } from '@/lib/target-fields'
 import { Search, Filter, ExternalLink } from 'lucide-react'
 import { useNavigate } from '@tanstack/react-router'
 import type { Target } from '@/types/target'
@@ -21,8 +22,6 @@ export const Route = createRoute({
 })
 
 const columnHelper = createColumnHelper<Target>()
-
-import { getClassification, getCity, getLat, getLng } from '@/lib/target-fields'
 
 const priorityVariant: Record<string, 'danger' | 'warning' | 'default'> = {
   a: 'danger',

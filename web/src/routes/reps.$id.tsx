@@ -13,6 +13,7 @@ import { Button } from '@/components/ui/Button'
 import { Spinner } from '@/components/ui/Spinner'
 import { QueryError } from '@/components/ui/QueryError'
 import { getMonday, addDays, formatDate } from '@/lib/dates'
+import { getLat, getLng, getClassification } from '@/lib/target-fields'
 import { ArrowLeft, ChevronLeft, ChevronRight, Info } from 'lucide-react'
 
 export const Route = createRoute({
@@ -20,8 +21,6 @@ export const Route = createRoute({
   path: '/reps/$id',
   component: RepDrillDownPage,
 })
-
-import { getLat, getLng, getClassification } from '@/lib/target-fields'
 
 function RepDrillDownPage() {
   const { id: repId } = useParams({ from: '/reps/$id' })
