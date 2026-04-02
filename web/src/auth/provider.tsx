@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback, useMemo, type ReactNode } from 'react'
+import { useState, useEffect, useCallback, useMemo, useRef, type ReactNode } from 'react'
 import { setTokenProvider } from '@/api/client'
 import { AuthContext } from './context'
 import type { AuthenticatedUser, Role } from '@/types/user'
@@ -17,17 +17,16 @@ function parseRole(value: string): Role {
 
 const DEMO_SESSION_KEY = 'pebblr_demo_user'
 
-let _currentUser: AuthenticatedUser | null = null
-
-function restoreDemoSession(): void {
+function restoreDemoSession(): AuthenticatedUser | null {
   try {
     const stored = sessionStorage.getItem(DEMO_SESSION_KEY)
     if (stored) {
-      _currentUser = JSON.parse(stored) as AuthenticatedUser
+      return JSON.parse(stored) as AuthenticatedUser
     }
   } catch {
     // Ignore parse errors
   }
+  return null
 }
 
 function saveDemoSession(user: AuthenticatedUser): void {
@@ -46,37 +45,42 @@ function clearDemoSession(): void {
   }
 }
 
-function initStaticAuth(): void {
+function buildStaticUser(): AuthenticatedUser | null {
   const staticToken: string | undefined = import.meta.env.VITE_STATIC_TOKEN
-  if (staticToken) {
-    _currentUser = {
-      id: 'static-dev-user',
-      name: 'Dev Admin',
-      displayName: 'Dev Admin',
-      email: 'admin@pebblr.dev',
-      role: 'admin',
-      oid: 'a0000000-0000-0000-0000-000000000001',
-      accessToken: staticToken,
-      expiresAt: Date.now() + 365 * 24 * 60 * 60 * 1000,
-    }
+  if (!staticToken) return null
+  return {
+    id: 'static-dev-user',
+    name: 'Dev Admin',
+    displayName: 'Dev Admin',
+    email: 'admin@pebblr.dev',
+    role: 'admin',
+    oid: 'a0000000-0000-0000-0000-000000000001',
+    accessToken: staticToken,
+    expiresAt: Date.now() + 365 * 24 * 60 * 60 * 1000,
   }
-  setTokenProvider(() => _currentUser?.accessToken ?? null)
 }
 
 export function AuthProvider({ children }: { children: ReactNode }) {
   const isDemoMode = import.meta.env.VITE_DEMO_MODE === 'true'
+
+  // Ref keeps the token accessible to the synchronous token-provider callback
+  // without introducing module-level mutable state.
+  const tokenRef = useRef<string | null>(null)
+
   const [user, setUser] = useState<AuthenticatedUser | null>(() => {
-    if (!isDemoMode) {
-      initStaticAuth()
-    } else {
-      restoreDemoSession()
-      setTokenProvider(() => _currentUser?.accessToken ?? null)
-    }
-    return _currentUser
+    const initial = isDemoMode ? restoreDemoSession() : buildStaticUser()
+    tokenRef.current = initial?.accessToken ?? null
+    return initial
   })
 
+  // Keep tokenRef in sync whenever user changes
   useEffect(() => {
-    setTokenProvider(() => _currentUser?.accessToken ?? null)
+    tokenRef.current = user?.accessToken ?? null
+  }, [user])
+
+  // Wire up the API client's token provider once on mount
+  useEffect(() => {
+    setTokenProvider(() => tokenRef.current)
   }, [])
 
   const demoLogin = useCallback(async (userId: string) => {
@@ -92,7 +96,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       account: { id: string; name: string; email: string; role: string }
     }
 
-    _currentUser = {
+    const newUser: AuthenticatedUser = {
       id: data.account.id,
       name: data.account.name,
       displayName: data.account.name,
@@ -102,12 +106,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       accessToken: data.token,
       expiresAt: Date.now() + 24 * 60 * 60 * 1000,
     }
-    saveDemoSession(_currentUser)
-    setUser(_currentUser)
+    saveDemoSession(newUser)
+    setUser(newUser)
   }, [])
 
   const demoLogout = useCallback(() => {
-    _currentUser = null
     clearDemoSession()
     setUser(null)
   }, [])
