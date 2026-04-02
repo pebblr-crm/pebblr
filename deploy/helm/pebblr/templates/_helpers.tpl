@@ -29,11 +29,13 @@ Create chart label.
 {{- end }}
 
 {{/*
-Common labels.
+Common labels — follows the Kubernetes recommended label schema.
+https://kubernetes.io/docs/concepts/overview/working-with-objects/common-labels/
 */}}
 {{- define "pebblr.labels" -}}
 helm.sh/chart: {{ include "pebblr.chart" . }}
 {{ include "pebblr.selectorLabels" . }}
+app.kubernetes.io/part-of: pebblr
 {{- if .Chart.AppVersion }}
 app.kubernetes.io/version: {{ .Chart.AppVersion | quote }}
 {{- end }}

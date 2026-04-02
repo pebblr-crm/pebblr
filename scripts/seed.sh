@@ -10,7 +10,7 @@ SEED_FILE="scripts/seed-data.sql"
 
 log() { echo "==> $*"; }
 
-POD=$(kubectl get pod -n "$DB_NAMESPACE" -l app=postgres -o jsonpath='{.items[0].metadata.name}' 2>/dev/null)
+POD=$(kubectl get pod -n "$DB_NAMESPACE" -l app.kubernetes.io/name=postgres -o jsonpath='{.items[0].metadata.name}' 2>/dev/null)
 if [ -z "$POD" ]; then
   echo "ERROR: No postgres pod found in namespace ${DB_NAMESPACE}. Run 'make dev-db' first." >&2
   exit 1

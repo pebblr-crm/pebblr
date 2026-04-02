@@ -19,7 +19,8 @@ spec:
         {{- toYaml . | nindent 8 }}
       {{- end }}
       labels:
-        {{- include "pebblr.selectorLabels" . | nindent 8 }}
+        {{- include "pebblr.labels" . | nindent 8 }}
+        app.kubernetes.io/component: api
     spec:
       serviceAccountName: {{ include "pebblr.serviceAccountName" . }}
       automountServiceAccountToken: false
