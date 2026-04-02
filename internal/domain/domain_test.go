@@ -104,32 +104,52 @@ func TestActivityPatchApplyToNilFields(t *testing.T) {
 	}
 }
 
-func TestActivityPrepareForResponseInitializesNilFields(t *testing.T) {
+func TestValidateBoundary(t *testing.T) {
 	t.Parallel()
-	a := &domain.Activity{JointVisitUID: "u-1"}
-	a.PrepareForResponse()
-	if a.Fields == nil {
-		t.Error("PrepareForResponse should initialize nil Fields map")
+
+	tests := []struct {
+		name    string
+		bound   map[string]any
+		wantErr bool
+	}{
+		{name: "nil boundary is valid", bound: nil, wantErr: false},
+		{name: "empty boundary is valid", bound: map[string]any{}, wantErr: false},
+		{name: "valid polygon", bound: map[string]any{
+			"type":        "Polygon",
+			"coordinates": []any{[]any{[]any{0.0, 0.0}}},
+		}, wantErr: false},
+		{name: "valid point", bound: map[string]any{
+			"type":        "Point",
+			"coordinates": []any{0.0, 0.0},
+		}, wantErr: false},
+		{name: "valid geometry collection", bound: map[string]any{
+			"type":       "GeometryCollection",
+			"geometries": []any{},
+		}, wantErr: false},
+		{name: "missing type", bound: map[string]any{
+			"coordinates": []any{0.0, 0.0},
+		}, wantErr: true},
+		{name: "unknown type", bound: map[string]any{
+			"type":        "Hexagon",
+			"coordinates": []any{},
+		}, wantErr: true},
+		{name: "missing coordinates", bound: map[string]any{
+			"type": "Polygon",
+		}, wantErr: true},
+		{name: "geometry collection without geometries", bound: map[string]any{
+			"type": "GeometryCollection",
+		}, wantErr: true},
 	}
-	if a.Fields["joint_visit_user_id"] != "u-1" {
-		t.Errorf("expected joint_visit_user_id=u-1, got %v", a.Fields["joint_visit_user_id"])
+	for _, tt := range tests {
+		tt := tt
+		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+			territory := &domain.Territory{Boundary: tt.bound}
+			err := territory.ValidateBoundary()
+			if (err != nil) != tt.wantErr {
+				t.Errorf("ValidateBoundary() error = %v, wantErr %v", err, tt.wantErr)
+			}
+		})
 	}
 }
 
-func TestRolePermissions(t *testing.T) {
-	t.Parallel()
-	repPerms := domain.RoleRep.Permissions()
-	if len(repPerms) == 0 {
-		t.Error("rep should have permissions")
-	}
-
-	adminPerms := domain.RoleAdmin.Permissions()
-	managerPerms := domain.RoleManager.Permissions()
-
-	if len(adminPerms) <= len(managerPerms) {
-		t.Error("admin should have more permissions than manager")
-	}
-	if len(managerPerms) <= len(repPerms) {
-		t.Error("manager should have more permissions than rep")
-	}
-}

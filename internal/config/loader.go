@@ -25,7 +25,10 @@ func Load(path string) (*TenantConfig, error) {
 	}
 
 	// Populate computed fields for the frontend.
-	cfg.Activities.HoistedFields = HoistedFieldKeys()
+	cfg.Activities.HoistedFields = HoistedFieldKeys
+
+	// Build O(1) lookup indexes for AccountType, ActivityType, and status checks.
+	cfg.buildIndexes()
 
 	return &cfg, nil
 }

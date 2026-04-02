@@ -62,7 +62,7 @@ type ActivityService struct {
 	users      store.UserRepository
 	audit      store.AuditRepository
 	dashboard  store.DashboardRepository
-	enforcer   rbac.Enforcer
+	enforcer   *rbac.PolicyEnforcer
 	cfg        *config.TenantConfig
 }
 
@@ -72,7 +72,7 @@ func NewActivityService(
 	targets store.TargetRepository,
 	users store.UserRepository,
 	audit store.AuditRepository,
-	enforcer rbac.Enforcer,
+	enforcer *rbac.PolicyEnforcer,
 	cfg *config.TenantConfig,
 	opts ...ActivityServiceOption,
 ) *ActivityService {
@@ -181,7 +181,7 @@ func (s *ActivityService) Get(ctx context.Context, actor *domain.User, id string
 	if err != nil {
 		return nil, fmt.Errorf(errFmtGettingActivity, err)
 	}
-	if !s.enforcer.CanViewActivity(ctx, actor, activity) {
+	if !s.enforcer.CanViewActivity(actor, activity) {
 		return nil, ErrForbidden
 	}
 	return activity, nil
@@ -192,7 +192,7 @@ func (s *ActivityService) Get(ctx context.Context, actor *domain.User, id string
 // purposes only; the database is not mutated. Use AutoCompleteExpired to persist
 // those transitions.
 func (s *ActivityService) List(ctx context.Context, actor *domain.User, filter store.ActivityFilter, page, limit int) (*store.ActivityPage, error) {
-	scope := s.enforcer.ScopeActivityQuery(ctx, actor)
+	scope := s.enforcer.ScopeActivityQuery(actor)
 	result, err := s.activities.List(ctx, scope, filter, page, limit)
 	if err != nil {
 		return nil, fmt.Errorf("listing activities: %w", err)
@@ -327,7 +327,7 @@ func (s *ActivityService) getEditableActivity(ctx context.Context, actor *domain
 	if err != nil {
 		return nil, fmt.Errorf(errFmtGettingActivity, err)
 	}
-	if !s.enforcer.CanUpdateActivity(ctx, actor, existing) {
+	if !s.enforcer.CanUpdateActivity(actor, existing) {
 		return nil, ErrForbidden
 	}
 	if existing.IsSubmitted() {
@@ -363,7 +363,7 @@ func (s *ActivityService) Delete(ctx context.Context, actor *domain.User, id str
 	if err != nil {
 		return fmt.Errorf(errFmtGettingActivity, err)
 	}
-	if !s.enforcer.CanDeleteActivity(ctx, actor, existing) {
+	if !s.enforcer.CanDeleteActivity(actor, existing) {
 		return ErrForbidden
 	}
 	if existing.IsSubmitted() {
@@ -391,7 +391,7 @@ func (s *ActivityService) Submit(ctx context.Context, actor *domain.User, id str
 	if err != nil {
 		return nil, fmt.Errorf(errFmtGettingActivity, err)
 	}
-	if !s.enforcer.CanUpdateActivity(ctx, actor, existing) {
+	if !s.enforcer.CanUpdateActivity(actor, existing) {
 		return nil, ErrForbidden
 	}
 	if existing.IsSubmitted() {
@@ -436,7 +436,7 @@ func (s *ActivityService) PartialUpdate(ctx context.Context, actor *domain.User,
 	if err != nil {
 		return nil, fmt.Errorf(errFmtGettingActivity, err)
 	}
-	if !s.enforcer.CanUpdateActivity(ctx, actor, existing) {
+	if !s.enforcer.CanUpdateActivity(actor, existing) {
 		return nil, ErrForbidden
 	}
 	if existing.IsSubmitted() {
@@ -484,7 +484,7 @@ func (s *ActivityService) PatchStatus(ctx context.Context, actor *domain.User, i
 	if err != nil {
 		return nil, fmt.Errorf(errFmtGettingActivity, err)
 	}
-	if !s.enforcer.CanUpdateActivity(ctx, actor, existing) {
+	if !s.enforcer.CanUpdateActivity(actor, existing) {
 		return nil, ErrForbidden
 	}
 	if existing.IsSubmitted() {
@@ -537,7 +537,7 @@ func (s *ActivityService) CloneWeek(ctx context.Context, actor *domain.User, sou
 	sourceEnd := sourceWeekStart.AddDate(0, 0, 4) // Friday
 	targetEnd := targetWeekStart.AddDate(0, 0, 4)
 
-	scope := s.enforcer.ScopeActivityQuery(ctx, actor)
+	scope := s.enforcer.ScopeActivityQuery(actor)
 	sourcePage, err := s.activities.List(ctx, scope, store.ActivityFilter{
 		DateFrom: &sourceWeekStart,
 		DateTo:   &sourceEnd,
@@ -779,7 +779,7 @@ func (s *ActivityService) checkRecoveryBalance(ctx context.Context, actor *domai
 		return nil
 	}
 
-	scope := s.enforcer.ScopeActivityQuery(ctx, actor)
+	scope := s.enforcer.ScopeActivityQuery(actor)
 	recoveryRule := s.cfg.Recovery
 
 	lookback := time.Duration(recoveryRule.RecoveryWindowDays*2+7) * 24 * time.Hour
@@ -874,7 +874,7 @@ func (s *ActivityService) checkTargetAccess(ctx context.Context, actor *domain.U
 	if err != nil {
 		return fmt.Errorf("checking target access: %w", err)
 	}
-	if !s.enforcer.CanViewTarget(ctx, actor, target) {
+	if !s.enforcer.CanViewTarget(actor, target) {
 		return ErrTargetNotAccessible
 	}
 	return nil

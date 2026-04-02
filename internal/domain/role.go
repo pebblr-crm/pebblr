@@ -1,6 +1,9 @@
 package domain
 
 // Role defines the access level of a user within pebblr.
+// Access control decisions are made by the rbac package based on these roles;
+// do not add permission-list methods here — they become decorative when
+// the enforcer uses role-based switching directly.
 type Role string
 
 const (
@@ -20,40 +23,3 @@ func (r Role) Valid() bool {
 	}
 	return false
 }
-
-// Permissions returns the set of named permissions granted to this role.
-func (r Role) Permissions() []Permission {
-	switch r {
-	case RoleRep:
-		return []Permission{PermViewOwnLeads, PermUpdateOwnLeads, PermAddNote}
-	case RoleManager:
-		return []Permission{
-			PermViewOwnLeads, PermUpdateOwnLeads, PermAddNote,
-			PermViewTeamLeads, PermAssignLeads, PermViewTeamMetrics,
-		}
-	case RoleAdmin:
-		return []Permission{
-			PermViewOwnLeads, PermUpdateOwnLeads, PermAddNote,
-			PermViewTeamLeads, PermAssignLeads, PermViewTeamMetrics,
-			PermViewAllLeads, PermManageUsers, PermManageTeams, PermViewAllMetrics,
-		}
-	}
-	return nil
-}
-
-// Permission is a named capability within the system.
-type Permission string
-
-// Permission constants enumerate all capabilities that can be granted to a role.
-const (
-	PermViewOwnLeads    Permission = "view:own_leads"
-	PermUpdateOwnLeads  Permission = "update:own_leads"
-	PermAddNote         Permission = "add:note"
-	PermViewTeamLeads   Permission = "view:team_leads"
-	PermAssignLeads     Permission = "assign:leads"
-	PermViewTeamMetrics Permission = "view:team_metrics"
-	PermViewAllLeads    Permission = "view:all_leads"
-	PermManageUsers     Permission = "manage:users"
-	PermManageTeams     Permission = "manage:teams"
-	PermViewAllMetrics  Permission = "view:all_metrics"
-)
