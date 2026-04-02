@@ -7,13 +7,14 @@ import (
 
 	"github.com/go-chi/chi/v5"
 	"github.com/pebblr/pebblr/internal/domain"
+	"github.com/pebblr/pebblr/internal/service"
 	"github.com/pebblr/pebblr/internal/store"
 )
 
 // UserServicer is the interface the UserHandler depends on for business logic.
 type UserServicer interface {
-	List(ctx context.Context) ([]*domain.User, error)
-	Get(ctx context.Context, id string) (*domain.User, error)
+	List(ctx context.Context, actor *domain.User) ([]*domain.User, error)
+	Get(ctx context.Context, actor *domain.User, id string) (*domain.User, error)
 }
 
 // UserHandler handles HTTP requests for user read operations.
@@ -51,16 +52,21 @@ func mapUserServiceError(w http.ResponseWriter, err error) {
 		writeError(w, http.StatusNotFound, "NOT_FOUND", "user not found")
 		return
 	}
+	if errors.Is(err, service.ErrForbidden) {
+		writeError(w, http.StatusForbidden, "FORBIDDEN", "access denied")
+		return
+	}
 	writeError(w, http.StatusInternalServerError, "INTERNAL_ERROR", errUnexpected)
 }
 
 // List handles GET /api/v1/users
 func (h *UserHandler) List(w http.ResponseWriter, r *http.Request) {
-	if actor := requireActor(w, r); actor == nil {
+	actor := requireActor(w, r)
+	if actor == nil {
 		return
 	}
 
-	users, err := h.svc.List(r.Context())
+	users, err := h.svc.List(r.Context(), actor)
 	if err != nil {
 		mapUserServiceError(w, err)
 		return
@@ -77,12 +83,13 @@ func (h *UserHandler) List(w http.ResponseWriter, r *http.Request) {
 
 // Get handles GET /api/v1/users/{id}
 func (h *UserHandler) Get(w http.ResponseWriter, r *http.Request) {
-	if actor := requireActor(w, r); actor == nil {
+	actor := requireActor(w, r)
+	if actor == nil {
 		return
 	}
 
 	id := chi.URLParam(r, "id")
-	user, err := h.svc.Get(r.Context(), id)
+	user, err := h.svc.Get(r.Context(), actor, id)
 	if err != nil {
 		mapUserServiceError(w, err)
 		return

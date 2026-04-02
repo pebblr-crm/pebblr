@@ -16,20 +16,20 @@ import (
 
 type stubTeamSvc struct{}
 
-func (s *stubTeamSvc) List(_ context.Context) ([]*domain.Team, error) {
+func (s *stubTeamSvc) List(_ context.Context, _ *domain.User) ([]*domain.Team, error) {
 	return []*domain.Team{
 		{ID: "team-1", Name: "Alpha Team", ManagerID: "admin-1"},
 	}, nil
 }
 
-func (s *stubTeamSvc) Get(_ context.Context, id string) (*domain.Team, error) {
+func (s *stubTeamSvc) Get(_ context.Context, _ *domain.User, id string) (*domain.Team, error) {
 	if id == "team-1" {
 		return &domain.Team{ID: "team-1", Name: "Alpha Team", ManagerID: "admin-1"}, nil
 	}
 	return nil, store.ErrNotFound
 }
 
-func (s *stubTeamSvc) ListMembers(_ context.Context, _ string) ([]*domain.User, error) {
+func (s *stubTeamSvc) ListMembers(_ context.Context, _ *domain.User, _ string) ([]*domain.User, error) {
 	return []*domain.User{
 		{ID: "rep-1", Name: "Alice Rep", Role: domain.RoleRep},
 	}, nil
