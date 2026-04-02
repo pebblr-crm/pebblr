@@ -65,3 +65,50 @@ Secret name for the Kubernetes Secret created by ExternalSecret.
 {{- define "pebblr.secretName" -}}
 {{- printf "%s-secrets" (include "pebblr.fullname" .) }}
 {{- end }}
+
+{{/*
+Pod-level security context — shared between Deployment and migration Job.
+*/}}
+{{- define "pebblr.podSecurityContext" -}}
+runAsNonRoot: true
+runAsUser: 1000
+fsGroup: 1000
+{{- end }}
+
+{{/*
+Container-level security context — shared between Deployment and migration Job.
+*/}}
+{{- define "pebblr.containerSecurityContext" -}}
+allowPrivilegeEscalation: false
+readOnlyRootFilesystem: true
+capabilities:
+  drop:
+    - ALL
+{{- end }}
+
+{{/*
+Secrets volume definition — shared between Deployment and migration Job.
+*/}}
+{{- define "pebblr.secretsVolume" -}}
+- name: secrets
+  secret:
+    secretName: {{ include "pebblr.secretName" . }}
+    defaultMode: 0400
+{{- end }}
+
+{{/*
+Secrets volumeMount definition — shared between Deployment and migration Job.
+*/}}
+{{- define "pebblr.secretsVolumeMount" -}}
+- name: secrets
+  mountPath: {{ .Values.secrets.mountPath }}
+  readOnly: true
+{{- end }}
+
+{{/*
+Container image spec — shared between Deployment and migration Job.
+*/}}
+{{- define "pebblr.image" -}}
+image: "{{ .Values.image.repository }}:{{ .Values.image.tag | default .Chart.AppVersion }}"
+imagePullPolicy: {{ .Values.image.pullPolicy }}
+{{- end }}
