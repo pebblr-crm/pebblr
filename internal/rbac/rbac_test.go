@@ -176,6 +176,91 @@ func TestScopeActivityQueryForAdmin(t *testing.T) {
 	}
 }
 
+func TestNilActorDeniesAccess(t *testing.T) {
+	t.Parallel()
+	enforcer := rbac.NewEnforcer()
+	ctx := context.Background()
+
+	target := &domain.Target{ID: "t-1", AssigneeID: "rep-1", TeamID: "team-1"}
+	activity := &domain.Activity{ID: "a-1", CreatorID: "rep-1", TeamID: "team-1"}
+
+	if enforcer.CanViewTarget(ctx, nil, target) {
+		t.Error("nil actor must not view targets")
+	}
+	if enforcer.CanUpdateTarget(ctx, nil, target) {
+		t.Error("nil actor must not update targets")
+	}
+	if enforcer.CanViewActivity(ctx, nil, activity) {
+		t.Error("nil actor must not view activities")
+	}
+	if enforcer.CanUpdateActivity(ctx, nil, activity) {
+		t.Error("nil actor must not update activities")
+	}
+	if enforcer.CanDeleteActivity(ctx, nil, activity) {
+		t.Error("nil actor must not delete activities")
+	}
+
+	scope := enforcer.ScopeTargetQuery(ctx, nil)
+	if scope.AllTargets || len(scope.AssigneeIDs) > 0 || len(scope.TeamIDs) > 0 {
+		t.Error("nil actor scope must match nothing")
+	}
+
+	actScope := enforcer.ScopeActivityQuery(ctx, nil)
+	if actScope.AllActivities || len(actScope.CreatorIDs) > 0 || len(actScope.TeamIDs) > 0 {
+		t.Error("nil actor activity scope must match nothing")
+	}
+}
+
+func TestInvalidRoleDeniesAccess(t *testing.T) {
+	t.Parallel()
+	enforcer := rbac.NewEnforcer()
+	ctx := context.Background()
+
+	bogus := &domain.User{ID: "x", Role: domain.Role("superuser")}
+	target := &domain.Target{ID: "t-1", AssigneeID: "x", TeamID: "team-1"}
+	activity := &domain.Activity{ID: "a-1", CreatorID: "x", TeamID: "team-1"}
+
+	if enforcer.CanViewTarget(ctx, bogus, target) {
+		t.Error("invalid role must not view targets")
+	}
+	if enforcer.CanViewActivity(ctx, bogus, activity) {
+		t.Error("invalid role must not view activities")
+	}
+
+	scope := enforcer.ScopeTargetQuery(ctx, bogus)
+	if scope.AllTargets || len(scope.AssigneeIDs) > 0 {
+		t.Error("invalid role scope must match nothing")
+	}
+}
+
+func TestNilResourceDeniesAccess(t *testing.T) {
+	t.Parallel()
+	enforcer := rbac.NewEnforcer()
+	ctx := context.Background()
+
+	admin := &domain.User{ID: "admin-1", Role: domain.RoleAdmin}
+
+	if enforcer.CanViewTarget(ctx, admin, nil) {
+		t.Error("nil target must deny access even for admin")
+	}
+	if enforcer.CanViewActivity(ctx, admin, nil) {
+		t.Error("nil activity must deny access even for admin")
+	}
+}
+
+func TestRepActivityScopeIncludesJointVisit(t *testing.T) {
+	t.Parallel()
+	enforcer := rbac.NewEnforcer()
+	ctx := context.Background()
+
+	rep := &domain.User{ID: "rep-1", Role: domain.RoleRep}
+	scope := enforcer.ScopeActivityQuery(ctx, rep)
+
+	if scope.JointVisitUID != rep.ID {
+		t.Errorf("rep scope should set JointVisitUID=%q, got %q", rep.ID, scope.JointVisitUID)
+	}
+}
+
 func TestContextUserRoundtrip(t *testing.T) {
 	t.Parallel()
 	user := &domain.User{ID: "user-1", Role: domain.RoleRep}
