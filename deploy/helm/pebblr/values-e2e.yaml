@@ -17,9 +17,9 @@ database:
   sslMode: disable
 
 auth:
-  tenantId: e2e-placeholder
-  clientId: e2e-placeholder
-  issuerUrl: https://login.microsoftonline.com/e2e-placeholder/v2.0
+  tenantId: "e2e-placeholder"
+  clientId: "e2e-placeholder"
+  issuerUrl: "https://login.microsoftonline.com/e2e-placeholder/v2.0"
 
 gateway:
   enabled: false

@@ -14,26 +14,23 @@ spec:
       {{- include "pebblr.selectorLabels" . | nindent 6 }}
   template:
     metadata:
+      {{- with .Values.podAnnotations }}
       annotations:
-        {{- toYaml .Values.podAnnotations | nindent 8 }}
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
       labels:
-        {{- include "pebblr.selectorLabels" . | nindent 8 }}
+        {{- include "pebblr.labels" . | nindent 8 }}
+        app.kubernetes.io/component: api
     spec:
       serviceAccountName: {{ include "pebblr.serviceAccountName" . }}
       automountServiceAccountToken: false
       securityContext:
-        runAsNonRoot: true
-        runAsUser: 1000
-        fsGroup: 1000
+        {{- include "pebblr.podSecurityContext" . | nindent 8 }}
       volumes:
-        - name: secrets
-          secret:
-            secretName: {{ include "pebblr.secretName" . }}
-            defaultMode: 0400
+        {{- include "pebblr.secretsVolume" . | nindent 8 }}
       containers:
         - name: api
-          image: "{{ .Values.image.repository }}:{{ .Values.image.tag | default .Chart.AppVersion }}"
-          imagePullPolicy: {{ .Values.image.pullPolicy }}
+          {{- include "pebblr.image" . | nindent 10 }}
           args:
             - "--auth-provider={{ .Values.auth.provider }}"
           ports:
@@ -45,9 +42,7 @@ spec:
                 name: {{ include "pebblr.fullname" . }}-config
           # Secrets are mounted as files — never passed as env vars
           volumeMounts:
-            - name: secrets
-              mountPath: {{ .Values.secrets.mountPath }}
-              readOnly: true
+            {{- include "pebblr.secretsVolumeMount" . | nindent 12 }}
           startupProbe:
             httpGet:
               path: /healthz
@@ -61,11 +56,7 @@ spec:
           resources:
             {{- toYaml .Values.resources | nindent 12 }}
           securityContext:
-            allowPrivilegeEscalation: false
-            readOnlyRootFilesystem: true
-            capabilities:
-              drop:
-                - ALL
+            {{- include "pebblr.containerSecurityContext" . | nindent 12 }}
       {{- with .Values.nodeSelector }}
       nodeSelector:
         {{- toYaml . | nindent 8 }}
