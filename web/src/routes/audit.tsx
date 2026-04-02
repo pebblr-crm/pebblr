@@ -7,6 +7,7 @@ import { DataTable } from '@/components/data/DataTable'
 import { Badge } from '@/components/ui/Badge'
 import { Button } from '@/components/ui/Button'
 import { Spinner } from '@/components/ui/Spinner'
+import { QueryError } from '@/components/ui/QueryError'
 import { FileText, CheckCircle, XCircle } from 'lucide-react'
 import type { AuditEntry, AuditStatus } from '@/types/audit'
 
@@ -29,7 +30,7 @@ function AuditPage() {
   const [statusFilter, setStatusFilter] = useState('')
   const [page, setPage] = useState(1)
 
-  const { data, isLoading } = useAuditLog({
+  const { data, isLoading, isError, refetch } = useAuditLog({
     entityType: entityTypeFilter || undefined,
     status: (statusFilter as AuditStatus) || undefined,
     page,
@@ -90,6 +91,7 @@ function AuditPage() {
                 onClick={() => handleReview(row.original.id, 'accepted')}
                 className="rounded p-1 text-emerald-600 hover:bg-emerald-50"
                 title="Accept"
+                aria-label="Accept audit entry"
               >
                 <CheckCircle size={16} />
               </button>
@@ -97,6 +99,7 @@ function AuditPage() {
                 onClick={() => handleReview(row.original.id, 'false_positive')}
                 className="rounded p-1 text-slate-400 hover:bg-slate-100"
                 title="False positive"
+                aria-label="Mark as false positive"
               >
                 <XCircle size={16} />
               </button>
@@ -110,6 +113,7 @@ function AuditPage() {
   )
 
   if (isLoading) return <Spinner />
+  if (isError) return <QueryError message="Failed to load audit logs" onRetry={() => void refetch()} />
 
   return (
     <div className="p-4 md:p-6">

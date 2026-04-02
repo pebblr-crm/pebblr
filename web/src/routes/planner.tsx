@@ -10,6 +10,7 @@ import { TargetMarker } from '@/components/map/TargetMarker'
 import { Badge } from '@/components/ui/Badge'
 import { Button } from '@/components/ui/Button'
 import { Spinner } from '@/components/ui/Spinner'
+import { QueryError } from '@/components/ui/QueryError'
 import { Modal } from '@/components/ui/Modal'
 import { ActivityDetailModal } from '@/components/activities/ActivityDetailModal'
 import { useToast } from '@/components/ui/Toast'
@@ -78,8 +79,8 @@ function PlannerPage() {
   const dateFrom = formatDate(weekStart)
   const dateTo = formatDate(weekEnd)
 
-  const { data: targetData, isLoading: targetsLoading } = useTargets({ limit: 500 })
-  const { data: activityData, isLoading: activitiesLoading } = useActivities({ dateFrom, dateTo, limit: 200 })
+  const { data: targetData, isLoading: targetsLoading, isError: targetsError, refetch: refetchTargets } = useTargets({ limit: 500 })
+  const { data: activityData, isLoading: activitiesLoading, isError: activitiesError, refetch: refetchActivities } = useActivities({ dateFrom, dateTo, limit: 200 })
   const { data: stats } = useActivityStats({ dateFrom, dateTo })
   const { data: coverage } = useCoverage({ dateFrom, dateTo })
   const { data: visitStatusData } = useTargetVisitStatus()
@@ -295,6 +296,7 @@ function PlannerPage() {
 
 
   if (targetsLoading || activitiesLoading) return <Spinner />
+  if (targetsError || activitiesError) return <QueryError message="Failed to load planner data" onRetry={() => { void refetchTargets(); void refetchActivities() }} />
 
   const completedCount = stats?.byStatus?.realizat ?? 0
   const completionRate = stats?.total ? Math.round((completedCount / stats.total) * 100) : 0
@@ -491,13 +493,13 @@ function PlannerPage() {
           <div className="px-4 py-3 border-b border-slate-200 bg-white flex flex-col sm:flex-row sm:items-center justify-between gap-2 shrink-0 md:px-6">
             <div className="flex flex-wrap items-center gap-2 md:gap-3">
               <div className="flex items-center gap-1 rounded-lg border border-slate-200 bg-slate-50">
-                <button onClick={prevWeek} className="p-1.5 hover:bg-slate-100 rounded-l-lg">
+                <button onClick={prevWeek} className="p-1.5 hover:bg-slate-100 rounded-l-lg" aria-label="Previous week">
                   <ChevronLeft size={16} />
                 </button>
                 <span className="px-2 text-xs font-medium text-slate-700 md:px-3 md:text-sm">
                   {weekStart.toLocaleDateString('en-GB', { month: 'short', day: 'numeric' })} — {weekEnd.toLocaleDateString('en-GB', { month: 'short', day: 'numeric' })}
                 </span>
-                <button onClick={nextWeek} className="p-1.5 hover:bg-slate-100 rounded-r-lg">
+                <button onClick={nextWeek} className="p-1.5 hover:bg-slate-100 rounded-r-lg" aria-label="Next week">
                   <ChevronRight size={16} />
                 </button>
               </div>
@@ -588,6 +590,7 @@ function PlannerPage() {
               <button
                 onClick={() => setShowMobileMap(false)}
                 className="rounded-lg p-1.5 text-slate-400 hover:bg-slate-100"
+                aria-label="Close map"
               >
                 <X size={20} />
               </button>

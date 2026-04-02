@@ -7,6 +7,7 @@ import { DataTable } from '@/components/data/DataTable'
 import { Badge } from '@/components/ui/Badge'
 import { Button } from '@/components/ui/Button'
 import { Spinner } from '@/components/ui/Spinner'
+import { QueryError } from '@/components/ui/QueryError'
 import { MapContainer } from '@/components/map/MapContainer'
 import { TargetMarker } from '@/components/map/TargetMarker'
 import { Search, Filter, ExternalLink } from 'lucide-react'
@@ -49,7 +50,7 @@ function TargetsPage() {
   const navigate = useNavigate()
   const [search, setSearch] = useState('')
   const [typeFilter, setTypeFilter] = useState('')
-  const { data, isLoading } = useTargets({ q: search || undefined, type: typeFilter || undefined, limit: 200 })
+  const { data, isLoading, isError, refetch } = useTargets({ q: search || undefined, type: typeFilter || undefined, limit: 200 })
   const { data: freqData } = useTargetFrequencyStatus()
   const targets = useMemo(() => data?.items ?? [], [data])
 
@@ -113,6 +114,7 @@ function TargetsPage() {
   )
 
   if (isLoading) return <Spinner />
+  if (isError) return <QueryError message="Failed to load targets" onRetry={() => void refetch()} />
 
   return (
     <div className="flex h-full">

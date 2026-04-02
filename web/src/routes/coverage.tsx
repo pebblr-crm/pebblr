@@ -10,6 +10,7 @@ import { TargetMarker } from '@/components/map/TargetMarker'
 import { Card } from '@/components/ui/Card'
 import { Button } from '@/components/ui/Button'
 import { Spinner } from '@/components/ui/Spinner'
+import { QueryError } from '@/components/ui/QueryError'
 import { RotateCcw, SlidersHorizontal, X } from 'lucide-react'
 
 export const Route = createRoute({
@@ -37,7 +38,7 @@ function CoveragePage() {
   const [priorityFilter, setPriorityFilter] = useState('')
   const [filtersOpen, setFiltersOpen] = useState(false)
 
-  const { data: targetData, isLoading: targetsLoading } = useTargets({ limit: 1000 })
+  const { data: targetData, isLoading: targetsLoading, isError: targetsError, refetch: refetchTargets } = useTargets({ limit: 1000 })
   const { data: territoryData } = useTerritories()
   const { data: teamsData } = useTeams()
   const { data: coverage } = useCoverage({})
@@ -64,6 +65,7 @@ function CoveragePage() {
   }, [])
 
   if (targetsLoading) return <Spinner />
+  if (targetsError) return <QueryError message="Failed to load coverage data" onRetry={() => void refetchTargets()} />
 
   const filterContent = (
     <>
