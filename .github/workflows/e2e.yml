@@ -68,6 +68,9 @@ jobs:
       - name: Deploy
         run: make e2e-deploy
 
+      - name: Seed data
+        run: make seed
+
       - name: Test
         run: make e2e
 
