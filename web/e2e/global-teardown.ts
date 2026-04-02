@@ -4,11 +4,23 @@
  */
 import { existsSync, readdirSync, readFileSync } from 'node:fs'
 import { join } from 'node:path'
-import { fileURLToPath } from 'node:url'
+import { convert } from 'ast-v8-to-istanbul'
+import { parse } from 'acorn'
 import libCoverage from 'istanbul-lib-coverage'
 import libReport from 'istanbul-lib-report'
 import reports from 'istanbul-reports'
-import { V8toIstanbul } from 'ast-v8-to-istanbul'
+
+function extractInlineSourceMap(code: string) {
+  const match = code.match(
+    /\/\/[#@] sourceMappingURL=data:application\/json;(?:charset=utf-8;)?base64,(.+)$/m,
+  )
+  if (!match) return undefined
+  try {
+    return JSON.parse(Buffer.from(match[1], 'base64').toString('utf-8'))
+  } catch {
+    return undefined
+  }
+}
 
 export default async function globalTeardown() {
   const webDir = join(import.meta.dirname, '..')
@@ -24,20 +36,34 @@ export default async function globalTeardown() {
     const entries = JSON.parse(readFileSync(join(v8Dir, file), 'utf-8'))
 
     for (const entry of entries) {
-      // Convert Vite dev server URL to local file path
-      // e.g. http://localhost:5174/src/App.tsx → /absolute/path/web/src/App.tsx
-      const url = new URL(entry.url)
-      const relativePath = url.pathname.replace(/^\//, '')
-      const absolutePath = join(webDir, relativePath)
+      if (!entry.source || !entry.functions?.length) continue
 
-      if (!existsSync(absolutePath)) continue
+      try {
+        const sourceMap = extractInlineSourceMap(entry.source)
+        const code = entry.source.replace(
+          /\/\/[#@] sourceMappingURL=data:[^\n]+$/m,
+          '',
+        )
 
-      const source = readFileSync(absolutePath, 'utf-8')
-      const converter = new V8toIstanbul(absolutePath, 0, { source })
-      await converter.load()
-      converter.applyCoverage(entry.functions)
-      const istanbulData = converter.toIstanbul()
-      coverageMap.merge(istanbulData)
+        const data = await convert({
+          ast: parse(code, {
+            ecmaVersion: 'latest',
+            sourceType: 'module',
+          }),
+          code,
+          wrapperLength: 0,
+          coverage: {
+            scriptId: entry.scriptId || '0',
+            url: entry.url,
+            functions: entry.functions,
+          },
+          sourceMap,
+        })
+
+        coverageMap.merge(data)
+      } catch {
+        // Skip entries that fail to convert (e.g. dynamic imports, eval'd code)
+      }
     }
   }
 
