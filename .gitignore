@@ -65,7 +65,4 @@ Thumbs.db
 tmp/
 .air/
 
-# Overstory (worktree management — not in canonical repo)
-.overstory/
-
 bin
