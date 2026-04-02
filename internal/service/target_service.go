@@ -265,7 +265,7 @@ func (s *TargetService) FrequencyStatus(ctx context.Context, actor *domain.User,
 		return nil, fmt.Errorf("querying frequency status: %w", err)
 	}
 
-	months := frequencyMonths(dateFrom, dateTo)
+	months := calendarMonths(dateFrom, dateTo)
 	items := make([]TargetFrequencyItem, 0, len(rows))
 	for _, row := range rows {
 		required := 0
@@ -291,29 +291,12 @@ func (s *TargetService) FrequencyStatus(ctx context.Context, actor *domain.User,
 	return items, nil
 }
 
-// frequencyMonths returns the number of calendar months spanned by the date range (minimum 1).
-func frequencyMonths(from, to time.Time) int {
-	if to.Before(from) {
-		return 1
-	}
-	months := (to.Year()-from.Year())*12 + int(to.Month()) - int(from.Month()) + 1
-	if months < 1 {
-		return 1
-	}
-	return months
-}
-
 // fieldActivityTypes returns the keys of all field-category activity types from config.
 func (s *TargetService) fieldActivityTypes() []string {
 	if s.cfg == nil {
 		return []string{"visit"}
 	}
-	var types []string
-	for i := range s.cfg.Activities.Types {
-		if s.cfg.Activities.Types[i].Category == "field" {
-			types = append(types, s.cfg.Activities.Types[i].Key)
-		}
-	}
+	types := s.cfg.FieldActivityTypes()
 	if len(types) == 0 {
 		types = []string{"visit"}
 	}

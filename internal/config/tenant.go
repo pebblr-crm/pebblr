@@ -158,6 +158,28 @@ func (c *TenantConfig) IsValidTransition(fromStatus, toStatus string) bool {
 	return false
 }
 
+// FieldActivityTypes returns the keys of all activity types with category "field".
+func (c *TenantConfig) FieldActivityTypes() []string {
+	var types []string
+	for i := range c.Activities.Types {
+		if c.Activities.Types[i].Category == "field" {
+			types = append(types, c.Activities.Types[i].Key)
+		}
+	}
+	return types
+}
+
+// BlockingActivityTypes returns the keys of all activity types that block field activities.
+func (c *TenantConfig) BlockingActivityTypes() []string {
+	var types []string
+	for i := range c.Activities.Types {
+		if c.Activities.Types[i].BlocksFieldActivities {
+			types = append(types, c.Activities.Types[i].Key)
+		}
+	}
+	return types
+}
+
 // ResolveOptions returns the option list for an options_ref key.
 func (c *TenantConfig) ResolveOptions(ref string) []OptionDef {
 	// Check top-level options map first.

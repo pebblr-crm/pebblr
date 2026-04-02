@@ -809,8 +809,9 @@ func TestBuildTargetScopeConditions_AssigneesAndTeams(t *testing.T) {
 	if result.empty {
 		t.Error("expected empty=false")
 	}
-	if len(result.conditions) != 2 {
-		t.Errorf("expected 2 conditions, got %d", len(result.conditions))
+	// The shared scope builder produces a single combined "(assignee OR team)" condition.
+	if len(result.conditions) != 1 {
+		t.Errorf("expected 1 combined condition, got %d", len(result.conditions))
 	}
 	if len(result.args) != 2 {
 		t.Errorf("expected 2 args, got %d", len(result.args))
