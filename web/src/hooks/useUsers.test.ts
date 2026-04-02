@@ -35,7 +35,7 @@ describe('userKeys', () => {
   })
 
   it('builds detail key', () => {
-    expect(userKeys.detail('u1')).toEqual(['users', 'u1'])
+    expect(userKeys.detail('u1')).toEqual(['users', 'detail', 'u1'])
   })
 })
 
