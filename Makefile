@@ -10,9 +10,9 @@ ENVOY_GW_VERSION      := v1.3.0
 CERT_MANAGER_VERSION  := v1.17.1
 
 # ── Paths ─────────────────────────────────────────────────────────────────────
-GO_CMD     := cmd/pebblr
-WEB_DIR    := web
-CLUSTER    := pebblr-local
+GO_CMD   := cmd/pebblr
+WEB_DIR  := web
+CLUSTER  := pebblr-local
 KIND_CFG := deploy/kind/kind-config.yaml
 
 # ── AKS safety guard ─────────────────────────────────────────────────────────
