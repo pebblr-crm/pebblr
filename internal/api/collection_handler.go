@@ -8,7 +8,6 @@ import (
 
 	"github.com/go-chi/chi/v5"
 	"github.com/pebblr/pebblr/internal/domain"
-	"github.com/pebblr/pebblr/internal/rbac"
 	"github.com/pebblr/pebblr/internal/service"
 	"github.com/pebblr/pebblr/internal/store"
 )
@@ -63,9 +62,8 @@ func mapCollectionServiceError(w http.ResponseWriter, err error) {
 
 // Create handles POST /api/v1/collections
 func (h *CollectionHandler) Create(w http.ResponseWriter, r *http.Request) {
-	actor, err := rbac.UserFromContext(r.Context())
-	if err != nil {
-		writeError(w, http.StatusUnauthorized, "UNAUTHORIZED", errMissingUser)
+	actor := requireActor(w, r)
+	if actor == nil {
 		return
 	}
 
@@ -88,9 +86,8 @@ func (h *CollectionHandler) Create(w http.ResponseWriter, r *http.Request) {
 
 // List handles GET /api/v1/collections
 func (h *CollectionHandler) List(w http.ResponseWriter, r *http.Request) {
-	actor, err := rbac.UserFromContext(r.Context())
-	if err != nil {
-		writeError(w, http.StatusUnauthorized, "UNAUTHORIZED", errMissingUser)
+	actor := requireActor(w, r)
+	if actor == nil {
 		return
 	}
 
@@ -107,9 +104,8 @@ func (h *CollectionHandler) List(w http.ResponseWriter, r *http.Request) {
 
 // Get handles GET /api/v1/collections/{id}
 func (h *CollectionHandler) Get(w http.ResponseWriter, r *http.Request) {
-	actor, err := rbac.UserFromContext(r.Context())
-	if err != nil {
-		writeError(w, http.StatusUnauthorized, "UNAUTHORIZED", errMissingUser)
+	actor := requireActor(w, r)
+	if actor == nil {
 		return
 	}
 
@@ -127,9 +123,8 @@ func (h *CollectionHandler) Get(w http.ResponseWriter, r *http.Request) {
 
 // Update handles PUT /api/v1/collections/{id}
 func (h *CollectionHandler) Update(w http.ResponseWriter, r *http.Request) {
-	actor, err := rbac.UserFromContext(r.Context())
-	if err != nil {
-		writeError(w, http.StatusUnauthorized, "UNAUTHORIZED", errMissingUser)
+	actor := requireActor(w, r)
+	if actor == nil {
 		return
 	}
 
@@ -154,9 +149,8 @@ func (h *CollectionHandler) Update(w http.ResponseWriter, r *http.Request) {
 
 // Delete handles DELETE /api/v1/collections/:id
 func (h *CollectionHandler) Delete(w http.ResponseWriter, r *http.Request) {
-	actor, err := rbac.UserFromContext(r.Context())
-	if err != nil {
-		writeError(w, http.StatusUnauthorized, "UNAUTHORIZED", errMissingUser)
+	actor := requireActor(w, r)
+	if actor == nil {
 		return
 	}
 

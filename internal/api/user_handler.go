@@ -7,7 +7,6 @@ import (
 
 	"github.com/go-chi/chi/v5"
 	"github.com/pebblr/pebblr/internal/domain"
-	"github.com/pebblr/pebblr/internal/rbac"
 	"github.com/pebblr/pebblr/internal/store"
 )
 
@@ -57,9 +56,7 @@ func mapUserServiceError(w http.ResponseWriter, err error) {
 
 // List handles GET /api/v1/users
 func (h *UserHandler) List(w http.ResponseWriter, r *http.Request) {
-	_, err := rbac.UserFromContext(r.Context())
-	if err != nil {
-		writeError(w, http.StatusUnauthorized, "UNAUTHORIZED", errMissingUser)
+	if actor := requireActor(w, r); actor == nil {
 		return
 	}
 
@@ -80,9 +77,7 @@ func (h *UserHandler) List(w http.ResponseWriter, r *http.Request) {
 
 // Get handles GET /api/v1/users/{id}
 func (h *UserHandler) Get(w http.ResponseWriter, r *http.Request) {
-	_, err := rbac.UserFromContext(r.Context())
-	if err != nil {
-		writeError(w, http.StatusUnauthorized, "UNAUTHORIZED", errMissingUser)
+	if actor := requireActor(w, r); actor == nil {
 		return
 	}
 

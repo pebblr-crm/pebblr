@@ -10,7 +10,6 @@ import (
 
 	"github.com/go-chi/chi/v5"
 	"github.com/pebblr/pebblr/internal/domain"
-	"github.com/pebblr/pebblr/internal/rbac"
 	"github.com/pebblr/pebblr/internal/service"
 	"github.com/pebblr/pebblr/internal/store"
 )
@@ -85,9 +84,8 @@ func mapTargetServiceError(w http.ResponseWriter, err error) {
 
 // List handles GET /api/v1/targets
 func (h *TargetHandler) List(w http.ResponseWriter, r *http.Request) {
-	actor, err := rbac.UserFromContext(r.Context())
-	if err != nil {
-		writeError(w, http.StatusUnauthorized, "UNAUTHORIZED", errMissingUser)
+	actor := requireActor(w, r)
+	if actor == nil {
 		return
 	}
 
@@ -137,9 +135,8 @@ func (h *TargetHandler) List(w http.ResponseWriter, r *http.Request) {
 
 // Create handles POST /api/v1/targets
 func (h *TargetHandler) Create(w http.ResponseWriter, r *http.Request) {
-	actor, err := rbac.UserFromContext(r.Context())
-	if err != nil {
-		writeError(w, http.StatusUnauthorized, "UNAUTHORIZED", errMissingUser)
+	actor := requireActor(w, r)
+	if actor == nil {
 		return
 	}
 
@@ -180,9 +177,8 @@ func (h *TargetHandler) Create(w http.ResponseWriter, r *http.Request) {
 
 // Get handles GET /api/v1/targets/{id}
 func (h *TargetHandler) Get(w http.ResponseWriter, r *http.Request) {
-	actor, err := rbac.UserFromContext(r.Context())
-	if err != nil {
-		writeError(w, http.StatusUnauthorized, "UNAUTHORIZED", errMissingUser)
+	actor := requireActor(w, r)
+	if actor == nil {
 		return
 	}
 
@@ -200,9 +196,8 @@ func (h *TargetHandler) Get(w http.ResponseWriter, r *http.Request) {
 
 // Update handles PUT /api/v1/targets/{id}
 func (h *TargetHandler) Update(w http.ResponseWriter, r *http.Request) {
-	actor, err := rbac.UserFromContext(r.Context())
-	if err != nil {
-		writeError(w, http.StatusUnauthorized, "UNAUTHORIZED", errMissingUser)
+	actor := requireActor(w, r)
+	if actor == nil {
 		return
 	}
 
@@ -251,9 +246,8 @@ type assignRequest struct {
 
 // Assign handles PATCH /api/v1/targets/{id}/assign
 func (h *TargetHandler) Assign(w http.ResponseWriter, r *http.Request) {
-	actor, err := rbac.UserFromContext(r.Context())
-	if err != nil {
-		writeError(w, http.StatusUnauthorized, "UNAUTHORIZED", errMissingUser)
+	actor := requireActor(w, r)
+	if actor == nil {
 		return
 	}
 
@@ -302,9 +296,8 @@ type importResponse struct {
 
 // Import handles POST /api/v1/targets/import
 func (h *TargetHandler) Import(w http.ResponseWriter, r *http.Request) {
-	actor, err := rbac.UserFromContext(r.Context())
-	if err != nil {
-		writeError(w, http.StatusUnauthorized, "UNAUTHORIZED", errMissingUser)
+	actor := requireActor(w, r)
+	if actor == nil {
 		return
 	}
 
@@ -361,9 +354,8 @@ func (h *TargetHandler) Import(w http.ResponseWriter, r *http.Request) {
 
 // FrequencyStatus handles GET /api/v1/targets/frequency-status
 func (h *TargetHandler) FrequencyStatus(w http.ResponseWriter, r *http.Request) {
-	actor, err := rbac.UserFromContext(r.Context())
-	if err != nil {
-		writeError(w, http.StatusUnauthorized, "UNAUTHORIZED", errMissingUser)
+	actor := requireActor(w, r)
+	if actor == nil {
 		return
 	}
 
@@ -389,9 +381,8 @@ func (h *TargetHandler) FrequencyStatus(w http.ResponseWriter, r *http.Request) 
 
 // VisitStatus handles GET /api/v1/targets/visit-status
 func (h *TargetHandler) VisitStatus(w http.ResponseWriter, r *http.Request) {
-	actor, err := rbac.UserFromContext(r.Context())
-	if err != nil {
-		writeError(w, http.StatusUnauthorized, "UNAUTHORIZED", errMissingUser)
+	actor := requireActor(w, r)
+	if actor == nil {
 		return
 	}
 

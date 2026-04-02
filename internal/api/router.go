@@ -11,7 +11,6 @@ import (
 	chimiddleware "github.com/go-chi/chi/v5/middleware"
 	"github.com/pebblr/pebblr/internal/auth"
 	"github.com/pebblr/pebblr/internal/auth/demo"
-	"github.com/pebblr/pebblr/internal/rbac"
 )
 
 // RouterConfig holds dependencies for the HTTP router.
@@ -158,9 +157,8 @@ func healthHandler(w http.ResponseWriter, _ *http.Request) {
 }
 
 func meHandler(w http.ResponseWriter, r *http.Request) {
-	user, err := rbac.UserFromContext(r.Context())
-	if err != nil {
-		writeError(w, http.StatusUnauthorized, "UNAUTHORIZED", errMissingUser)
+	user := requireActor(w, r)
+	if user == nil {
 		return
 	}
 	w.Header().Set(headerContentType, contentTypeJSON)
