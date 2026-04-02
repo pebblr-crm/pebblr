@@ -40,10 +40,6 @@ function AuditPage() {
   const entries = useMemo(() => data?.items ?? [], [data])
   const pendingCount = useMemo(() => entries.filter((e) => e.status === 'pending').length, [entries])
 
-  const handleReview = (id: string, status: AuditStatus) => {
-    updateStatus.mutate({ id, status })
-  }
-
   const columns = useMemo(
     () => [
       columnHelper.accessor('createdAt', {
@@ -87,14 +83,14 @@ function AuditPage() {
           return (
             <div className="flex gap-1">
               <button
-                onClick={() => handleReview(row.original.id, 'accepted')}
+                onClick={() => updateStatus.mutate({ id: row.original.id, status: 'accepted' })}
                 className="rounded p-1 text-emerald-600 hover:bg-emerald-50"
                 title="Accept"
               >
                 <CheckCircle size={16} />
               </button>
               <button
-                onClick={() => handleReview(row.original.id, 'false_positive')}
+                onClick={() => updateStatus.mutate({ id: row.original.id, status: 'false_positive' })}
                 className="rounded p-1 text-slate-400 hover:bg-slate-100"
                 title="False positive"
               >
@@ -105,8 +101,7 @@ function AuditPage() {
         },
       }),
     ],
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-    [],
+    [updateStatus],
   )
 
   if (isLoading) return <Spinner />
