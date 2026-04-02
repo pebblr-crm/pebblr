@@ -29,7 +29,6 @@ func TestOnlineStatusValid(t *testing.T) {
 		domain.OnlineStatusOffline,
 	}
 	for _, s := range valid {
-		s := s
 		t.Run(string(s), func(t *testing.T) {
 			t.Parallel()
 			if !s.Valid() {
@@ -45,7 +44,6 @@ func TestOnlineStatusValid(t *testing.T) {
 func TestRoleValid(t *testing.T) {
 	t.Parallel()
 	for _, r := range []domain.Role{domain.RoleRep, domain.RoleManager, domain.RoleAdmin} {
-		r := r
 		t.Run(string(r), func(t *testing.T) {
 			t.Parallel()
 			if !r.Valid() {
