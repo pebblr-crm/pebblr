@@ -352,7 +352,10 @@ func (r *targetRepository) VisitStatus(ctx context.Context, scope rbac.TargetSco
 		}
 		result = append(result, vs)
 	}
-	return result, rows.Err()
+	if err := rows.Err(); err != nil {
+		return nil, fmt.Errorf("iterating visit status: %w", err)
+	}
+	return result, nil
 }
 
 func (r *targetRepository) FrequencyStatus(ctx context.Context, scope rbac.TargetScope, fieldTypes []string, dateFrom, dateTo time.Time) ([]store.TargetFrequencyStatus, error) {
@@ -413,7 +416,10 @@ func (r *targetRepository) FrequencyStatus(ctx context.Context, scope rbac.Targe
 		}
 		result = append(result, fs)
 	}
-	return result, rows.Err()
+	if err := rows.Err(); err != nil {
+		return nil, fmt.Errorf("iterating frequency status: %w", err)
+	}
+	return result, nil
 }
 
 func scanTargetWithFlag(row pgx.Row, flag *bool) (*domain.Target, error) {

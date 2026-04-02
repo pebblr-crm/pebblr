@@ -3,6 +3,7 @@ package service
 import (
 	"context"
 	"fmt"
+	"slices"
 
 	"github.com/pebblr/pebblr/internal/domain"
 	"github.com/pebblr/pebblr/internal/store"
@@ -129,7 +130,7 @@ func (s *CollectionService) canView(actor *domain.User, c *domain.Collection) bo
 	case domain.RoleAdmin:
 		return true
 	case domain.RoleManager:
-		return containsString(actor.TeamIDs, c.TeamID)
+		return slices.Contains(actor.TeamIDs, c.TeamID)
 	default:
 		return actor.ID == c.CreatorID
 	}
@@ -143,11 +144,3 @@ func (s *CollectionService) canModify(actor *domain.User, c *domain.Collection) 
 	return actor.ID == c.CreatorID
 }
 
-func containsString(slice []string, s string) bool {
-	for _, v := range slice {
-		if v == s {
-			return true
-		}
-	}
-	return false
-}
