@@ -10,6 +10,11 @@ type TenantConfig struct {
 	Options    map[string][]OptionDef  `json:"options"`
 	Rules      RulesConfig             `json:"rules"`
 	Recovery   *RecoveryRule           `json:"recovery,omitempty"`
+
+	// Computed indexes — built by buildIndexes(), not serialized.
+	accountTypeIndex  map[string]*AccountTypeConfig  `json:"-"`
+	activityTypeIndex map[string]*ActivityTypeConfig `json:"-"`
+	statusIndex       map[string]*StatusDef          `json:"-"`
 }
 
 // TenantInfo holds basic tenant metadata.
@@ -94,8 +99,30 @@ type RecoveryRule struct {
 	RecoveryType         string `json:"recovery_type"`
 }
 
+// buildIndexes populates computed index maps for O(1) lookups.
+// Must be called after loading/parsing the config.
+func (c *TenantConfig) buildIndexes() {
+	c.accountTypeIndex = make(map[string]*AccountTypeConfig, len(c.Accounts.Types))
+	for i := range c.Accounts.Types {
+		c.accountTypeIndex[c.Accounts.Types[i].Key] = &c.Accounts.Types[i]
+	}
+
+	c.activityTypeIndex = make(map[string]*ActivityTypeConfig, len(c.Activities.Types))
+	for i := range c.Activities.Types {
+		c.activityTypeIndex[c.Activities.Types[i].Key] = &c.Activities.Types[i]
+	}
+
+	c.statusIndex = make(map[string]*StatusDef, len(c.Activities.Statuses))
+	for i := range c.Activities.Statuses {
+		c.statusIndex[c.Activities.Statuses[i].Key] = &c.Activities.Statuses[i]
+	}
+}
+
 // AccountType returns the AccountTypeConfig for the given key, or nil.
 func (c *TenantConfig) AccountType(key string) *AccountTypeConfig {
+	if c.accountTypeIndex != nil {
+		return c.accountTypeIndex[key]
+	}
 	for i := range c.Accounts.Types {
 		if c.Accounts.Types[i].Key == key {
 			return &c.Accounts.Types[i]
@@ -106,6 +133,9 @@ func (c *TenantConfig) AccountType(key string) *AccountTypeConfig {
 
 // ActivityType returns the ActivityTypeConfig for the given key, or nil.
 func (c *TenantConfig) ActivityType(key string) *ActivityTypeConfig {
+	if c.activityTypeIndex != nil {
+		return c.activityTypeIndex[key]
+	}
 	for i := range c.Activities.Types {
 		if c.Activities.Types[i].Key == key {
 			return &c.Activities.Types[i]
@@ -126,6 +156,10 @@ func (c *TenantConfig) InitialStatus() string {
 
 // IsValidStatus reports whether key is a defined status.
 func (c *TenantConfig) IsValidStatus(key string) bool {
+	if c.statusIndex != nil {
+		_, ok := c.statusIndex[key]
+		return ok
+	}
 	for _, s := range c.Activities.Statuses {
 		if s.Key == key {
 			return true
@@ -136,6 +170,10 @@ func (c *TenantConfig) IsValidStatus(key string) bool {
 
 // IsSubmittableStatus reports whether the given status allows report submission.
 func (c *TenantConfig) IsSubmittableStatus(key string) bool {
+	if c.statusIndex != nil {
+		s, ok := c.statusIndex[key]
+		return ok && s.Submittable
+	}
 	for _, s := range c.Activities.Statuses {
 		if s.Key == key {
 			return s.Submittable

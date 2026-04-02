@@ -20,13 +20,13 @@ type TargetService struct {
 	targets  store.TargetRepository
 	users    store.UserRepository
 	audit    store.AuditRepository
-	enforcer rbac.Enforcer
+	enforcer *rbac.PolicyEnforcer
 	cfg      *config.TenantConfig
 	geocoder geo.Geocoder // optional; nil skips geocoding
 }
 
 // NewTargetService constructs a TargetService with the given dependencies.
-func NewTargetService(targets store.TargetRepository, enforcer rbac.Enforcer, cfg *config.TenantConfig, opts ...TargetServiceOption) *TargetService {
+func NewTargetService(targets store.TargetRepository, enforcer *rbac.PolicyEnforcer, cfg *config.TenantConfig, opts ...TargetServiceOption) *TargetService {
 	s := &TargetService{targets: targets, enforcer: enforcer, cfg: cfg}
 	for _, o := range opts {
 		o(s)
@@ -74,7 +74,7 @@ func (s *TargetService) Get(ctx context.Context, actor *domain.User, id string) 
 	if err != nil {
 		return nil, fmt.Errorf(errGettingTarget, err)
 	}
-	if !s.enforcer.CanViewTarget(ctx, actor, target) {
+	if !s.enforcer.CanViewTarget(actor, target) {
 		return nil, ErrForbidden
 	}
 	return target, nil
@@ -82,7 +82,7 @@ func (s *TargetService) Get(ctx context.Context, actor *domain.User, id string) 
 
 // List returns a paginated list of targets scoped to the actor's permissions.
 func (s *TargetService) List(ctx context.Context, actor *domain.User, filter store.TargetFilter, page, limit int) (*store.TargetPage, error) {
-	scope := s.enforcer.ScopeTargetQuery(ctx, actor)
+	scope := s.enforcer.ScopeTargetQuery(actor)
 	result, err := s.targets.List(ctx, scope, filter, page, limit)
 	if err != nil {
 		return nil, fmt.Errorf("listing targets: %w", err)
@@ -97,7 +97,7 @@ func (s *TargetService) Update(ctx context.Context, actor *domain.User, target *
 	if err != nil {
 		return nil, fmt.Errorf(errGettingTarget, err)
 	}
-	if !s.enforcer.CanUpdateTarget(ctx, actor, existing) {
+	if !s.enforcer.CanUpdateTarget(actor, existing) {
 		return nil, ErrForbidden
 	}
 	if err := s.validateTarget(target); err != nil {
@@ -125,7 +125,7 @@ func (s *TargetService) Assign(ctx context.Context, actor *domain.User, targetID
 	if err != nil {
 		return nil, fmt.Errorf(errGettingTarget, err)
 	}
-	if !s.enforcer.CanUpdateTarget(ctx, actor, existing) {
+	if !s.enforcer.CanUpdateTarget(actor, existing) {
 		return nil, ErrForbidden
 	}
 
@@ -237,7 +237,7 @@ func buildAddress(fields map[string]any) string {
 
 // VisitStatus returns the last visit date for each of the actor's targets.
 func (s *TargetService) VisitStatus(ctx context.Context, actor *domain.User) ([]store.TargetVisitStatus, error) {
-	scope := s.enforcer.ScopeTargetQuery(ctx, actor)
+	scope := s.enforcer.ScopeTargetQuery(actor)
 	fieldTypes := s.fieldActivityTypes()
 	result, err := s.targets.VisitStatus(ctx, scope, fieldTypes)
 	if err != nil {
@@ -257,7 +257,7 @@ type TargetFrequencyItem struct {
 
 // FrequencyStatus returns per-target visit compliance for the given period.
 func (s *TargetService) FrequencyStatus(ctx context.Context, actor *domain.User, dateFrom, dateTo time.Time) ([]TargetFrequencyItem, error) {
-	scope := s.enforcer.ScopeTargetQuery(ctx, actor)
+	scope := s.enforcer.ScopeTargetQuery(actor)
 	fieldTypes := s.fieldActivityTypes()
 
 	rows, err := s.targets.FrequencyStatus(ctx, scope, fieldTypes, dateFrom, dateTo)

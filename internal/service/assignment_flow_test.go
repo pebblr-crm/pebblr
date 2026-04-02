@@ -176,17 +176,17 @@ func TestFlow_DualVisitLifecycle(t *testing.T) {
 
 	// ── Step 3: Rep A can view the activity (they created it).
 	// Simulate by checking RBAC directly.
-	if !enforcer.CanViewActivity(ctx, repA(), created) {
+	if !enforcer.CanViewActivity(repA(), created) {
 		t.Error("step 3: rep A should be able to view their own activity")
 	}
 
 	// ── Step 4: Rep B can view the activity (they are the joint visitor).
-	if !enforcer.CanViewActivity(ctx, repB(), created) {
+	if !enforcer.CanViewActivity(repB(), created) {
 		t.Error("step 4: rep B should be able to view activity as joint visitor")
 	}
 
 	// ── Step 5: Rep B CANNOT see the target in the target list (not assigned to them).
-	if enforcer.CanViewTarget(ctx, repB(), target) {
+	if enforcer.CanViewTarget(repB(), target) {
 		t.Error("step 5: rep B should NOT be able to view the target (not their assignee)")
 	}
 

@@ -51,6 +51,9 @@ func (s *TerritoryService) Create(ctx context.Context, actor *domain.User, t *do
 	if t.Name == "" {
 		return nil, ErrInvalidInput
 	}
+	if err := t.ValidateBoundary(); err != nil {
+		return nil, fmt.Errorf("%w: %s", ErrInvalidInput, err)
+	}
 
 	created, err := s.territories.Create(ctx, t)
 	if err != nil {
@@ -66,6 +69,9 @@ func (s *TerritoryService) Update(ctx context.Context, actor *domain.User, t *do
 	}
 	if t.Name == "" {
 		return nil, ErrInvalidInput
+	}
+	if err := t.ValidateBoundary(); err != nil {
+		return nil, fmt.Errorf("%w: %s", ErrInvalidInput, err)
 	}
 
 	existing, err := s.territories.Get(ctx, t.ID)

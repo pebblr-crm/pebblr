@@ -85,6 +85,9 @@ func (b *targetQueryBuilder) whereClause() string {
 // applyScope applies RBAC scope conditions to the query builder.
 // Returns false if the scope excludes all targets (empty result).
 func (b *targetQueryBuilder) applyScope(scope rbac.TargetScope) bool {
+	if scope.DenyAll {
+		return false
+	}
 	if scope.AllTargets {
 		return true
 	}
@@ -282,6 +285,11 @@ type targetScopeResult struct {
 // The prefix (e.g. "t.") is prepended to column names.
 func buildTargetScopeConditions(scope rbac.TargetScope, prefix string, startArgIdx int) targetScopeResult {
 	result := targetScopeResult{argIdx: startArgIdx}
+
+	if scope.DenyAll {
+		result.empty = true
+		return result
+	}
 
 	if scope.AllTargets {
 		return result

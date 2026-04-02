@@ -12,24 +12,28 @@ func (e FieldError) Error() string {
 	return fmt.Sprintf("%s: %s", e.Field, e.Message)
 }
 
-// hoistedFields are config field keys that map to top-level Activity columns
-// rather than living in the JSONB fields map. They are validated separately
-// (e.g. ValidateDuration) and must be skipped by ValidateActivity.
-var hoistedFields = map[string]bool{
-	"duration":            true,
-	"account_id":          true,
-	"routing":             true,
-	"joint_visit_user_id": true,
+// HoistedFieldKeys lists config field keys that map to top-level Activity
+// columns in the database rather than living in the JSONB fields map.
+// These are validated separately (e.g. ValidateDuration) and must be skipped
+// by ValidateActivity.
+//
+// If you add a new hoisted column to the activities table, you must also add
+// it here, in the Activity struct, and in the postgres repository scan.
+var HoistedFieldKeys = []string{
+	"duration",
+	"account_id",
+	"routing",
+	"joint_visit_user_id",
 }
 
-// HoistedFieldKeys returns the keys of all hoisted fields as a slice.
-func HoistedFieldKeys() []string {
-	keys := make([]string, 0, len(hoistedFields))
-	for k := range hoistedFields {
-		keys = append(keys, k)
+// hoistedFields is the set-form of HoistedFieldKeys for O(1) lookups.
+var hoistedFields = func() map[string]bool {
+	m := make(map[string]bool, len(HoistedFieldKeys))
+	for _, k := range HoistedFieldKeys {
+		m[k] = true
 	}
-	return keys
-}
+	return m
+}()
 
 // ValidateActivity validates field values for an activity against the
 // tenant config. phase is "save" or "submit" — submit enforces

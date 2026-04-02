@@ -92,11 +92,19 @@ type activityListResponse struct {
 }
 
 // prepareActivities injects hoisted column values back into Fields for
-// all activities before they are serialized to JSON.
+// all activities before they are serialized to JSON. This is a presentation
+// concern — the frontend expects hoisted columns to also appear in the
+// dynamic fields map.
 func prepareActivities(activities ...*domain.Activity) {
 	for _, a := range activities {
-		if a != nil {
-			a.PrepareForResponse()
+		if a == nil {
+			continue
+		}
+		if a.Fields == nil {
+			a.Fields = map[string]any{}
+		}
+		if a.JointVisitUID != "" {
+			a.Fields["joint_visit_user_id"] = a.JointVisitUID
 		}
 	}
 }

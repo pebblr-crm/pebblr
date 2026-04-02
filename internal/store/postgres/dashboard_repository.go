@@ -358,6 +358,9 @@ func activityScopeConditions(scope rbac.ActivityScope, args []any, argIdx int) (
 
 // activityScopeConditionsAliased builds the RBAC scope WHERE clause for activities with optional table alias.
 func activityScopeConditionsAliased(alias string, scope rbac.ActivityScope, args []any, argIdx int) (sql string, outArgs []any, nextIdx int) {
+	if scope.DenyAll {
+		return "FALSE", args, argIdx
+	}
 	if scope.AllActivities {
 		return "", args, argIdx
 	}
@@ -399,6 +402,9 @@ func targetScopeConditions(scope rbac.TargetScope, args []any, argIdx int) (sql 
 
 // targetScopeConditionsAliased builds the RBAC scope WHERE clause for targets with optional table alias.
 func targetScopeConditionsAliased(alias string, scope rbac.TargetScope, args []any, argIdx int) (sql string, outArgs []any, nextIdx int) {
+	if scope.DenyAll {
+		return "FALSE", args, argIdx
+	}
 	if scope.AllTargets {
 		return "", args, argIdx
 	}

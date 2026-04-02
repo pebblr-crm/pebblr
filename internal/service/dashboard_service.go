@@ -42,14 +42,14 @@ type FrequencyItem struct {
 // DashboardService provides dashboard analytics with RBAC enforcement.
 type DashboardService struct {
 	dashboard store.DashboardRepository
-	enforcer  rbac.Enforcer
+	enforcer  *rbac.PolicyEnforcer
 	cfg       *config.TenantConfig
 }
 
 // NewDashboardService constructs a DashboardService.
 func NewDashboardService(
 	dashboard store.DashboardRepository,
-	enforcer rbac.Enforcer,
+	enforcer *rbac.PolicyEnforcer,
 	cfg *config.TenantConfig,
 ) *DashboardService {
 	return &DashboardService{
@@ -61,7 +61,7 @@ func NewDashboardService(
 
 // ActivityStats returns activity counts grouped by status and category for the given period.
 func (s *DashboardService) ActivityStats(ctx context.Context, actor *domain.User, filter store.DashboardFilter) (*ActivityStatsResponse, error) {
-	scope := s.enforcer.ScopeActivityQuery(ctx, actor)
+	scope := s.enforcer.ScopeActivityQuery(actor)
 	stats, err := s.dashboard.ActivityStats(ctx, scope, filter)
 	if err != nil {
 		return nil, fmt.Errorf("querying activity stats: %w", err)
@@ -91,8 +91,8 @@ func (s *DashboardService) ActivityStats(ctx context.Context, actor *domain.User
 
 // Coverage returns target coverage statistics for the given period.
 func (s *DashboardService) Coverage(ctx context.Context, actor *domain.User, filter store.DashboardFilter) (*CoverageResponse, error) {
-	actScope := s.enforcer.ScopeActivityQuery(ctx, actor)
-	tgtScope := s.enforcer.ScopeTargetQuery(ctx, actor)
+	actScope := s.enforcer.ScopeActivityQuery(actor)
+	tgtScope := s.enforcer.ScopeTargetQuery(actor)
 
 	stats, err := s.dashboard.CoverageStats(ctx, actScope, tgtScope, filter)
 	if err != nil {
@@ -113,8 +113,8 @@ func (s *DashboardService) Coverage(ctx context.Context, actor *domain.User, fil
 
 // Frequency returns visit frequency compliance per target classification.
 func (s *DashboardService) Frequency(ctx context.Context, actor *domain.User, filter store.DashboardFilter) (*FrequencyResponse, error) {
-	actScope := s.enforcer.ScopeActivityQuery(ctx, actor)
-	tgtScope := s.enforcer.ScopeTargetQuery(ctx, actor)
+	actScope := s.enforcer.ScopeActivityQuery(actor)
+	tgtScope := s.enforcer.ScopeTargetQuery(actor)
 
 	rows, err := s.dashboard.FrequencyStats(ctx, actScope, tgtScope, filter)
 	if err != nil {
@@ -173,7 +173,7 @@ func (s *DashboardService) RecoveryBalance(ctx context.Context, actor *domain.Us
 		return &RecoveryBalanceResponse{Intervals: []RecoveryClaimInterval{}}, nil
 	}
 
-	scope := s.enforcer.ScopeActivityQuery(ctx, actor)
+	scope := s.enforcer.ScopeActivityQuery(actor)
 	recoveryRule := s.cfg.Recovery
 	fieldTypes := fieldActivityTypeKeys(s.cfg)
 

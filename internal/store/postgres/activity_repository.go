@@ -107,6 +107,9 @@ func (b *activityQueryBuilder) whereClause() string {
 // buildActivityScopeConditions applies RBAC scope conditions to the query builder.
 // Returns false if the scope excludes all activities (empty result).
 func (b *activityQueryBuilder) applyScope(scope rbac.ActivityScope) bool {
+	if scope.DenyAll {
+		return false
+	}
 	if scope.AllActivities {
 		return true
 	}
