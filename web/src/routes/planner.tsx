@@ -507,8 +507,10 @@ function PlannerPage() {
               const t = targetMap.get(id)
               if (!t) return null
               const p = getClassification(t.fields)
-              const badgeClass = p === 'a' ? 'bg-red-100 text-red-700'
-                : p === 'b' ? 'bg-amber-100 text-amber-700' : 'bg-slate-100 text-slate-600'
+              let badgeClass: string
+              if (p === 'a') badgeClass = 'bg-red-100 text-red-700'
+              else if (p === 'b') badgeClass = 'bg-amber-100 text-amber-700'
+              else badgeClass = 'bg-slate-100 text-slate-600'
               return (
                 <li key={id} className="flex items-center gap-2 px-3 py-2">
                   <span className={`w-2 h-2 rounded-full shrink-0 ${priorityDot[p] ?? priorityDot.c}`} />

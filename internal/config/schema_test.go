@@ -6,6 +6,8 @@ import (
 	"testing"
 )
 
+const fmtUnexpectedErr = "unexpected error: %v"
+
 func TestValidateSchema_ValidConfig(t *testing.T) {
 	t.Parallel()
 	dir := t.TempDir()
@@ -16,7 +18,7 @@ func TestValidateSchema_ValidConfig(t *testing.T) {
 
 	errs, err := ValidateSchema(path)
 	if err != nil {
-		t.Fatalf("unexpected error: %v", err)
+		t.Fatalf(fmtUnexpectedErr, err)
 	}
 	if len(errs) != 0 {
 		t.Fatalf("expected no validation errors, got %v", errs)
@@ -35,7 +37,7 @@ func TestValidateSchema_InvalidConfig(t *testing.T) {
 
 	errs, err := ValidateSchema(path)
 	if err != nil {
-		t.Fatalf("unexpected error: %v", err)
+		t.Fatalf(fmtUnexpectedErr, err)
 	}
 	if len(errs) == 0 {
 		t.Fatal("expected validation errors for missing fields")
@@ -74,7 +76,7 @@ func TestLoadAndValidate_ValidConfig(t *testing.T) {
 
 	cfg, errs, err := LoadAndValidate(path)
 	if err != nil {
-		t.Fatalf("unexpected error: %v", err)
+		t.Fatalf(fmtUnexpectedErr, err)
 	}
 	if len(errs) != 0 {
 		t.Fatalf("expected no errors, got %v", errs)
@@ -98,7 +100,7 @@ func TestLoadAndValidate_SchemaErrors(t *testing.T) {
 
 	cfg, errs, err := LoadAndValidate(path)
 	if err != nil {
-		t.Fatalf("unexpected error: %v", err)
+		t.Fatalf(fmtUnexpectedErr, err)
 	}
 	if len(errs) == 0 {
 		t.Fatal("expected schema validation errors")
@@ -132,7 +134,7 @@ func TestLoadAndValidate_SemanticErrors(t *testing.T) {
 
 	cfg, errs, err := LoadAndValidate(path)
 	if err != nil {
-		t.Fatalf("unexpected error: %v", err)
+		t.Fatalf(fmtUnexpectedErr, err)
 	}
 	if len(errs) == 0 {
 		t.Fatal("expected semantic validation errors")
@@ -165,7 +167,7 @@ func TestFlattenErrors_LeafError(t *testing.T) {
 
 	errs, err := ValidateSchema(path)
 	if err != nil {
-		t.Fatalf("unexpected error: %v", err)
+		t.Fatalf(fmtUnexpectedErr, err)
 	}
 	// Should have errors for missing required properties.
 	if len(errs) == 0 {

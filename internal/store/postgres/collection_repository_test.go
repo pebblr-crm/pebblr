@@ -11,6 +11,16 @@ import (
 	"github.com/pebblr/pebblr/internal/store"
 )
 
+const (
+	testCollectionName   = "Monday Route"
+	querySelectCollection = "SELECT .+ FROM target_collections c"
+	fmtExpectedCol1      = "expected ID col-1, got %s"
+	queryInsertCollection = "INSERT INTO target_collections"
+	queryDeleteItems     = "DELETE FROM target_collection_items"
+	queryDeleteCollection = "DELETE FROM target_collections"
+	queryUpdateCollection = "UPDATE target_collections SET"
+)
+
 func collectionColumns() []string {
 	return []string{"id", "name", "creator_id", "team_id", "created_at", "updated_at"}
 }
@@ -22,14 +32,14 @@ func collectionWithItemsColumns() []string {
 func collectionRow(mock pgxmock.PgxPoolIface) *pgxmock.Rows {
 	now := testTime()
 	return mock.NewRows(collectionColumns()).AddRow(
-		"col-1", "Monday Route", "rep-1", "team-1", now, now,
+		"col-1", testCollectionName, "rep-1", testTeamID, now, now,
 	)
 }
 
 func collectionWithItemsRow(mock pgxmock.PgxPoolIface) *pgxmock.Rows {
 	now := testTime()
 	return mock.NewRows(collectionWithItemsColumns()).AddRow(
-		"col-1", "Monday Route", "rep-1", "team-1", now, now, []string{"t1", "t2"},
+		"col-1", testCollectionName, "rep-1", testTeamID, now, now, []string{"t1", "t2"},
 	)
 }
 
@@ -49,18 +59,18 @@ func TestCollectionGet_Success(t *testing.T) {
 	repo := newCollectionRepo(mock)
 	ctx := context.Background()
 
-	mock.ExpectQuery("SELECT .+ FROM target_collections c").
+	mock.ExpectQuery(querySelectCollection).
 		WithArgs("col-1").
 		WillReturnRows(collectionWithItemsRow(mock))
 
 	c, err := repo.Get(ctx, "col-1")
 	if err != nil {
-		t.Fatalf("unexpected error: %v", err)
+		t.Fatalf(fmtUnexpectedErr, err)
 	}
 	if c.ID != "col-1" {
-		t.Errorf("expected ID col-1, got %s", c.ID)
+		t.Errorf(fmtExpectedCol1, c.ID)
 	}
-	if c.Name != "Monday Route" {
+	if c.Name != testCollectionName {
 		t.Errorf("expected name Monday Route, got %s", c.Name)
 	}
 	if len(c.TargetIDs) != 2 {
@@ -74,13 +84,13 @@ func TestCollectionGet_NotFound(t *testing.T) {
 	repo := newCollectionRepo(mock)
 	ctx := context.Background()
 
-	mock.ExpectQuery("SELECT .+ FROM target_collections c").
+	mock.ExpectQuery(querySelectCollection).
 		WithArgs("missing").
 		WillReturnRows(emptyCollectionWithItemsRows(mock))
 
 	_, err := repo.Get(ctx, "missing")
 	if !errors.Is(err, store.ErrNotFound) {
-		t.Errorf("expected ErrNotFound, got: %v", err)
+		t.Errorf(fmtExpectedNotFound, err)
 	}
 }
 
@@ -90,13 +100,13 @@ func TestCollectionGet_DBError(t *testing.T) {
 	repo := newCollectionRepo(mock)
 	ctx := context.Background()
 
-	mock.ExpectQuery("SELECT .+ FROM target_collections c").
+	mock.ExpectQuery(querySelectCollection).
 		WithArgs("col-1").
-		WillReturnError(fmt.Errorf("db error"))
+		WillReturnError(fmt.Errorf(errDBMsg))
 
 	_, err := repo.Get(ctx, "col-1")
 	if err == nil {
-		t.Fatal("expected error, got nil")
+		t.Fatal(msgExpectedErr)
 	}
 }
 
@@ -108,12 +118,12 @@ func TestCollectionList_NoFilter(t *testing.T) {
 	repo := newCollectionRepo(mock)
 	ctx := context.Background()
 
-	mock.ExpectQuery("SELECT .+ FROM target_collections c").
+	mock.ExpectQuery(querySelectCollection).
 		WillReturnRows(collectionWithItemsRow(mock))
 
 	collections, err := repo.List(ctx, store.CollectionFilter{})
 	if err != nil {
-		t.Fatalf("unexpected error: %v", err)
+		t.Fatalf(fmtUnexpectedErr, err)
 	}
 	if len(collections) != 1 {
 		t.Errorf("expected 1 collection, got %d", len(collections))
@@ -127,13 +137,13 @@ func TestCollectionList_WithCreatorFilter(t *testing.T) {
 	ctx := context.Background()
 	creatorID := "rep-1"
 
-	mock.ExpectQuery("SELECT .+ FROM target_collections c").
+	mock.ExpectQuery(querySelectCollection).
 		WithArgs("rep-1").
 		WillReturnRows(collectionWithItemsRow(mock))
 
 	collections, err := repo.List(ctx, store.CollectionFilter{CreatorID: &creatorID})
 	if err != nil {
-		t.Fatalf("unexpected error: %v", err)
+		t.Fatalf(fmtUnexpectedErr, err)
 	}
 	if len(collections) != 1 {
 		t.Errorf("expected 1 collection, got %d", len(collections))
@@ -146,12 +156,12 @@ func TestCollectionList_Empty(t *testing.T) {
 	repo := newCollectionRepo(mock)
 	ctx := context.Background()
 
-	mock.ExpectQuery("SELECT .+ FROM target_collections c").
+	mock.ExpectQuery(querySelectCollection).
 		WillReturnRows(emptyCollectionWithItemsRows(mock))
 
 	collections, err := repo.List(ctx, store.CollectionFilter{})
 	if err != nil {
-		t.Fatalf("unexpected error: %v", err)
+		t.Fatalf(fmtUnexpectedErr, err)
 	}
 	if len(collections) != 0 {
 		t.Errorf("expected 0 collections, got %d", len(collections))
@@ -164,12 +174,12 @@ func TestCollectionList_DBError(t *testing.T) {
 	repo := newCollectionRepo(mock)
 	ctx := context.Background()
 
-	mock.ExpectQuery("SELECT .+ FROM target_collections c").
-		WillReturnError(fmt.Errorf("db error"))
+	mock.ExpectQuery(querySelectCollection).
+		WillReturnError(fmt.Errorf(errDBMsg))
 
 	_, err := repo.List(ctx, store.CollectionFilter{})
 	if err == nil {
-		t.Fatal("expected error, got nil")
+		t.Fatal(msgExpectedErr)
 	}
 }
 
@@ -184,15 +194,15 @@ func TestCollectionCreate_Success(t *testing.T) {
 	c := &domain.Collection{
 		Name:      "New Collection",
 		CreatorID: "rep-1",
-		TeamID:    "team-1",
+		TeamID:    testTeamID,
 		TargetIDs: []string{"t1", "t2"},
 	}
 
 	mock.ExpectBegin()
-	mock.ExpectQuery("INSERT INTO target_collections").
-		WithArgs("New Collection", "rep-1", "team-1").
+	mock.ExpectQuery(queryInsertCollection).
+		WithArgs("New Collection", "rep-1", testTeamID).
 		WillReturnRows(collectionRow(mock))
-	mock.ExpectExec("DELETE FROM target_collection_items").
+	mock.ExpectExec(queryDeleteItems).
 		WithArgs("col-1").
 		WillReturnResult(pgxmock.NewResult("DELETE", 0))
 	mock.ExpectExec("INSERT INTO target_collection_items").
@@ -202,10 +212,10 @@ func TestCollectionCreate_Success(t *testing.T) {
 
 	created, err := repo.Create(ctx, c)
 	if err != nil {
-		t.Fatalf("unexpected error: %v", err)
+		t.Fatalf(fmtUnexpectedErr, err)
 	}
 	if created.ID != "col-1" {
-		t.Errorf("expected ID col-1, got %s", created.ID)
+		t.Errorf(fmtExpectedCol1, created.ID)
 	}
 }
 
@@ -218,15 +228,15 @@ func TestCollectionCreate_EmptyTargets(t *testing.T) {
 	c := &domain.Collection{
 		Name:      "Empty Collection",
 		CreatorID: "rep-1",
-		TeamID:    "team-1",
+		TeamID:    testTeamID,
 		TargetIDs: []string{},
 	}
 
 	mock.ExpectBegin()
-	mock.ExpectQuery("INSERT INTO target_collections").
-		WithArgs("Empty Collection", "rep-1", "team-1").
+	mock.ExpectQuery(queryInsertCollection).
+		WithArgs("Empty Collection", "rep-1", testTeamID).
 		WillReturnRows(collectionRow(mock))
-	mock.ExpectExec("DELETE FROM target_collection_items").
+	mock.ExpectExec(queryDeleteItems).
 		WithArgs("col-1").
 		WillReturnResult(pgxmock.NewResult("DELETE", 0))
 	// No INSERT INTO target_collection_items since targetIDs is empty.
@@ -234,10 +244,10 @@ func TestCollectionCreate_EmptyTargets(t *testing.T) {
 
 	created, err := repo.Create(ctx, c)
 	if err != nil {
-		t.Fatalf("unexpected error: %v", err)
+		t.Fatalf(fmtUnexpectedErr, err)
 	}
 	if created.ID != "col-1" {
-		t.Errorf("expected ID col-1, got %s", created.ID)
+		t.Errorf(fmtExpectedCol1, created.ID)
 	}
 }
 
@@ -247,13 +257,13 @@ func TestCollectionCreate_BeginError(t *testing.T) {
 	repo := newCollectionRepo(mock)
 	ctx := context.Background()
 
-	c := &domain.Collection{Name: "Fail", CreatorID: "rep-1", TeamID: "team-1"}
+	c := &domain.Collection{Name: "Fail", CreatorID: "rep-1", TeamID: testTeamID}
 
 	mock.ExpectBegin().WillReturnError(fmt.Errorf("begin error"))
 
 	_, err := repo.Create(ctx, c)
 	if err == nil {
-		t.Fatal("expected error, got nil")
+		t.Fatal(msgExpectedErr)
 	}
 }
 
@@ -263,17 +273,17 @@ func TestCollectionCreate_InsertError(t *testing.T) {
 	repo := newCollectionRepo(mock)
 	ctx := context.Background()
 
-	c := &domain.Collection{Name: "Fail", CreatorID: "rep-1", TeamID: "team-1"}
+	c := &domain.Collection{Name: "Fail", CreatorID: "rep-1", TeamID: testTeamID}
 
 	mock.ExpectBegin()
-	mock.ExpectQuery("INSERT INTO target_collections").
-		WithArgs("Fail", "rep-1", "team-1").
+	mock.ExpectQuery(queryInsertCollection).
+		WithArgs("Fail", "rep-1", testTeamID).
 		WillReturnError(fmt.Errorf("insert error"))
 	mock.ExpectRollback()
 
 	_, err := repo.Create(ctx, c)
 	if err == nil {
-		t.Fatal("expected error, got nil")
+		t.Fatal(msgExpectedErr)
 	}
 }
 
@@ -285,13 +295,13 @@ func TestCollectionDelete_Success(t *testing.T) {
 	repo := newCollectionRepo(mock)
 	ctx := context.Background()
 
-	mock.ExpectExec("DELETE FROM target_collections").
+	mock.ExpectExec(queryDeleteCollection).
 		WithArgs("col-1").
 		WillReturnResult(pgxmock.NewResult("DELETE", 1))
 
 	err := repo.Delete(ctx, "col-1")
 	if err != nil {
-		t.Fatalf("unexpected error: %v", err)
+		t.Fatalf(fmtUnexpectedErr, err)
 	}
 }
 
@@ -301,13 +311,13 @@ func TestCollectionDelete_NotFound(t *testing.T) {
 	repo := newCollectionRepo(mock)
 	ctx := context.Background()
 
-	mock.ExpectExec("DELETE FROM target_collections").
+	mock.ExpectExec(queryDeleteCollection).
 		WithArgs("missing").
 		WillReturnResult(pgxmock.NewResult("DELETE", 0))
 
 	err := repo.Delete(ctx, "missing")
 	if !errors.Is(err, store.ErrNotFound) {
-		t.Errorf("expected ErrNotFound, got: %v", err)
+		t.Errorf(fmtExpectedNotFound, err)
 	}
 }
 
@@ -317,13 +327,13 @@ func TestCollectionDelete_DBError(t *testing.T) {
 	repo := newCollectionRepo(mock)
 	ctx := context.Background()
 
-	mock.ExpectExec("DELETE FROM target_collections").
+	mock.ExpectExec(queryDeleteCollection).
 		WithArgs("col-1").
-		WillReturnError(fmt.Errorf("db error"))
+		WillReturnError(fmt.Errorf(errDBMsg))
 
 	err := repo.Delete(ctx, "col-1")
 	if err == nil {
-		t.Fatal("expected error, got nil")
+		t.Fatal(msgExpectedErr)
 	}
 }
 
@@ -342,10 +352,10 @@ func TestCollectionUpdate_Success(t *testing.T) {
 	}
 
 	mock.ExpectBegin()
-	mock.ExpectQuery("UPDATE target_collections SET").
+	mock.ExpectQuery(queryUpdateCollection).
 		WithArgs("Updated Name", "col-1").
 		WillReturnRows(collectionRow(mock))
-	mock.ExpectExec("DELETE FROM target_collection_items").
+	mock.ExpectExec(queryDeleteItems).
 		WithArgs("col-1").
 		WillReturnResult(pgxmock.NewResult("DELETE", 2))
 	mock.ExpectExec("INSERT INTO target_collection_items").
@@ -355,10 +365,10 @@ func TestCollectionUpdate_Success(t *testing.T) {
 
 	updated, err := repo.Update(ctx, c)
 	if err != nil {
-		t.Fatalf("unexpected error: %v", err)
+		t.Fatalf(fmtUnexpectedErr, err)
 	}
 	if updated.ID != "col-1" {
-		t.Errorf("expected ID col-1, got %s", updated.ID)
+		t.Errorf(fmtExpectedCol1, updated.ID)
 	}
 }
 
@@ -371,14 +381,14 @@ func TestCollectionUpdate_NotFound(t *testing.T) {
 	c := &domain.Collection{ID: "missing", Name: "Ghost"}
 
 	mock.ExpectBegin()
-	mock.ExpectQuery("UPDATE target_collections SET").
+	mock.ExpectQuery(queryUpdateCollection).
 		WithArgs("Ghost", "missing").
 		WillReturnRows(mock.NewRows(collectionColumns()))
 	mock.ExpectRollback()
 
 	_, err := repo.Update(ctx, c)
 	if !errors.Is(err, store.ErrNotFound) {
-		t.Errorf("expected ErrNotFound, got: %v", err)
+		t.Errorf(fmtExpectedNotFound, err)
 	}
 }
 
@@ -395,7 +405,7 @@ func TestCollectionUpdate_NilTargetIDs(t *testing.T) {
 	}
 
 	mock.ExpectBegin()
-	mock.ExpectQuery("UPDATE target_collections SET").
+	mock.ExpectQuery(queryUpdateCollection).
 		WithArgs("Name Only", "col-1").
 		WillReturnRows(collectionRow(mock))
 	// No item replacement when TargetIDs is nil.
@@ -403,9 +413,9 @@ func TestCollectionUpdate_NilTargetIDs(t *testing.T) {
 
 	updated, err := repo.Update(ctx, c)
 	if err != nil {
-		t.Fatalf("unexpected error: %v", err)
+		t.Fatalf(fmtUnexpectedErr, err)
 	}
 	if updated.ID != "col-1" {
-		t.Errorf("expected ID col-1, got %s", updated.ID)
+		t.Errorf(fmtExpectedCol1, updated.ID)
 	}
 }

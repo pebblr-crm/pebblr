@@ -219,8 +219,7 @@ function DayColumn({
       </button>
 
       {/* Day body / drop zone */}
-      <div
-        role="region"
+      <section
         aria-label={`${dayName} drop zone`}
         onDragEnter={(e) => { e.preventDefault(); dragCounter.current++; setDragOver(true) }}
         onDragOver={(e) => e.preventDefault()}
@@ -257,15 +256,12 @@ function DayColumn({
           const t = targetMap?.get(id)
           if (!t) return null
           return (
-            <div
+            <li
               key={id}
-              role="listitem"
-              tabIndex={0}
               draggable
-              onKeyDown={(e) => { if (e.key === 'Delete' || e.key === 'Backspace') onRemoveAssignment?.(dateStr, id) }}
               onDragStart={() => onPendingDragStart?.(dateStr, id)}
               onDragEnd={() => onPendingDragEnd?.()}
-              className={`flex items-center gap-1 bg-teal-50 border border-teal-200 rounded px-2 py-1.5 text-sm cursor-grab transition-all ${
+              className={`flex items-center gap-1 bg-teal-50 border border-teal-200 rounded px-2 py-1.5 text-sm cursor-grab transition-all list-none ${
                 draggingPending?.sourceDate === dateStr && draggingPending?.targetId === id
                   ? 'opacity-40 scale-95' : ''
               }`}
@@ -274,11 +270,12 @@ function DayColumn({
               <span className="truncate flex-1 text-teal-800 font-medium">{t.name}</span>
               <button
                 onClick={() => onRemoveAssignment?.(dateStr, id)}
+                onKeyDown={(e) => { if (e.key === 'Delete' || e.key === 'Backspace') onRemoveAssignment?.(dateStr, id) }}
                 className="text-teal-400 hover:text-red-500 shrink-0"
               >
                 <X size={12} />
               </button>
-            </div>
+            </li>
           )
         })}
 
@@ -322,7 +319,7 @@ function DayColumn({
             </span>
           </div>
         )}
-      </div>
+      </section>
     </div>
   )
 }

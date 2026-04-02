@@ -57,7 +57,7 @@ func TestAudit_List_AdminSuccess(t *testing.T) {
 
 	entries, total, err := svc.List(context.Background(), adminUser(), store.AuditFilter{})
 	if err != nil {
-		t.Fatalf("unexpected error: %v", err)
+		t.Fatalf(fmtUnexpectedErr, err)
 	}
 	if total != 1 {
 		t.Errorf("expected total 1, got %d", total)
@@ -74,7 +74,7 @@ func TestAudit_List_NilBecomesEmptySlice(t *testing.T) {
 
 	entries, _, err := svc.List(context.Background(), adminUser(), store.AuditFilter{})
 	if err != nil {
-		t.Fatalf("unexpected error: %v", err)
+		t.Fatalf(fmtUnexpectedErr, err)
 	}
 	if entries == nil {
 		t.Error("expected empty slice, got nil")
@@ -88,7 +88,7 @@ func TestAudit_List_RepForbidden(t *testing.T) {
 
 	_, _, err := svc.List(context.Background(), repUser(), store.AuditFilter{})
 	if !errors.Is(err, service.ErrForbidden) {
-		t.Fatalf("expected ErrForbidden, got %v", err)
+		t.Fatalf(fmtExpectedForbidden, err)
 	}
 }
 
@@ -99,7 +99,7 @@ func TestAudit_List_ManagerForbidden(t *testing.T) {
 
 	_, _, err := svc.List(context.Background(), managerUser(), store.AuditFilter{})
 	if !errors.Is(err, service.ErrForbidden) {
-		t.Fatalf("expected ErrForbidden, got %v", err)
+		t.Fatalf(fmtExpectedForbidden, err)
 	}
 }
 
@@ -123,7 +123,7 @@ func TestAudit_UpdateStatus_AdminSuccess(t *testing.T) {
 
 	err := svc.UpdateStatus(context.Background(), adminUser(), "a-1", "accepted")
 	if err != nil {
-		t.Fatalf("unexpected error: %v", err)
+		t.Fatalf(fmtUnexpectedErr, err)
 	}
 	if repo.updatedID != "a-1" {
 		t.Errorf("expected updatedID a-1, got %s", repo.updatedID)
@@ -140,7 +140,7 @@ func TestAudit_UpdateStatus_FalsePositive(t *testing.T) {
 
 	err := svc.UpdateStatus(context.Background(), adminUser(), "a-1", "false_positive")
 	if err != nil {
-		t.Fatalf("unexpected error: %v", err)
+		t.Fatalf(fmtUnexpectedErr, err)
 	}
 }
 
@@ -151,7 +151,7 @@ func TestAudit_UpdateStatus_Pending(t *testing.T) {
 
 	err := svc.UpdateStatus(context.Background(), adminUser(), "a-1", "pending")
 	if err != nil {
-		t.Fatalf("unexpected error: %v", err)
+		t.Fatalf(fmtUnexpectedErr, err)
 	}
 }
 
@@ -162,7 +162,7 @@ func TestAudit_UpdateStatus_RepForbidden(t *testing.T) {
 
 	err := svc.UpdateStatus(context.Background(), repUser(), "a-1", "accepted")
 	if !errors.Is(err, service.ErrForbidden) {
-		t.Fatalf("expected ErrForbidden, got %v", err)
+		t.Fatalf(fmtExpectedForbidden, err)
 	}
 }
 

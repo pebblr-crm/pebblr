@@ -29,16 +29,26 @@ export const Route = createRoute({
 
 const freqColumnHelper = createColumnHelper<FrequencyItem>()
 
-function ClassificationCell({ getValue }: { getValue: () => string }) {
-  const v = getValue()
-  const variant = v === 'A' ? 'danger' : v === 'B' ? 'warning' : 'default'
-  return <Badge variant={variant}>{v}</Badge>
+function classificationVariant(v: string): 'danger' | 'warning' | 'default' {
+  if (v === 'A') return 'danger'
+  if (v === 'B') return 'warning'
+  return 'default'
 }
 
-function ComplianceCell({ getValue }: { getValue: () => number }) {
+function ClassificationCell({ getValue }: Readonly<{ getValue: () => string }>) {
+  const v = getValue()
+  return <Badge variant={classificationVariant(v)}>{v}</Badge>
+}
+
+function complianceColor(v: number): string {
+  if (v >= 80) return 'text-emerald-600'
+  if (v >= 50) return 'text-amber-600'
+  return 'text-red-600'
+}
+
+function ComplianceCell({ getValue }: Readonly<{ getValue: () => number }>) {
   const v = Math.round(getValue())
-  const color = v >= 80 ? 'text-emerald-600' : v >= 50 ? 'text-amber-600' : 'text-red-600'
-  return <span className={`font-semibold ${color}`}>{v}%</span>
+  return <span className={`font-semibold ${complianceColor(v)}`}>{v}%</span>
 }
 
 /* ── Helpers ── */
@@ -60,6 +70,9 @@ function getMonthStart(d: Date): Date {
 function getMonthEnd(d: Date): Date {
   return new Date(d.getFullYear(), d.getMonth() + 1, 0)
 }
+
+function renderClassificationCell(info: { getValue: () => string }) { return <ClassificationCell getValue={info.getValue} /> }
+function renderComplianceCell(info: { getValue: () => number }) { return <ComplianceCell getValue={info.getValue} /> }
 
 /* ── Main Page ── */
 
@@ -125,14 +138,14 @@ function DashboardPage() {
     () => [
       freqColumnHelper.accessor('classification', {
         header: 'Classification',
-        cell: (info) => <ClassificationCell getValue={info.getValue} />,
+        cell: renderClassificationCell,
       }),
       freqColumnHelper.accessor('targetCount', { header: 'Targets' }),
       freqColumnHelper.accessor('totalVisits', { header: 'Visits' }),
       freqColumnHelper.accessor('required', { header: 'Required' }),
       freqColumnHelper.accessor('compliance', {
         header: 'Compliance',
-        cell: (info) => <ComplianceCell getValue={info.getValue} />,
+        cell: renderComplianceCell,
       }),
     ],
     [],
@@ -273,15 +286,15 @@ function DashboardPage() {
 /* ── Calendar Toolbar ── */
 
 interface CalendarToolbarProps {
-  selectedRep: string
-  onRepChange: (value: string) => void
-  repUsers: Array<{ id: string; name: string; displayName: string }>
-  viewMode: 'week' | 'month'
-  onViewModeChange: (mode: 'week' | 'month') => void
-  onPrev: () => void
-  onNext: () => void
-  onToday: () => void
-  periodLabel: string
+  readonly selectedRep: string
+  readonly onRepChange: (value: string) => void
+  readonly repUsers: Array<{ id: string; name: string; displayName: string }>
+  readonly viewMode: 'week' | 'month'
+  readonly onViewModeChange: (mode: 'week' | 'month') => void
+  readonly onPrev: () => void
+  readonly onNext: () => void
+  readonly onToday: () => void
+  readonly periodLabel: string
 }
 
 function CalendarToolbar({

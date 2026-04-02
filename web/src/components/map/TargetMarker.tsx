@@ -31,10 +31,8 @@ export function TargetMarker({
       title={name}
       onClick={onClick}
     >
-      <div
-        role="button"
-        tabIndex={0}
-        onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); onClick?.() } }}
+      <button
+        type="button"
         onMouseEnter={() => onHover?.(true)}
         onMouseLeave={() => onHover?.(false)}
         style={{
@@ -49,6 +47,7 @@ export function TargetMarker({
           cursor: 'pointer',
           transition: 'width 0.15s, height 0.15s, border 0.15s, box-shadow 0.15s',
           zIndex: highlighted || selected ? 10 : 1,
+          padding: 0,
         }}
       />
     </AdvancedMarker>

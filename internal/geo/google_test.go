@@ -9,6 +9,12 @@ import (
 	"testing"
 )
 
+const (
+	contentTypeJSON   = "application/json"
+	headerContentType = "Content-Type"
+	testAPIKey        = "test-key"
+)
+
 func TestGoogleGeocoder_Success(t *testing.T) {
 	t.Parallel()
 	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
@@ -23,13 +29,13 @@ func TestGoogleGeocoder_Success(t *testing.T) {
 				},
 			},
 		}
-		w.Header().Set("Content-Type", "application/json")
+		w.Header().Set(headerContentType, contentTypeJSON)
 		_ = json.NewEncoder(w).Encode(resp)
 	}))
 	defer srv.Close()
 
 	g := &GoogleGeocoder{
-		apiKey:     "test-key",
+		apiKey:     testAPIKey,
 		httpClient: srv.Client(),
 		baseURL:    srv.URL,
 	}
@@ -56,13 +62,13 @@ func TestGoogleGeocoder_NoResults(t *testing.T) {
 			Status:  "ZERO_RESULTS",
 			Results: []googleResult{},
 		}
-		w.Header().Set("Content-Type", "application/json")
+		w.Header().Set(headerContentType, contentTypeJSON)
 		_ = json.NewEncoder(w).Encode(resp)
 	}))
 	defer srv.Close()
 
 	g := &GoogleGeocoder{
-		apiKey:     "test-key",
+		apiKey:     testAPIKey,
 		httpClient: srv.Client(),
 		baseURL:    srv.URL,
 	}
@@ -81,7 +87,7 @@ func TestGoogleGeocoder_HTTPError(t *testing.T) {
 	defer srv.Close()
 
 	g := &GoogleGeocoder{
-		apiKey:     "test-key",
+		apiKey:     testAPIKey,
 		httpClient: srv.Client(),
 		baseURL:    srv.URL,
 	}
@@ -95,13 +101,13 @@ func TestGoogleGeocoder_HTTPError(t *testing.T) {
 func TestGoogleGeocoder_InvalidJSON(t *testing.T) {
 	t.Parallel()
 	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
-		w.Header().Set("Content-Type", "application/json")
+		w.Header().Set(headerContentType, contentTypeJSON)
 		_, _ = w.Write([]byte("{not json"))
 	}))
 	defer srv.Close()
 
 	g := &GoogleGeocoder{
-		apiKey:     "test-key",
+		apiKey:     testAPIKey,
 		httpClient: srv.Client(),
 		baseURL:    srv.URL,
 	}
@@ -115,7 +121,7 @@ func TestGoogleGeocoder_InvalidJSON(t *testing.T) {
 func TestGoogleGeocoder_ConnectionError(t *testing.T) {
 	t.Parallel()
 	g := &GoogleGeocoder{
-		apiKey:     "test-key",
+		apiKey:     testAPIKey,
 		httpClient: http.DefaultClient,
 		baseURL:    "http://localhost:1", // unreachable port
 	}

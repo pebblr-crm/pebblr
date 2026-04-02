@@ -10,6 +10,13 @@ import (
 	"github.com/pebblr/pebblr/internal/store"
 )
 
+const (
+	errDBMsg          = "db error"
+	msgExpectedErr    = "expected error, got nil"
+	testTeam99ID      = "team-99"
+	testTerritoryName = "New Territory"
+)
+
 // --- stub territory repo ---
 
 type stubTerritoryRepo struct {
@@ -68,7 +75,7 @@ func sampleTerritory() *domain.Territory {
 	return &domain.Territory{
 		ID:     "ter-1",
 		Name:   "Bucharest North",
-		TeamID: "team-1",
+		TeamID: testTeamID,
 		Region: "Bucharest",
 	}
 }
@@ -84,7 +91,7 @@ func TestTerritory_List_AdminSeesAll(t *testing.T) {
 
 	result, err := svc.List(context.Background(), adminUser())
 	if err != nil {
-		t.Fatalf("unexpected error: %v", err)
+		t.Fatalf(fmtUnexpectedErr, err)
 	}
 	if len(result) != 1 {
 		t.Errorf("expected 1 territory, got %d", len(result))
@@ -98,7 +105,7 @@ func TestTerritory_List_NilResultBecomesEmptySlice(t *testing.T) {
 
 	result, err := svc.List(context.Background(), adminUser())
 	if err != nil {
-		t.Fatalf("unexpected error: %v", err)
+		t.Fatalf(fmtUnexpectedErr, err)
 	}
 	if result == nil {
 		t.Error("expected empty slice, got nil")
@@ -110,12 +117,12 @@ func TestTerritory_List_NilResultBecomesEmptySlice(t *testing.T) {
 
 func TestTerritory_List_RepoError(t *testing.T) {
 	t.Parallel()
-	repo := &stubTerritoryRepo{listErr: errors.New("db error")}
+	repo := &stubTerritoryRepo{listErr: errors.New(errDBMsg)}
 	svc := service.NewTerritoryService(repo)
 
 	_, err := svc.List(context.Background(), adminUser())
 	if err == nil {
-		t.Fatal("expected error, got nil")
+		t.Fatal(msgExpectedErr)
 	}
 }
 
@@ -128,7 +135,7 @@ func TestTerritory_List_ManagerScopedByTeam(t *testing.T) {
 
 	result, err := svc.List(context.Background(), managerUser())
 	if err != nil {
-		t.Fatalf("unexpected error: %v", err)
+		t.Fatalf(fmtUnexpectedErr, err)
 	}
 	if len(result) != 1 {
 		t.Errorf("expected 1 territory, got %d", len(result))
@@ -144,7 +151,7 @@ func TestTerritory_Get_AdminCanView(t *testing.T) {
 
 	ter, err := svc.Get(context.Background(), adminUser(), "ter-1")
 	if err != nil {
-		t.Fatalf("unexpected error: %v", err)
+		t.Fatalf(fmtUnexpectedErr, err)
 	}
 	if ter.ID != "ter-1" {
 		t.Errorf("expected ID ter-1, got %s", ter.ID)
@@ -158,7 +165,7 @@ func TestTerritory_Get_RepSameTeam(t *testing.T) {
 
 	ter, err := svc.Get(context.Background(), repUser(), "ter-1")
 	if err != nil {
-		t.Fatalf("unexpected error: %v", err)
+		t.Fatalf(fmtUnexpectedErr, err)
 	}
 	if ter.ID != "ter-1" {
 		t.Errorf("expected ID ter-1, got %s", ter.ID)
@@ -170,21 +177,21 @@ func TestTerritory_Get_RepOtherTeamForbidden(t *testing.T) {
 	repo := &stubTerritoryRepo{territory: sampleTerritory()}
 	svc := service.NewTerritoryService(repo)
 
-	otherRep := &domain.User{ID: "rep-2", Role: domain.RoleRep, TeamIDs: []string{"team-99"}}
+	otherRep := &domain.User{ID: "rep-2", Role: domain.RoleRep, TeamIDs: []string{testTeam99ID}}
 	_, err := svc.Get(context.Background(), otherRep, "ter-1")
 	if !errors.Is(err, service.ErrForbidden) {
-		t.Fatalf("expected ErrForbidden, got %v", err)
+		t.Fatalf(fmtExpectedForbidden, err)
 	}
 }
 
 func TestTerritory_Get_RepoError(t *testing.T) {
 	t.Parallel()
-	repo := &stubTerritoryRepo{getErr: errors.New("db error")}
+	repo := &stubTerritoryRepo{getErr: errors.New(errDBMsg)}
 	svc := service.NewTerritoryService(repo)
 
 	_, err := svc.Get(context.Background(), adminUser(), "ter-1")
 	if err == nil {
-		t.Fatal("expected error, got nil")
+		t.Fatal(msgExpectedErr)
 	}
 }
 
@@ -195,13 +202,13 @@ func TestTerritory_Create_AdminSuccess(t *testing.T) {
 	repo := &stubTerritoryRepo{}
 	svc := service.NewTerritoryService(repo)
 
-	ter := &domain.Territory{Name: "New Territory", TeamID: "team-1", Region: "Cluj"}
+	ter := &domain.Territory{Name: testTerritoryName, TeamID: testTeamID, Region: "Cluj"}
 	created, err := svc.Create(context.Background(), adminUser(), ter)
 	if err != nil {
-		t.Fatalf("unexpected error: %v", err)
+		t.Fatalf(fmtUnexpectedErr, err)
 	}
-	if created.Name != "New Territory" {
-		t.Errorf("expected name New Territory, got %s", created.Name)
+	if created.Name != testTerritoryName {
+		t.Errorf("expected name %s, got %s", testTerritoryName, created.Name)
 	}
 }
 
@@ -210,10 +217,10 @@ func TestTerritory_Create_ManagerSuccess(t *testing.T) {
 	repo := &stubTerritoryRepo{}
 	svc := service.NewTerritoryService(repo)
 
-	ter := &domain.Territory{Name: "New Territory", TeamID: "team-1"}
+	ter := &domain.Territory{Name: testTerritoryName, TeamID: testTeamID}
 	_, err := svc.Create(context.Background(), managerUser(), ter)
 	if err != nil {
-		t.Fatalf("unexpected error: %v", err)
+		t.Fatalf(fmtUnexpectedErr, err)
 	}
 }
 
@@ -222,10 +229,10 @@ func TestTerritory_Create_RepForbidden(t *testing.T) {
 	repo := &stubTerritoryRepo{}
 	svc := service.NewTerritoryService(repo)
 
-	ter := &domain.Territory{Name: "New Territory", TeamID: "team-1"}
+	ter := &domain.Territory{Name: testTerritoryName, TeamID: testTeamID}
 	_, err := svc.Create(context.Background(), repUser(), ter)
 	if !errors.Is(err, service.ErrForbidden) {
-		t.Fatalf("expected ErrForbidden, got %v", err)
+		t.Fatalf(fmtExpectedForbidden, err)
 	}
 }
 
@@ -234,10 +241,10 @@ func TestTerritory_Create_EmptyNameInvalid(t *testing.T) {
 	repo := &stubTerritoryRepo{}
 	svc := service.NewTerritoryService(repo)
 
-	ter := &domain.Territory{Name: "", TeamID: "team-1"}
+	ter := &domain.Territory{Name: "", TeamID: testTeamID}
 	_, err := svc.Create(context.Background(), adminUser(), ter)
 	if !errors.Is(err, service.ErrInvalidInput) {
-		t.Fatalf("expected ErrInvalidInput, got %v", err)
+		t.Fatalf(fmtExpectedInvalidInput, err)
 	}
 }
 
@@ -248,24 +255,24 @@ func TestTerritory_Create_InvalidBoundary(t *testing.T) {
 
 	ter := &domain.Territory{
 		Name:     "Bad Boundary",
-		TeamID:   "team-1",
+		TeamID:   testTeamID,
 		Boundary: map[string]any{"invalid": true},
 	}
 	_, err := svc.Create(context.Background(), adminUser(), ter)
 	if !errors.Is(err, service.ErrInvalidInput) {
-		t.Fatalf("expected ErrInvalidInput, got %v", err)
+		t.Fatalf(fmtExpectedInvalidInput, err)
 	}
 }
 
 func TestTerritory_Create_RepoError(t *testing.T) {
 	t.Parallel()
-	repo := &stubTerritoryRepo{createErr: errors.New("db error")}
+	repo := &stubTerritoryRepo{createErr: errors.New(errDBMsg)}
 	svc := service.NewTerritoryService(repo)
 
-	ter := &domain.Territory{Name: "Test", TeamID: "team-1"}
+	ter := &domain.Territory{Name: "Test", TeamID: testTeamID}
 	_, err := svc.Create(context.Background(), adminUser(), ter)
 	if err == nil {
-		t.Fatal("expected error, got nil")
+		t.Fatal(msgExpectedErr)
 	}
 }
 
@@ -276,10 +283,10 @@ func TestTerritory_Update_AdminSuccess(t *testing.T) {
 	repo := &stubTerritoryRepo{territory: sampleTerritory()}
 	svc := service.NewTerritoryService(repo)
 
-	ter := &domain.Territory{ID: "ter-1", Name: "Updated", TeamID: "team-1"}
+	ter := &domain.Territory{ID: "ter-1", Name: "Updated", TeamID: testTeamID}
 	updated, err := svc.Update(context.Background(), adminUser(), ter)
 	if err != nil {
-		t.Fatalf("unexpected error: %v", err)
+		t.Fatalf(fmtUnexpectedErr, err)
 	}
 	if updated.Name != "Updated" {
 		t.Errorf("expected name Updated, got %s", updated.Name)
@@ -291,10 +298,10 @@ func TestTerritory_Update_RepForbidden(t *testing.T) {
 	repo := &stubTerritoryRepo{territory: sampleTerritory()}
 	svc := service.NewTerritoryService(repo)
 
-	ter := &domain.Territory{ID: "ter-1", Name: "Hacked", TeamID: "team-1"}
+	ter := &domain.Territory{ID: "ter-1", Name: "Hacked", TeamID: testTeamID}
 	_, err := svc.Update(context.Background(), repUser(), ter)
 	if !errors.Is(err, service.ErrForbidden) {
-		t.Fatalf("expected ErrForbidden, got %v", err)
+		t.Fatalf(fmtExpectedForbidden, err)
 	}
 }
 
@@ -303,10 +310,10 @@ func TestTerritory_Update_EmptyNameInvalid(t *testing.T) {
 	repo := &stubTerritoryRepo{territory: sampleTerritory()}
 	svc := service.NewTerritoryService(repo)
 
-	ter := &domain.Territory{ID: "ter-1", Name: "", TeamID: "team-1"}
+	ter := &domain.Territory{ID: "ter-1", Name: "", TeamID: testTeamID}
 	_, err := svc.Update(context.Background(), adminUser(), ter)
 	if !errors.Is(err, service.ErrInvalidInput) {
-		t.Fatalf("expected ErrInvalidInput, got %v", err)
+		t.Fatalf(fmtExpectedInvalidInput, err)
 	}
 }
 
@@ -317,22 +324,22 @@ func TestTerritory_Update_ManagerOtherTeamForbidden(t *testing.T) {
 	repo := &stubTerritoryRepo{territory: ter}
 	svc := service.NewTerritoryService(repo)
 
-	update := &domain.Territory{ID: "ter-1", Name: "Updated", TeamID: "team-99"}
+	update := &domain.Territory{ID: "ter-1", Name: "Updated", TeamID: testTeam99ID}
 	_, err := svc.Update(context.Background(), managerUser(), update)
 	if !errors.Is(err, service.ErrForbidden) {
-		t.Fatalf("expected ErrForbidden, got %v", err)
+		t.Fatalf(fmtExpectedForbidden, err)
 	}
 }
 
 func TestTerritory_Update_GetError(t *testing.T) {
 	t.Parallel()
-	repo := &stubTerritoryRepo{getErr: errors.New("db error")}
+	repo := &stubTerritoryRepo{getErr: errors.New(errDBMsg)}
 	svc := service.NewTerritoryService(repo)
 
-	ter := &domain.Territory{ID: "ter-1", Name: "Updated", TeamID: "team-1"}
+	ter := &domain.Territory{ID: "ter-1", Name: "Updated", TeamID: testTeamID}
 	_, err := svc.Update(context.Background(), adminUser(), ter)
 	if err == nil {
-		t.Fatal("expected error, got nil")
+		t.Fatal(msgExpectedErr)
 	}
 }
 
@@ -345,7 +352,7 @@ func TestTerritory_Delete_AdminSuccess(t *testing.T) {
 
 	err := svc.Delete(context.Background(), adminUser(), "ter-1")
 	if err != nil {
-		t.Fatalf("unexpected error: %v", err)
+		t.Fatalf(fmtUnexpectedErr, err)
 	}
 	if !repo.deleted {
 		t.Error("expected territory to be deleted")
@@ -359,7 +366,7 @@ func TestTerritory_Delete_RepForbidden(t *testing.T) {
 
 	err := svc.Delete(context.Background(), repUser(), "ter-1")
 	if !errors.Is(err, service.ErrForbidden) {
-		t.Fatalf("expected ErrForbidden, got %v", err)
+		t.Fatalf(fmtExpectedForbidden, err)
 	}
 }
 
@@ -372,28 +379,28 @@ func TestTerritory_Delete_ManagerOtherTeamForbidden(t *testing.T) {
 
 	err := svc.Delete(context.Background(), managerUser(), "ter-1")
 	if !errors.Is(err, service.ErrForbidden) {
-		t.Fatalf("expected ErrForbidden, got %v", err)
+		t.Fatalf(fmtExpectedForbidden, err)
 	}
 }
 
 func TestTerritory_Delete_GetError(t *testing.T) {
 	t.Parallel()
-	repo := &stubTerritoryRepo{getErr: errors.New("db error")}
+	repo := &stubTerritoryRepo{getErr: errors.New(errDBMsg)}
 	svc := service.NewTerritoryService(repo)
 
 	err := svc.Delete(context.Background(), adminUser(), "ter-1")
 	if err == nil {
-		t.Fatal("expected error, got nil")
+		t.Fatal(msgExpectedErr)
 	}
 }
 
 func TestTerritory_Delete_DeleteError(t *testing.T) {
 	t.Parallel()
-	repo := &stubTerritoryRepo{territory: sampleTerritory(), deleteErr: errors.New("db error")}
+	repo := &stubTerritoryRepo{territory: sampleTerritory(), deleteErr: errors.New(errDBMsg)}
 	svc := service.NewTerritoryService(repo)
 
 	err := svc.Delete(context.Background(), adminUser(), "ter-1")
 	if err == nil {
-		t.Fatal("expected error, got nil")
+		t.Fatal(msgExpectedErr)
 	}
 }

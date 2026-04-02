@@ -7,11 +7,11 @@ import { Button } from '@/components/ui/Button'
 import { Modal } from '@/components/ui/Modal'
 import { Check } from 'lucide-react'
 
-function MultiSelectOption({ option, selected, onToggle }: {
+function MultiSelectOption({ option, selected, onToggle }: Readonly<{
   option: { key: string; label: string }
   selected: boolean
   onToggle: () => void
-}) {
+}>) {
   return (
     <button
       type="button"
@@ -277,6 +277,10 @@ export function CreateActivityModal({ open, onClose }: Readonly<{ open: boolean;
                 case 'multi_select': {
                   const opts = resolveOptions(fieldDef)
                   const selected = Array.isArray(value) ? (value as string[]) : []
+                  const toggleMulti = (key: string) => {
+                    const next = selected.includes(key) ? selected.filter((s) => s !== key) : [...selected, key]
+                    setFieldValue(fieldDef.key, next)
+                  }
                   return (
                     <div key={fieldDef.key}>
                       <label className="mb-1.5 block text-sm font-medium text-slate-700">
@@ -288,10 +292,7 @@ export function CreateActivityModal({ open, onClose }: Readonly<{ open: boolean;
                             key={o.key}
                             option={o}
                             selected={selected.includes(o.key)}
-                            onToggle={() => setFieldValue(
-                              fieldDef.key,
-                              selected.includes(o.key) ? selected.filter((s) => s !== o.key) : [...selected, o.key],
-                            )}
+                            onToggle={() => toggleMulti(o.key)}
                           />
                         ))}
                       </div>

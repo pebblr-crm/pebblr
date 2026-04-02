@@ -1,4 +1,4 @@
-import { useState, useMemo } from 'react'
+import { useState, useMemo, useCallback } from 'react'
 import { createRoute } from '@tanstack/react-router'
 import { createColumnHelper } from '@tanstack/react-table'
 import { Route as rootRoute } from './__root'
@@ -26,7 +26,7 @@ const auditStatusVariant: Record<string, 'warning' | 'success' | 'default'> = {
 
 const columnHelper = createColumnHelper<AuditEntry>()
 
-function TimestampCell({ getValue }: { getValue: () => string }) {
+function TimestampCell({ getValue }: Readonly<{ getValue: () => string }>) {
   return (
     <span className="text-xs text-slate-500 whitespace-nowrap">
       {new Date(getValue()).toLocaleString('en-GB', {
@@ -37,21 +37,21 @@ function TimestampCell({ getValue }: { getValue: () => string }) {
   )
 }
 
-function ActorCell({ getValue }: { getValue: () => string }) {
+function ActorCell({ getValue }: Readonly<{ getValue: () => string }>) {
   return (
     <span className="text-sm text-slate-700 font-mono">{getValue().slice(0, 8)}...</span>
   )
 }
 
-function EntityTypeCell({ getValue }: { getValue: () => string }) {
+function EntityTypeCell({ getValue }: Readonly<{ getValue: () => string }>) {
   return <Badge>{getValue()}</Badge>
 }
 
-function EventTypeCell({ getValue }: { getValue: () => string }) {
+function EventTypeCell({ getValue }: Readonly<{ getValue: () => string }>) {
   return <span className="text-sm capitalize">{getValue().replace('_', ' ')}</span>
 }
 
-function StatusCell({ getValue }: { getValue: () => AuditStatus }) {
+function StatusCell({ getValue }: Readonly<{ getValue: () => AuditStatus }>) {
   return (
     <Badge variant={auditStatusVariant[getValue()] ?? 'default'}>
       {getValue().replace('_', ' ')}
@@ -59,11 +59,11 @@ function StatusCell({ getValue }: { getValue: () => AuditStatus }) {
   )
 }
 
-function ReviewActionsCell({ entry, onAccept, onFalsePositive }: {
+function ReviewActionsCell({ entry, onAccept, onFalsePositive }: Readonly<{
   entry: AuditEntry
   onAccept: (id: string) => void
   onFalsePositive: (id: string) => void
-}) {
+}>) {
   if (entry.status !== 'pending') return null
   return (
     <div className="flex gap-1">
@@ -87,6 +87,12 @@ function ReviewActionsCell({ entry, onAccept, onFalsePositive }: {
   )
 }
 
+function renderTimestampCell(info: { getValue: () => string }) { return <TimestampCell getValue={info.getValue} /> }
+function renderActorCell(info: { getValue: () => string }) { return <ActorCell getValue={info.getValue} /> }
+function renderEntityTypeCell(info: { getValue: () => string }) { return <EntityTypeCell getValue={info.getValue} /> }
+function renderEventTypeCell(info: { getValue: () => string }) { return <EventTypeCell getValue={info.getValue} /> }
+function renderStatusCell(info: { getValue: () => AuditStatus }) { return <StatusCell getValue={info.getValue} /> }
+
 function AuditPage() {
   const [entityTypeFilter, setEntityTypeFilter] = useState('')
   const [statusFilter, setStatusFilter] = useState('')
@@ -103,41 +109,46 @@ function AuditPage() {
   const entries = useMemo(() => data?.items ?? [], [data])
   const pendingCount = useMemo(() => entries.filter((e) => e.status === 'pending').length, [entries])
 
+  const renderReviewActions = useCallback(
+    ({ row }: { row: { original: AuditEntry } }) => (
+      <ReviewActionsCell
+        entry={row.original}
+        onAccept={(id) => updateStatus.mutate({ id, status: 'accepted' })}
+        onFalsePositive={(id) => updateStatus.mutate({ id, status: 'false_positive' })}
+      />
+    ),
+    [updateStatus],
+  )
+
   const columns = useMemo(
     () => [
       columnHelper.accessor('createdAt', {
         header: 'Timestamp',
-        cell: (info) => <TimestampCell getValue={info.getValue} />,
+        cell: renderTimestampCell,
       }),
       columnHelper.accessor('actorId', {
         header: 'Actor',
-        cell: (info) => <ActorCell getValue={info.getValue} />,
+        cell: renderActorCell,
       }),
       columnHelper.accessor('entityType', {
         header: 'Entity',
-        cell: (info) => <EntityTypeCell getValue={info.getValue} />,
+        cell: renderEntityTypeCell,
       }),
       columnHelper.accessor('eventType', {
         header: 'Action',
-        cell: (info) => <EventTypeCell getValue={info.getValue} />,
+        cell: renderEventTypeCell,
       }),
       columnHelper.accessor('status', {
         header: 'Status',
-        cell: (info) => <StatusCell getValue={info.getValue} />,
+        cell: renderStatusCell,
       }),
       columnHelper.display({
         id: 'actions',
         header: 'Review',
-        cell: ({ row }) => (
-          <ReviewActionsCell
-            entry={row.original}
-            onAccept={(id) => updateStatus.mutate({ id, status: 'accepted' })}
-            onFalsePositive={(id) => updateStatus.mutate({ id, status: 'false_positive' })}
-          />
-        ),
+        cell: renderReviewActions,
       }),
     ],
-    [updateStatus],
+    [renderReviewActions],
   )
 
   if (isLoading) return <Spinner />

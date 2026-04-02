@@ -30,7 +30,7 @@ const roleVariant: Record<string, 'danger' | 'warning' | 'primary'> = {
 
 const userColumnHelper = createColumnHelper<User>()
 
-function UserNameCell({ getValue }: { getValue: () => string }) {
+function UserNameCell({ getValue }: Readonly<{ getValue: () => string }>) {
   return (
     <div className="flex items-center gap-2">
       <div className="h-8 w-8 rounded-full bg-slate-200 flex items-center justify-center text-xs font-medium text-slate-600">
@@ -41,13 +41,16 @@ function UserNameCell({ getValue }: { getValue: () => string }) {
   )
 }
 
-function UserRoleCell({ getValue }: { getValue: () => string }) {
+function UserRoleCell({ getValue }: Readonly<{ getValue: () => string }>) {
   return (
     <Badge variant={roleVariant[getValue()] ?? 'default'}>
       {getValue()}
     </Badge>
   )
 }
+
+function renderUserNameCell(info: { getValue: () => string }) { return <UserNameCell getValue={info.getValue} /> }
+function renderUserRoleCell(info: { getValue: () => string }) { return <UserRoleCell getValue={info.getValue} /> }
 
 function ConsolePage() {
   const [section, setSection] = useState<Section>('users')
@@ -64,12 +67,12 @@ function ConsolePage() {
     () => [
       userColumnHelper.accessor('displayName', {
         header: 'Name',
-        cell: (info) => <UserNameCell getValue={info.getValue} />,
+        cell: renderUserNameCell,
       }),
       userColumnHelper.accessor('email', { header: 'Email' }),
       userColumnHelper.accessor('role', {
         header: 'Role',
-        cell: (info) => <UserRoleCell getValue={info.getValue} />,
+        cell: renderUserRoleCell,
       }),
     ],
     [],

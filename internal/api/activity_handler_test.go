@@ -17,16 +17,17 @@ import (
 )
 
 const (
-	testAdminID      = "admin-1"
+	testAdminID       = "admin-1"
 	headerContentType = "Content-Type"
-	contentTypeJSON  = "application/json"
-	fmtExpected200   = "expected 200, got %d: %s"
-	fmtDecodeErr     = "decoding response: %v"
-	fmtExpected400   = "expected 400, got %d: %s"
-	pathActivity1    = "/activity-1"
-	pathSubmitted    = "/submitted"
-	fmtExpected409   = "expected 409, got %d: %s"
-	testDate         = "2026-03-24"
+	contentTypeJSON   = "application/json"
+	fmtExpected200    = "expected 200, got %d: %s"
+	fmtDecodeErr      = "decoding response: %v"
+	fmtExpected400    = "expected 400, got %d: %s"
+	pathActivity1     = "/activity-1"
+	pathSubmitted     = "/submitted"
+	pathStatus        = "/status"
+	fmtExpected409    = "expected 409, got %d: %s"
+	testDate          = "2026-03-24"
 )
 
 // --- stub ActivityService ---
@@ -385,7 +386,7 @@ func TestActivitySubmit_AlreadySubmitted(t *testing.T) {
 func TestActivityPatchStatus_Succeeds(t *testing.T) {
 	t.Parallel()
 	body := map[string]any{"status": "realizat"}
-	w := activityReq(t, "PATCH", pathActivity1 + "/status", body)
+	w := activityReq(t, "PATCH", pathActivity1+pathStatus, body)
 	if w.Code != http.StatusOK {
 		t.Fatalf(fmtExpected200, w.Code, w.Body.String())
 	}
@@ -402,7 +403,7 @@ func TestActivityPatchStatus_Succeeds(t *testing.T) {
 func TestActivityPatchStatus_MissingStatus(t *testing.T) {
 	t.Parallel()
 	body := map[string]any{}
-	w := activityReq(t, "PATCH", pathActivity1 + "/status", body)
+	w := activityReq(t, "PATCH", pathActivity1+pathStatus, body)
 	if w.Code != http.StatusBadRequest {
 		t.Fatalf(fmtExpected400, w.Code, w.Body.String())
 	}
@@ -411,7 +412,7 @@ func TestActivityPatchStatus_MissingStatus(t *testing.T) {
 func TestActivityPatchStatus_SubmittedConflict(t *testing.T) {
 	t.Parallel()
 	body := map[string]any{"status": "realizat"}
-	w := activityReq(t, "PATCH", pathSubmitted + "/status", body)
+	w := activityReq(t, "PATCH", pathSubmitted+pathStatus, body)
 	if w.Code != http.StatusConflict {
 		t.Fatalf(fmtExpected409, w.Code, w.Body.String())
 	}

@@ -15,6 +15,13 @@ import (
 	"github.com/pebblr/pebblr/internal/store"
 )
 
+const (
+	fmtCollExpected200 = "expected 200, got %d: %s"
+	pathCol1           = "/col-1"
+	pathMissing        = "/missing"
+	fmtExpected404     = "expected 404, got %d"
+)
+
 // --- stub CollectionService ---
 
 type stubCollectionSvc struct {
@@ -117,7 +124,7 @@ func TestCollectionList_ReturnsOK(t *testing.T) {
 	newTestCollectionRouter(testAdminUser()).ServeHTTP(w, req)
 
 	if w.Code != http.StatusOK {
-		t.Errorf("expected 200, got %d: %s", w.Code, w.Body.String())
+		t.Errorf(fmtCollExpected200, w.Code, w.Body.String())
 	}
 	var resp map[string]any
 	if err := json.NewDecoder(w.Body).Decode(&resp); err != nil {
@@ -145,23 +152,23 @@ func TestCollectionList_NoUser_Returns401(t *testing.T) {
 
 func TestCollectionGet_Found(t *testing.T) {
 	t.Parallel()
-	req := httptest.NewRequest(http.MethodGet, "/col-1", http.NoBody)
+	req := httptest.NewRequest(http.MethodGet, pathCol1, http.NoBody)
 	w := httptest.NewRecorder()
 	newTestCollectionRouter(testAdminUser()).ServeHTTP(w, req)
 
 	if w.Code != http.StatusOK {
-		t.Errorf("expected 200, got %d: %s", w.Code, w.Body.String())
+		t.Errorf(fmtCollExpected200, w.Code, w.Body.String())
 	}
 }
 
 func TestCollectionGet_NotFound(t *testing.T) {
 	t.Parallel()
-	req := httptest.NewRequest(http.MethodGet, "/missing", http.NoBody)
+	req := httptest.NewRequest(http.MethodGet, pathMissing, http.NoBody)
 	w := httptest.NewRecorder()
 	newTestCollectionRouter(testAdminUser()).ServeHTTP(w, req)
 
 	if w.Code != http.StatusNotFound {
-		t.Errorf("expected 404, got %d", w.Code)
+		t.Errorf(fmtExpected404, w.Code)
 	}
 }
 
@@ -212,18 +219,18 @@ func TestCollectionUpdate_Returns200(t *testing.T) {
 		"name":      "Renamed",
 		"targetIds": []string{"t1", "t3"},
 	})
-	req := httptest.NewRequest(http.MethodPut, "/col-1", bytes.NewReader(body))
+	req := httptest.NewRequest(http.MethodPut, pathCol1, bytes.NewReader(body))
 	w := httptest.NewRecorder()
 	newTestCollectionRouter(testAdminUser()).ServeHTTP(w, req)
 
 	if w.Code != http.StatusOK {
-		t.Errorf("expected 200, got %d: %s", w.Code, w.Body.String())
+		t.Errorf(fmtCollExpected200, w.Code, w.Body.String())
 	}
 }
 
 func TestCollectionUpdate_InvalidJSON_Returns400(t *testing.T) {
 	t.Parallel()
-	req := httptest.NewRequest(http.MethodPut, "/col-1", bytes.NewReader([]byte("{bad")))
+	req := httptest.NewRequest(http.MethodPut, pathCol1, bytes.NewReader([]byte("{bad")))
 	w := httptest.NewRecorder()
 	newTestCollectionRouter(testAdminUser()).ServeHTTP(w, req)
 
@@ -238,18 +245,18 @@ func TestCollectionUpdate_NotFound(t *testing.T) {
 		"name":      "Update",
 		"targetIds": []string{},
 	})
-	req := httptest.NewRequest(http.MethodPut, "/missing", bytes.NewReader(body))
+	req := httptest.NewRequest(http.MethodPut, pathMissing, bytes.NewReader(body))
 	w := httptest.NewRecorder()
 	newTestCollectionRouter(testAdminUser()).ServeHTTP(w, req)
 
 	if w.Code != http.StatusNotFound {
-		t.Errorf("expected 404, got %d", w.Code)
+		t.Errorf(fmtExpected404, w.Code)
 	}
 }
 
 func TestCollectionDelete_Returns204(t *testing.T) {
 	t.Parallel()
-	req := httptest.NewRequest(http.MethodDelete, "/col-1", http.NoBody)
+	req := httptest.NewRequest(http.MethodDelete, pathCol1, http.NoBody)
 	w := httptest.NewRecorder()
 	newTestCollectionRouter(testAdminUser()).ServeHTTP(w, req)
 
@@ -260,11 +267,11 @@ func TestCollectionDelete_Returns204(t *testing.T) {
 
 func TestCollectionDelete_NotFound(t *testing.T) {
 	t.Parallel()
-	req := httptest.NewRequest(http.MethodDelete, "/missing", http.NoBody)
+	req := httptest.NewRequest(http.MethodDelete, pathMissing, http.NoBody)
 	w := httptest.NewRecorder()
 	newTestCollectionRouter(testAdminUser()).ServeHTTP(w, req)
 
 	if w.Code != http.StatusNotFound {
-		t.Errorf("expected 404, got %d", w.Code)
+		t.Errorf(fmtExpected404, w.Code)
 	}
 }

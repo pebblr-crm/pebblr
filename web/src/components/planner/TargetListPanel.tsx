@@ -172,9 +172,10 @@ export function TargetListPanel({
               const isSelected = selectedTargetIds.has(t.id)
               const isHovered = hoveredTargetId === t.id
 
-              const stateClass = isSelected
-                ? 'bg-teal-50 border-l-2 border-l-teal-500'
-                : isHovered ? 'bg-slate-50' : 'hover:bg-slate-50'
+              let stateClass: string
+              if (isSelected) stateClass = 'bg-teal-50 border-l-2 border-l-teal-500'
+              else if (isHovered) stateClass = 'bg-slate-50'
+              else stateClass = 'hover:bg-slate-50'
 
               return (
                 <li

@@ -1,4 +1,4 @@
-import { useState, useMemo } from 'react'
+import { useState, useMemo, useCallback } from 'react'
 import { createRoute, useNavigate } from '@tanstack/react-router'
 import { createColumnHelper } from '@tanstack/react-table'
 import { Route as rootRoute } from './__root'
@@ -28,7 +28,7 @@ const priorityVariant: Record<string, 'danger' | 'warning' | 'default'> = {
   c: 'default',
 }
 
-function TargetNameCell({ name, id, onNavigate }: { name: string; id: string; onNavigate: (id: string) => void }) {
+function TargetNameCell({ name, id, onNavigate }: Readonly<{ name: string; id: string; onNavigate: (id: string) => void }>) {
   return (
     <a
       href={`/targets/${id}`}
@@ -41,7 +41,7 @@ function TargetNameCell({ name, id, onNavigate }: { name: string; id: string; on
   )
 }
 
-function PriorityCell({ getValue }: { getValue: () => string }) {
+function PriorityCell({ getValue }: Readonly<{ getValue: () => string }>) {
   return (
     <Badge variant={priorityVariant[getValue()] ?? 'default'}>
       {getValue().toUpperCase()}
@@ -49,17 +49,26 @@ function PriorityCell({ getValue }: { getValue: () => string }) {
   )
 }
 
-function TargetTypeCell({ getValue }: { getValue: () => string }) {
+function TargetTypeCell({ getValue }: Readonly<{ getValue: () => string }>) {
   return <span className="capitalize">{getValue()}</span>
 }
 
-function TargetComplianceCell({ getValue }: { getValue: () => number | undefined }) {
+function complianceColor(pct: number): string {
+  if (pct >= 80) return 'text-emerald-600'
+  if (pct >= 50) return 'text-amber-600'
+  return 'text-red-600'
+}
+
+function TargetComplianceCell({ getValue }: Readonly<{ getValue: () => number | undefined }>) {
   const v = getValue()
   if (v == null) return <span className="text-slate-400">-</span>
   const pct = Math.round(v)
-  const color = pct >= 80 ? 'text-emerald-600' : pct >= 50 ? 'text-amber-600' : 'text-red-600'
-  return <span className={`font-medium ${color}`}>{pct}%</span>
+  return <span className={`font-medium ${complianceColor(pct)}`}>{pct}%</span>
 }
+
+function renderPriorityCell(info: { getValue: () => unknown }) { return <PriorityCell getValue={() => String(info.getValue())} /> }
+function renderTargetTypeCell(info: { getValue: () => string }) { return <TargetTypeCell getValue={info.getValue} /> }
+function renderTargetComplianceCell(info: { getValue: () => unknown }) { return <TargetComplianceCell getValue={() => info.getValue() as number | undefined} /> }
 
 function TargetsPage() {
   const navigate = useNavigate()
@@ -75,22 +84,27 @@ function TargetsPage() {
     return m
   }, [freqData])
 
+  const renderNameCell = useCallback(
+    (info: { getValue: () => string; row: { original: { id: string } } }) => (
+      <TargetNameCell
+        name={info.getValue()}
+        id={info.row.original.id}
+        onNavigate={(id) => navigate({ to: '/targets/$id', params: { id } })}
+      />
+    ),
+    [navigate],
+  )
+
   const columns = useMemo(
     () => [
       columnHelper.accessor('name', {
         header: 'Name',
-        cell: (info) => (
-          <TargetNameCell
-            name={info.getValue()}
-            id={info.row.original.id}
-            onNavigate={(id) => navigate({ to: '/targets/$id', params: { id } })}
-          />
-        ),
+        cell: renderNameCell,
       }),
       columnHelper.accessor((row) => getClassification(row.fields), {
         id: 'priority',
         header: 'Priority',
-        cell: (info) => <PriorityCell getValue={info.getValue} />,
+        cell: renderPriorityCell,
       }),
       columnHelper.accessor((row) => getCity(row.fields), {
         id: 'city',
@@ -98,15 +112,15 @@ function TargetsPage() {
       }),
       columnHelper.accessor('targetType', {
         header: 'Type',
-        cell: (info) => <TargetTypeCell getValue={info.getValue} />,
+        cell: renderTargetTypeCell,
       }),
       columnHelper.accessor((row) => freqMap.get(row.id), {
         id: 'compliance',
         header: 'Compliance',
-        cell: (info) => <TargetComplianceCell getValue={info.getValue} />,
+        cell: renderTargetComplianceCell,
       }),
     ],
-    [freqMap, navigate],
+    [freqMap, renderNameCell],
   )
 
   const geoTargets = useMemo(

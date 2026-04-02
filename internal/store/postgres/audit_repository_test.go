@@ -13,6 +13,18 @@ import (
 	"github.com/pebblr/pebblr/internal/store"
 )
 
+const (
+	testAuditID       = "audit-1"
+	queryInsertAudit  = "INSERT INTO audit_log"
+	errDBMsg          = "db error"
+	msgExpectedErr    = "expected error, got nil"
+	querySelectAudit  = "SELECT .+ FROM audit_log"
+	fmtExpected1Entry = "expected 1 entry, got %d"
+	auditSelectCount  = "SELECT COUNT\\(\\*\\)"
+	queryUpdateStatus = "UPDATE audit_log SET status"
+	testAdminID       = "admin-1"
+)
+
 func auditColumns() []string {
 	return []string{
 		"id", "entity_type", "entity_id", "event_type", "actor_id",
@@ -25,7 +37,7 @@ func auditRow(mock pgxmock.PgxPoolIface) *pgxmock.Rows {
 	oldJSON, _ := json.Marshal(map[string]any{"status": "planned"})
 	newJSON, _ := json.Marshal(map[string]any{"status": "completed"})
 	return mock.NewRows(auditColumns()).AddRow(
-		"audit-1", "activity", "act-1", "status_changed", "rep-1",
+		testAuditID, "activity", "act-1", "status_changed", "rep-1",
 		oldJSON, newJSON, "pending", (*string)(nil), (*time.Time)(nil), now,
 	)
 }
@@ -55,13 +67,13 @@ func TestAuditRecord_Success(t *testing.T) {
 		NewValue:   map[string]any{"status": "completed"},
 	}
 
-	mock.ExpectExec("INSERT INTO audit_log").
+	mock.ExpectExec(queryInsertAudit).
 		WithArgs(anyArgs(6)...).
 		WillReturnResult(pgxmock.NewResult("INSERT", 1))
 
 	err := repo.Record(ctx, entry)
 	if err != nil {
-		t.Fatalf("unexpected error: %v", err)
+		t.Fatalf(fmtUnexpectedErr, err)
 	}
 }
 
@@ -80,13 +92,13 @@ func TestAuditRecord_NilValues(t *testing.T) {
 		NewValue:   nil,
 	}
 
-	mock.ExpectExec("INSERT INTO audit_log").
+	mock.ExpectExec(queryInsertAudit).
 		WithArgs(anyArgs(6)...).
 		WillReturnResult(pgxmock.NewResult("INSERT", 1))
 
 	err := repo.Record(ctx, entry)
 	if err != nil {
-		t.Fatalf("unexpected error: %v", err)
+		t.Fatalf(fmtUnexpectedErr, err)
 	}
 }
 
@@ -103,13 +115,13 @@ func TestAuditRecord_DBError(t *testing.T) {
 		ActorID:    "rep-1",
 	}
 
-	mock.ExpectExec("INSERT INTO audit_log").
+	mock.ExpectExec(queryInsertAudit).
 		WithArgs(anyArgs(6)...).
-		WillReturnError(fmt.Errorf("db error"))
+		WillReturnError(fmt.Errorf(errDBMsg))
 
 	err := repo.Record(ctx, entry)
 	if err == nil {
-		t.Fatal("expected error, got nil")
+		t.Fatal(msgExpectedErr)
 	}
 }
 
@@ -121,19 +133,19 @@ func TestAuditListByEntity_Success(t *testing.T) {
 	repo := newAuditRepo(mock)
 	ctx := context.Background()
 
-	mock.ExpectQuery("SELECT .+ FROM audit_log").
+	mock.ExpectQuery(querySelectAudit).
 		WithArgs("activity", "act-1").
 		WillReturnRows(auditRow(mock))
 
 	entries, err := repo.ListByEntity(ctx, "activity", "act-1")
 	if err != nil {
-		t.Fatalf("unexpected error: %v", err)
+		t.Fatalf(fmtUnexpectedErr, err)
 	}
 	if len(entries) != 1 {
-		t.Errorf("expected 1 entry, got %d", len(entries))
+		t.Errorf(fmtExpected1Entry, len(entries))
 	}
-	if entries[0].ID != "audit-1" {
-		t.Errorf("expected ID audit-1, got %s", entries[0].ID)
+	if entries[0].ID != testAuditID {
+		t.Errorf("expected ID %s, got %s", testAuditID, entries[0].ID)
 	}
 }
 
@@ -143,13 +155,13 @@ func TestAuditListByEntity_Empty(t *testing.T) {
 	repo := newAuditRepo(mock)
 	ctx := context.Background()
 
-	mock.ExpectQuery("SELECT .+ FROM audit_log").
+	mock.ExpectQuery(querySelectAudit).
 		WithArgs("activity", "act-1").
 		WillReturnRows(emptyAuditRows(mock))
 
 	entries, err := repo.ListByEntity(ctx, "activity", "act-1")
 	if err != nil {
-		t.Fatalf("unexpected error: %v", err)
+		t.Fatalf(fmtUnexpectedErr, err)
 	}
 	if len(entries) != 0 {
 		t.Errorf("expected 0 entries, got %d", len(entries))
@@ -162,13 +174,13 @@ func TestAuditListByEntity_DBError(t *testing.T) {
 	repo := newAuditRepo(mock)
 	ctx := context.Background()
 
-	mock.ExpectQuery("SELECT .+ FROM audit_log").
+	mock.ExpectQuery(querySelectAudit).
 		WithArgs("activity", "act-1").
-		WillReturnError(fmt.Errorf("db error"))
+		WillReturnError(fmt.Errorf(errDBMsg))
 
 	_, err := repo.ListByEntity(ctx, "activity", "act-1")
 	if err == nil {
-		t.Fatal("expected error, got nil")
+		t.Fatal(msgExpectedErr)
 	}
 }
 
@@ -180,22 +192,22 @@ func TestAuditList_NoFilters(t *testing.T) {
 	repo := newAuditRepo(mock)
 	ctx := context.Background()
 
-	mock.ExpectQuery("SELECT COUNT\\(\\*\\)").
+	mock.ExpectQuery(auditSelectCount).
 		WillReturnRows(mock.NewRows([]string{"count"}).AddRow(1))
 
-	mock.ExpectQuery("SELECT .+ FROM audit_log").
+	mock.ExpectQuery(querySelectAudit).
 		WithArgs(anyArgs(1)...). // limit
 		WillReturnRows(auditRow(mock))
 
 	entries, total, err := repo.List(ctx, store.AuditFilter{})
 	if err != nil {
-		t.Fatalf("unexpected error: %v", err)
+		t.Fatalf(fmtUnexpectedErr, err)
 	}
 	if total != 1 {
 		t.Errorf("expected total 1, got %d", total)
 	}
 	if len(entries) != 1 {
-		t.Errorf("expected 1 entry, got %d", len(entries))
+		t.Errorf(fmtExpected1Entry, len(entries))
 	}
 }
 
@@ -216,23 +228,23 @@ func TestAuditList_WithFilters(t *testing.T) {
 		Limit:      10,
 	}
 
-	mock.ExpectQuery("SELECT COUNT\\(\\*\\)").
+	mock.ExpectQuery(auditSelectCount).
 		WithArgs("activity", "rep-1", "pending").
 		WillReturnRows(mock.NewRows([]string{"count"}).AddRow(15))
 
-	mock.ExpectQuery("SELECT .+ FROM audit_log").
+	mock.ExpectQuery(querySelectAudit).
 		WithArgs("activity", "rep-1", "pending", 10, 10). // filters + limit + offset
 		WillReturnRows(auditRow(mock))
 
 	entries, total, err := repo.List(ctx, filter)
 	if err != nil {
-		t.Fatalf("unexpected error: %v", err)
+		t.Fatalf(fmtUnexpectedErr, err)
 	}
 	if total != 15 {
 		t.Errorf("expected total 15, got %d", total)
 	}
 	if len(entries) != 1 {
-		t.Errorf("expected 1 entry, got %d", len(entries))
+		t.Errorf(fmtExpected1Entry, len(entries))
 	}
 }
 
@@ -242,12 +254,12 @@ func TestAuditList_CountError(t *testing.T) {
 	repo := newAuditRepo(mock)
 	ctx := context.Background()
 
-	mock.ExpectQuery("SELECT COUNT\\(\\*\\)").
-		WillReturnError(fmt.Errorf("db error"))
+	mock.ExpectQuery(auditSelectCount).
+		WillReturnError(fmt.Errorf(errDBMsg))
 
 	_, _, err := repo.List(ctx, store.AuditFilter{})
 	if err == nil {
-		t.Fatal("expected error, got nil")
+		t.Fatal(msgExpectedErr)
 	}
 }
 
@@ -257,16 +269,16 @@ func TestAuditList_QueryError(t *testing.T) {
 	repo := newAuditRepo(mock)
 	ctx := context.Background()
 
-	mock.ExpectQuery("SELECT COUNT\\(\\*\\)").
+	mock.ExpectQuery(auditSelectCount).
 		WillReturnRows(mock.NewRows([]string{"count"}).AddRow(1))
 
-	mock.ExpectQuery("SELECT .+ FROM audit_log").
+	mock.ExpectQuery(querySelectAudit).
 		WithArgs(anyArgs(1)...).
-		WillReturnError(fmt.Errorf("db error"))
+		WillReturnError(fmt.Errorf(errDBMsg))
 
 	_, _, err := repo.List(ctx, store.AuditFilter{})
 	if err == nil {
-		t.Fatal("expected error, got nil")
+		t.Fatal(msgExpectedErr)
 	}
 }
 
@@ -278,13 +290,13 @@ func TestAuditUpdateStatus_Success(t *testing.T) {
 	repo := newAuditRepo(mock)
 	ctx := context.Background()
 
-	mock.ExpectExec("UPDATE audit_log SET status").
-		WithArgs("accepted", "admin-1", "audit-1").
+	mock.ExpectExec(queryUpdateStatus).
+		WithArgs("accepted", testAdminID, testAuditID).
 		WillReturnResult(pgxmock.NewResult("UPDATE", 1))
 
-	err := repo.UpdateStatus(ctx, "audit-1", "accepted", "admin-1")
+	err := repo.UpdateStatus(ctx, testAuditID, "accepted", testAdminID)
 	if err != nil {
-		t.Fatalf("unexpected error: %v", err)
+		t.Fatalf(fmtUnexpectedErr, err)
 	}
 }
 
@@ -294,11 +306,11 @@ func TestAuditUpdateStatus_NotFound(t *testing.T) {
 	repo := newAuditRepo(mock)
 	ctx := context.Background()
 
-	mock.ExpectExec("UPDATE audit_log SET status").
-		WithArgs("accepted", "admin-1", "missing").
+	mock.ExpectExec(queryUpdateStatus).
+		WithArgs("accepted", testAdminID, "missing").
 		WillReturnResult(pgxmock.NewResult("UPDATE", 0))
 
-	err := repo.UpdateStatus(ctx, "missing", "accepted", "admin-1")
+	err := repo.UpdateStatus(ctx, "missing", "accepted", testAdminID)
 	if !errors.Is(err, store.ErrNotFound) {
 		t.Errorf("expected ErrNotFound, got: %v", err)
 	}
@@ -310,13 +322,13 @@ func TestAuditUpdateStatus_DBError(t *testing.T) {
 	repo := newAuditRepo(mock)
 	ctx := context.Background()
 
-	mock.ExpectExec("UPDATE audit_log SET status").
-		WithArgs("accepted", "admin-1", "audit-1").
-		WillReturnError(fmt.Errorf("db error"))
+	mock.ExpectExec(queryUpdateStatus).
+		WithArgs("accepted", testAdminID, testAuditID).
+		WillReturnError(fmt.Errorf(errDBMsg))
 
-	err := repo.UpdateStatus(ctx, "audit-1", "accepted", "admin-1")
+	err := repo.UpdateStatus(ctx, testAuditID, "accepted", testAdminID)
 	if err == nil {
-		t.Fatal("expected error, got nil")
+		t.Fatal(msgExpectedErr)
 	}
 }
 
@@ -326,7 +338,7 @@ func TestUnmarshalJSONValue_Empty(t *testing.T) {
 	t.Parallel()
 	result, err := unmarshalJSONValue(nil, "test")
 	if err != nil {
-		t.Fatalf("unexpected error: %v", err)
+		t.Fatalf(fmtUnexpectedErr, err)
 	}
 	if result != nil {
 		t.Error("expected nil for empty data")
@@ -338,7 +350,7 @@ func TestUnmarshalJSONValue_Valid(t *testing.T) {
 	data, _ := json.Marshal(map[string]any{"key": "value"})
 	result, err := unmarshalJSONValue(data, "test")
 	if err != nil {
-		t.Fatalf("unexpected error: %v", err)
+		t.Fatalf(fmtUnexpectedErr, err)
 	}
 	if result["key"] != "value" {
 		t.Errorf("expected key=value, got %v", result["key"])

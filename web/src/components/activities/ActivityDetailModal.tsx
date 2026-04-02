@@ -8,7 +8,7 @@ import { statusVariant, transitionColors } from '@/lib/styles'
 import { str } from '@/lib/helpers'
 import { Send, ExternalLink, AlertCircle, Check } from 'lucide-react'
 
-function ActionFooter({ transitions, config, isSubmittable, isPending, patchPending, submitPending, onTransition, onSubmit }: {
+function ActionFooter({ transitions, config, isSubmittable, isPending, patchPending, submitPending, onTransition, onSubmit }: Readonly<{
   transitions: string[]
   config: ReturnType<typeof useConfig>['data']
   isSubmittable: boolean
@@ -17,7 +17,7 @@ function ActionFooter({ transitions, config, isSubmittable, isPending, patchPend
   submitPending: boolean
   onTransition: (nextStatus: string) => void
   onSubmit: () => void
-}) {
+}>) {
   return (
     <div className="space-y-3">
       <div className="flex gap-2">
