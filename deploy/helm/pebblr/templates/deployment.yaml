@@ -43,6 +43,12 @@ spec:
           # Secrets are mounted as files — never passed as env vars
           volumeMounts:
             {{- include "pebblr.secretsVolumeMount" . | nindent 12 }}
+          startupProbe:
+            httpGet:
+              path: /healthz
+              port: http
+            failureThreshold: 30
+            periodSeconds: 2
           livenessProbe:
             {{- toYaml .Values.livenessProbe | nindent 12 }}
           readinessProbe:
