@@ -39,44 +39,44 @@ func (r *dashboardRepository) ActivityStats(ctx context.Context, scope rbac.Acti
 	// By status
 	byStatus := map[string]int{}
 	statusQuery := `SELECT status, COUNT(*) FROM activities ` + where + ` GROUP BY status`
-	rows, err := r.pool.Query(ctx, statusQuery, args...)
+	statusRows, err := r.pool.Query(ctx, statusQuery, args...)
 	if err != nil {
 		return nil, fmt.Errorf("querying activity stats by status: %w", err)
 	}
+	defer statusRows.Close()
+
 	total := 0
-	for rows.Next() {
+	for statusRows.Next() {
 		var status string
 		var count int
-		if err := rows.Scan(&status, &count); err != nil {
-			rows.Close()
+		if err := statusRows.Scan(&status, &count); err != nil {
 			return nil, fmt.Errorf("scanning status row: %w", err)
 		}
 		byStatus[status] = count
 		total += count
 	}
-	rows.Close()
-	if err := rows.Err(); err != nil {
+	if err := statusRows.Err(); err != nil {
 		return nil, fmt.Errorf("iterating status rows: %w", err)
 	}
 
-	// By category (activity_type → category mapping done at service layer, here just group by activity_type)
+	// By category (activity_type -> category mapping done at service layer, here just group by activity_type)
 	byCategory := map[string]int{}
 	typeQuery := `SELECT activity_type, COUNT(*) FROM activities ` + where + ` GROUP BY activity_type`
-	rows, err = r.pool.Query(ctx, typeQuery, args...)
+	typeRows, err := r.pool.Query(ctx, typeQuery, args...)
 	if err != nil {
 		return nil, fmt.Errorf("querying activity stats by type: %w", err)
 	}
-	for rows.Next() {
+	defer typeRows.Close()
+
+	for typeRows.Next() {
 		var activityType string
 		var count int
-		if err := rows.Scan(&activityType, &count); err != nil {
-			rows.Close()
+		if err := typeRows.Scan(&activityType, &count); err != nil {
 			return nil, fmt.Errorf("scanning type row: %w", err)
 		}
 		byCategory[activityType] = count
 	}
-	rows.Close()
-	if err := rows.Err(); err != nil {
+	if err := typeRows.Err(); err != nil {
 		return nil, fmt.Errorf("iterating type rows: %w", err)
 	}
 
@@ -284,7 +284,10 @@ func (r *dashboardRepository) WeekendFieldActivities(ctx context.Context, scope 
 		}
 		result = append(result, wa)
 	}
-	return result, rows.Err()
+	if err := rows.Err(); err != nil {
+		return nil, fmt.Errorf("iterating weekend activities: %w", err)
+	}
+	return result, nil
 }
 
 // RecoveryActivities returns dates of recovery-type activities taken.
@@ -323,7 +326,10 @@ func (r *dashboardRepository) RecoveryActivities(ctx context.Context, scope rbac
 		}
 		result = append(result, t)
 	}
-	return result, rows.Err()
+	if err := rows.Err(); err != nil {
+		return nil, fmt.Errorf("iterating recovery activities: %w", err)
+	}
+	return result, nil
 }
 
 // appendDashboardFilter adds date range and user/team filter conditions.

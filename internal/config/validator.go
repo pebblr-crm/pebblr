@@ -1,6 +1,9 @@
 package config
 
-import "fmt"
+import (
+	"fmt"
+	"sort"
+)
 
 // FieldError describes a validation failure on a single field.
 type FieldError struct {
@@ -22,12 +25,14 @@ var hoistedFields = map[string]bool{
 	"joint_visit_user_id": true,
 }
 
-// HoistedFieldKeys returns the keys of all hoisted fields as a slice.
+// HoistedFieldKeys returns the keys of all hoisted fields as a sorted slice.
+// The output is deterministic to ensure consistent API responses and testability.
 func HoistedFieldKeys() []string {
 	keys := make([]string, 0, len(hoistedFields))
 	for k := range hoistedFields {
 		keys = append(keys, k)
 	}
+	sort.Strings(keys)
 	return keys
 }
 

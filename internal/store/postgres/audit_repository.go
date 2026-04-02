@@ -3,7 +3,6 @@ package postgres
 import (
 	"context"
 	"encoding/json"
-	"errors"
 	"fmt"
 
 	"github.com/jackc/pgx/v5"
@@ -142,7 +141,7 @@ func scanAuditEntries(rows pgx.Rows) ([]*domain.AuditEntry, error) {
 		}
 		entries = append(entries, e)
 	}
-	if err := rows.Err(); err != nil && !errors.Is(err, pgx.ErrNoRows) {
+	if err := rows.Err(); err != nil {
 		return nil, fmt.Errorf("iterating audit log: %w", err)
 	}
 	return entries, nil
@@ -184,10 +183,3 @@ func unmarshalJSONValue(data []byte, label string) (map[string]any, error) {
 	return m, nil
 }
 
-// nullJSONIfNil returns nil if the map is nil (stores NULL in db), otherwise the marshalled JSON.
-func nullJSONIfNil(m map[string]any, marshalled []byte) []byte {
-	if m == nil {
-		return nil
-	}
-	return marshalled
-}

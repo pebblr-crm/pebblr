@@ -1,5 +1,7 @@
 package domain
 
+import "fmt"
+
 // OnlineStatus represents a user's current availability/presence state.
 type OnlineStatus string
 
@@ -33,4 +35,19 @@ type User struct {
 	Avatar string `json:"avatar"`
 	// OnlineStatus indicates the user's current presence state.
 	OnlineStatus OnlineStatus `json:"onlineStatus"`
+}
+
+// Validate checks that the User has valid required fields. This is a defense-in-depth
+// check to catch malformed users before they reach RBAC decisions.
+func (u *User) Validate() error {
+	if u.ID == "" {
+		return fmt.Errorf("user ID must not be empty")
+	}
+	if u.ExternalID == "" {
+		return fmt.Errorf("user external ID must not be empty")
+	}
+	if !u.Role.Valid() {
+		return fmt.Errorf("invalid user role %q", u.Role)
+	}
+	return nil
 }

@@ -223,3 +223,42 @@ func TestTenantConfig_ResolveOptions(t *testing.T) {
 		t.Fatal("expected nil for unknown options ref")
 	}
 }
+
+func TestTenantConfig_FieldActivityTypes(t *testing.T) {
+	t.Parallel()
+	cfg := testConfig(t)
+
+	types := cfg.FieldActivityTypes()
+	if len(types) != 1 || types[0] != "visit" {
+		t.Fatalf("expected [visit], got %v", types)
+	}
+
+	// Empty config returns nil.
+	empty := &TenantConfig{}
+	if types := empty.FieldActivityTypes(); len(types) != 0 {
+		t.Fatalf("expected empty slice, got %v", types)
+	}
+}
+
+func TestTenantConfig_BlockingActivityTypes(t *testing.T) {
+	t.Parallel()
+	cfg := testConfig(t)
+
+	// Default test config has no blocking types.
+	types := cfg.BlockingActivityTypes()
+	if len(types) != 0 {
+		t.Fatalf("expected no blocking types, got %v", types)
+	}
+
+	// Add a blocking activity type.
+	cfg.Activities.Types = append(cfg.Activities.Types, ActivityTypeConfig{
+		Key:                   "vacation",
+		Label:                 "Vacation",
+		Category:              "non_field",
+		BlocksFieldActivities: true,
+	})
+	types = cfg.BlockingActivityTypes()
+	if len(types) != 1 || types[0] != "vacation" {
+		t.Fatalf("expected [vacation], got %v", types)
+	}
+}

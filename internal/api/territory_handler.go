@@ -78,7 +78,8 @@ func (h *TerritoryHandler) List(w http.ResponseWriter, r *http.Request) {
 	}
 
 	w.Header().Set(headerContentType, contentTypeJSON)
-	_ = json.NewEncoder(w).Encode(map[string]any{
+	w.WriteHeader(http.StatusOK)
+	writeJSON(w, r, map[string]any{
 		"items": territories,
 		"total": len(territories),
 	})
@@ -100,7 +101,8 @@ func (h *TerritoryHandler) Get(w http.ResponseWriter, r *http.Request) {
 	}
 
 	w.Header().Set(headerContentType, contentTypeJSON)
-	_ = json.NewEncoder(w).Encode(territory)
+	w.WriteHeader(http.StatusOK)
+	writeJSON(w, r, territory)
 }
 
 // Create handles POST /api/v1/territories
@@ -132,7 +134,7 @@ func (h *TerritoryHandler) Create(w http.ResponseWriter, r *http.Request) {
 
 	w.Header().Set(headerContentType, contentTypeJSON)
 	w.WriteHeader(http.StatusCreated)
-	_ = json.NewEncoder(w).Encode(created)
+	writeJSON(w, r, created)
 }
 
 // Update handles PUT /api/v1/territories/{id}
@@ -166,7 +168,8 @@ func (h *TerritoryHandler) Update(w http.ResponseWriter, r *http.Request) {
 	}
 
 	w.Header().Set(headerContentType, contentTypeJSON)
-	_ = json.NewEncoder(w).Encode(updated)
+	w.WriteHeader(http.StatusOK)
+	writeJSON(w, r, updated)
 }
 
 // Delete handles DELETE /api/v1/territories/{id}

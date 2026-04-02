@@ -99,6 +99,9 @@ func (h *TargetHandler) List(w http.ResponseWriter, r *http.Request) {
 	if limit < 1 {
 		limit = 20
 	}
+	if limit > maxPaginationLimit {
+		limit = maxPaginationLimit
+	}
 
 	var filter store.TargetFilter
 	if t := r.URL.Query().Get("type"); t != "" {
@@ -315,6 +318,10 @@ func (h *TargetHandler) Import(w http.ResponseWriter, r *http.Request) {
 		writeError(w, http.StatusBadRequest, "BAD_REQUEST", "targets array is required and must not be empty")
 		return
 	}
+	if len(req.Targets) > maxImportItems {
+		writeError(w, http.StatusBadRequest, "BAD_REQUEST", "import limited to 1000 items per request")
+		return
+	}
 
 	targets := make([]*domain.Target, len(req.Targets))
 	for i, item := range req.Targets {
@@ -376,7 +383,8 @@ func (h *TargetHandler) FrequencyStatus(w http.ResponseWriter, r *http.Request) 
 	}
 
 	w.Header().Set(headerContentType, contentTypeJSON)
-	_ = json.NewEncoder(w).Encode(map[string]any{"items": result})
+	w.WriteHeader(http.StatusOK)
+	writeJSON(w, r, map[string]any{"items": result})
 }
 
 // VisitStatus handles GET /api/v1/targets/visit-status

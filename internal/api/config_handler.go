@@ -21,11 +21,11 @@ func NewConfigHandler(cfg *config.TenantConfig) *ConfigHandler {
 func (h *ConfigHandler) Get(w http.ResponseWriter, r *http.Request) {
 	_, err := rbac.UserFromContext(r.Context())
 	if err != nil {
-		writeError(w, http.StatusUnauthorized, "UNAUTHORIZED", "missing authenticated user")
+		writeError(w, http.StatusUnauthorized, "UNAUTHORIZED", errMissingUser)
 		return
 	}
 
-	w.Header().Set("Content-Type", "application/json")
+	w.Header().Set(headerContentType, contentTypeJSON)
 	w.WriteHeader(http.StatusOK)
 	writeJSON(w, r, h.cfg)
 }

@@ -38,19 +38,7 @@ export const Route = createRoute({
 
 /* ── Helpers ── */
 
-function getLat(fields: Record<string, unknown>): number | null {
-  const v = fields.lat
-  return typeof v === 'number' ? v : null
-}
-
-function getLng(fields: Record<string, unknown>): number | null {
-  const v = fields.lng
-  return typeof v === 'number' ? v : null
-}
-
-function getClassification(fields: Record<string, unknown>): string {
-  return ((fields.potential as string) ?? 'c').toLowerCase()
-}
+import { getLat, getLng, getClassification } from '@/lib/target-fields'
 
 
 /* ── Main page ── */
@@ -163,74 +151,80 @@ function PlannerPage() {
 
   const clearSelection = useCallback(() => setSelectedTargetIds(new Set()), [])
 
-  // ── Drop handler ──
-  const handleDrop = useCallback((dateStr: string) => {
-    // Moving a pending assignment between days
-    if (dragPending) {
-      if (dragPending.sourceDate !== dateStr) {
-        // Check both pending and existing activities on target day
-        const existingOnDay = activities.some(
-          (a) => a.dueDate.slice(0, 10) === dateStr && a.targetId === dragPending.targetId,
-        )
-        if (existingOnDay) {
-          showToast('Target already has a visit on this day', 'warning')
-          setDragPending(null)
-          return
-        }
-        setDayAssignments((prev) => {
-          const srcArr = (prev[dragPending.sourceDate] ?? []).filter((id) => id !== dragPending.targetId)
-          const dstArr = prev[dateStr] ?? []
-          if (dstArr.includes(dragPending.targetId)) {
-            showToast('Target is already on this day', 'warning')
-            return prev
-          }
-          const next = { ...prev, [dateStr]: [...dstArr, dragPending.targetId] }
-          if (srcArr.length === 0) delete next[dragPending.sourceDate]
-          else next[dragPending.sourceDate] = srcArr
-          return next
-        })
-      }
+  // ── Drop sub-handlers ──
+
+  const handleDropPending = useCallback((dateStr: string) => {
+    if (!dragPending) return
+    if (dragPending.sourceDate === dateStr) {
       setDragPending(null)
       return
     }
-    // Rescheduling existing activity
+    const existingOnDay = activities.some(
+      (a) => a.dueDate.slice(0, 10) === dateStr && a.targetId === dragPending.targetId,
+    )
+    if (existingOnDay) {
+      showToast('Target already has a visit on this day', 'warning')
+      setDragPending(null)
+      return
+    }
+    setDayAssignments((prev) => {
+      const srcArr = (prev[dragPending.sourceDate] ?? []).filter((id) => id !== dragPending.targetId)
+      const dstArr = prev[dateStr] ?? []
+      if (dstArr.includes(dragPending.targetId)) {
+        showToast('Target is already on this day', 'warning')
+        return prev
+      }
+      const next = { ...prev, [dateStr]: [...dstArr, dragPending.targetId] }
+      if (srcArr.length === 0) delete next[dragPending.sourceDate]
+      else next[dragPending.sourceDate] = srcArr
+      return next
+    })
+    setDragPending(null)
+  }, [dragPending, activities, showToast])
+
+  const handleDropTargets = useCallback((dateStr: string) => {
+    const ids = new Set(selectedTargetIds)
+    if (dragTargetId) ids.add(dragTargetId)
+    if (ids.size === 0) return
+
+    const pendingOnDay = new Set(dayAssignments[dateStr] ?? [])
+    const existingOnDay = new Set(
+      activities.filter((a) => a.dueDate.slice(0, 10) === dateStr && a.targetId).map((a) => a.targetId!),
+    )
+    const toAdd = Array.from(ids).filter((id) => !pendingOnDay.has(id) && !existingOnDay.has(id))
+    const dupCount = ids.size - toAdd.length
+
+    if (toAdd.length > 0) {
+      setDayAssignments((prev) => ({
+        ...prev,
+        [dateStr]: [...(prev[dateStr] ?? []), ...toAdd],
+      }))
+    }
+    if (dupCount > 0) {
+      const msg = dupCount === ids.size
+        ? `Already scheduled — ${dupCount === 1 ? 'target is' : `all ${dupCount} targets are`} already on this day`
+        : `${toAdd.length} added, ${dupCount} already on this day`
+      showToast(msg, 'warning')
+    }
+    setDragTargetId(null)
+    setSelectedTargetIds(new Set())
+  }, [dragTargetId, selectedTargetIds, dayAssignments, activities, showToast])
+
+  // ── Drop handler ──
+  const handleDrop = useCallback((dateStr: string) => {
+    if (dragPending) {
+      handleDropPending(dateStr)
+      return
+    }
     if (dragActivityId) {
       patchActivity.mutate({ id: dragActivityId, dueDate: dateStr })
       setDragActivityId(null)
       return
     }
-    // Dropping targets: always drop all selected (the dragged one is included in selection)
     if (dragTargetId || selectedTargetIds.size > 0) {
-      const ids = new Set(selectedTargetIds)
-      if (dragTargetId) ids.add(dragTargetId)
-      // Check against both pending assignments AND existing activities on this day
-      const pendingOnDay = new Set(dayAssignments[dateStr] ?? [])
-      const existingOnDay = new Set(
-        activities.filter((a) => a.dueDate.slice(0, 10) === dateStr && a.targetId).map((a) => a.targetId!),
-      )
-      const toAdd = Array.from(ids).filter((id) => !pendingOnDay.has(id) && !existingOnDay.has(id))
-      const dupCount = ids.size - toAdd.length
-
-      if (toAdd.length > 0) {
-        setDayAssignments((prev) => ({
-          ...prev,
-          [dateStr]: [...(prev[dateStr] ?? []), ...toAdd],
-        }))
-      }
-
-      if (dupCount > 0) {
-        showToast(
-          dupCount === ids.size
-            ? `Already scheduled — ${dupCount === 1 ? 'target is' : `all ${dupCount} targets are`} already on this day`
-            : `${toAdd.length} added, ${dupCount} already on this day`,
-          'warning',
-        )
-      }
-
-      setDragTargetId(null)
-      setSelectedTargetIds(new Set())
+      handleDropTargets(dateStr)
     }
-  }, [dragPending, dragActivityId, dragTargetId, selectedTargetIds, dayAssignments, activities, patchActivity, showToast])
+  }, [dragPending, dragActivityId, dragTargetId, selectedTargetIds, handleDropPending, handleDropTargets, patchActivity])
 
   const removeFromDay = useCallback((dateStr: string, targetId: string) => {
     setDayAssignments((prev) => {
@@ -430,24 +424,25 @@ function PlannerPage() {
                     <li
                       key={t.id}
                       draggable
-                      role="button"
-                      tabIndex={0}
                       onDragStart={(e) => {
                         e.dataTransfer.setData('text/plain', t.id)
                         setDragTargetId(t.id)
                       }}
                       onDragEnd={() => setDragTargetId(null)}
-                      onClick={() => toggleTarget(t.id)}
-                      onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); toggleTarget(t.id) } }}
                       onMouseEnter={() => setHoveredTargetId(t.id)}
                       onMouseLeave={() => setHoveredTargetId(null)}
-                      className={`px-3 py-2 border-b border-slate-50 flex items-center gap-2 text-xs cursor-pointer transition-colors ${
+                      className={`border-b border-slate-50 ${
                         isSelected
                           ? 'bg-teal-50 border-l-2 border-l-teal-500'
                           : isHovered
                             ? 'bg-slate-50'
                             : 'hover:bg-slate-50'
                       }`}
+                    >
+                    <button
+                      type="button"
+                      onClick={() => toggleTarget(t.id)}
+                      className="w-full px-3 py-2 flex items-center gap-2 text-xs cursor-pointer transition-colors text-left"
                     >
                       {isSelected && (
                         <GripVertical size={12} className="text-slate-400 shrink-0 cursor-grab" />
@@ -476,6 +471,7 @@ function PlannerPage() {
                       >
                         {priority.toUpperCase()}
                       </span>
+                    </button>
                     </li>
                   )
                 })}

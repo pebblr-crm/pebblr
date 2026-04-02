@@ -34,7 +34,7 @@ ensure_postgres() {
   fi
 
   kubectl rollout status deployment/postgres -n "$DB_NAMESPACE" --timeout="${TIMEOUT}s"
-  kubectl wait pod -l app=postgres -n "$DB_NAMESPACE" --for=condition=Ready --timeout="${TIMEOUT}s"
+  kubectl wait pod -l app.kubernetes.io/name=postgres -n "$DB_NAMESPACE" --for=condition=Ready --timeout="${TIMEOUT}s"
 }
 
 create_secret() {

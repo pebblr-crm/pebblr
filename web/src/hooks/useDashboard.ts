@@ -20,10 +20,11 @@ function buildQuery(base: string, filter: DashboardFilter): string {
 }
 
 export const dashboardKeys = {
-  activities: (f: DashboardFilter) => ['dashboard', 'activities', f] as const,
-  coverage: (f: DashboardFilter) => ['dashboard', 'coverage', f] as const,
-  frequency: (f: DashboardFilter) => ['dashboard', 'frequency', f] as const,
-  recovery: (f: DashboardFilter) => ['dashboard', 'recovery', f] as const,
+  all: ['dashboard'] as const,
+  activities: (f: DashboardFilter) => [...dashboardKeys.all, 'activities', f] as const,
+  coverage: (f: DashboardFilter) => [...dashboardKeys.all, 'coverage', f] as const,
+  frequency: (f: DashboardFilter) => [...dashboardKeys.all, 'frequency', f] as const,
+  recovery: (f: DashboardFilter) => [...dashboardKeys.all, 'recovery', f] as const,
 }
 
 export function useActivityStats(filter: DashboardFilter = {}) {

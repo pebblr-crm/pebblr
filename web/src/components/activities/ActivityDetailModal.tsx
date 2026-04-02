@@ -9,8 +9,8 @@ import { str } from '@/lib/helpers'
 import { Send, ExternalLink, AlertCircle, Check } from 'lucide-react'
 
 interface ActivityDetailModalProps {
-  activityId: string | null
-  onClose: () => void
+  readonly activityId: string | null
+  readonly onClose: () => void
 }
 
 export function ActivityDetailModal({ activityId, onClose }: ActivityDetailModalProps) {
@@ -82,27 +82,29 @@ export function ActivityDetailModal({ activityId, onClose }: ActivityDetailModal
     return Object.keys(fields).length > 0 ? fields : undefined
   }
 
+  /** Save fields first (if edited), then execute the follow-up action. */
+  const saveFieldsThen = (afterSave: () => void) => {
+    if (!activity) return
+    const fields = buildFields()
+    if (fields) {
+      patchActivity.mutate({ id: activity.id, fields }, { onSuccess: afterSave })
+    } else {
+      afterSave()
+    }
+  }
+
   const handleTransition = (nextStatus: string) => {
     if (!activity) return
     setValidationErrors([])
-    const fields = buildFields()
-    const changeStatus = () => {
+    saveFieldsThen(() => {
       patchStatus.mutate(
         { id: activity.id, status: nextStatus },
         { onSuccess: () => { void refetch() } },
       )
-    }
-    // Save fields first if any were edited, then change status
-    if (fields) {
-      patchActivity.mutate({ id: activity.id, fields }, { onSuccess: changeStatus })
-    } else {
-      changeStatus()
-    }
+    })
   }
 
-  const handleSubmit = () => {
-    if (!activity) return
-    // Client-side validation for submit_required
+  const validateSubmitFields = (): Array<{ field: string; message: string }> => {
     const errors: Array<{ field: string; message: string }> = []
     if (submitRequired.has('feedback') && !feedback.trim()) {
       errors.push({ field: 'feedback', message: 'Feedback is required before submission' })
@@ -110,15 +112,18 @@ export function ActivityDetailModal({ activityId, onClose }: ActivityDetailModal
     if (submitRequired.has('promoted_products') && promotedProducts.length === 0) {
       errors.push({ field: 'promoted_products', message: 'Select at least one product' })
     }
+    return errors
+  }
+
+  const handleSubmit = () => {
+    if (!activity) return
+    const errors = validateSubmitFields()
     if (errors.length > 0) {
       setValidationErrors(errors)
       return
     }
-
-    // Save fields via PATCH /activities/:id, then submit via POST /activities/:id/submit
     setValidationErrors([])
-    const fields = buildFields()
-    const afterSave = () => {
+    saveFieldsThen(() => {
       submitActivity.mutate(activity.id, {
         onSuccess: () => { void refetch() },
         onError: (err) => {
@@ -126,15 +131,7 @@ export function ActivityDetailModal({ activityId, onClose }: ActivityDetailModal
           if (apiErr.fields) setValidationErrors(apiErr.fields)
         },
       })
-    }
-    if (fields) {
-      patchActivity.mutate(
-        { id: activity.id, fields },
-        { onSuccess: afterSave },
-      )
-    } else {
-      afterSave()
-    }
+    })
   }
 
   const toggleProduct = (key: string) => {

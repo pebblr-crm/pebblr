@@ -9,6 +9,7 @@ import { Button } from '@/components/ui/Button'
 import { Spinner } from '@/components/ui/Spinner'
 import { QueryError } from '@/components/ui/QueryError'
 import { FileText, CheckCircle, XCircle } from 'lucide-react'
+import { Select } from '@/components/ui/Select'
 import type { AuditEntry, AuditStatus } from '@/types/audit'
 
 export const Route = createRoute({
@@ -17,7 +18,7 @@ export const Route = createRoute({
   component: AuditPage,
 })
 
-const statusVariant: Record<string, 'warning' | 'success' | 'default'> = {
+const auditStatusVariant: Record<string, 'warning' | 'success' | 'default'> = {
   pending: 'warning',
   accepted: 'success',
   false_positive: 'default',
@@ -40,10 +41,6 @@ function AuditPage() {
 
   const entries = useMemo(() => data?.items ?? [], [data])
   const pendingCount = useMemo(() => entries.filter((e) => e.status === 'pending').length, [entries])
-
-  const handleReview = (id: string, status: AuditStatus) => {
-    updateStatus.mutate({ id, status })
-  }
 
   const columns = useMemo(
     () => [
@@ -75,7 +72,7 @@ function AuditPage() {
       columnHelper.accessor('status', {
         header: 'Status',
         cell: (info) => (
-          <Badge variant={statusVariant[info.getValue()] ?? 'default'}>
+          <Badge variant={auditStatusVariant[info.getValue()] ?? 'default'}>
             {info.getValue().replace('_', ' ')}
           </Badge>
         ),
@@ -88,7 +85,7 @@ function AuditPage() {
           return (
             <div className="flex gap-1">
               <button
-                onClick={() => handleReview(row.original.id, 'accepted')}
+                onClick={() => updateStatus.mutate({ id: row.original.id, status: 'accepted' })}
                 className="rounded p-1 text-emerald-600 hover:bg-emerald-50"
                 title="Accept"
                 aria-label="Accept audit entry"
@@ -96,7 +93,7 @@ function AuditPage() {
                 <CheckCircle size={16} />
               </button>
               <button
-                onClick={() => handleReview(row.original.id, 'false_positive')}
+                onClick={() => updateStatus.mutate({ id: row.original.id, status: 'false_positive' })}
                 className="rounded p-1 text-slate-400 hover:bg-slate-100"
                 title="False positive"
                 aria-label="Mark as false positive"
@@ -108,8 +105,7 @@ function AuditPage() {
         },
       }),
     ],
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-    [],
+    [updateStatus],
   )
 
   if (isLoading) return <Spinner />
@@ -138,26 +134,26 @@ function AuditPage() {
 
       {/* Filters */}
       <div className="mb-4 flex flex-wrap items-center gap-3">
-        <select
+        <Select
           value={entityTypeFilter}
           onChange={(e) => { setEntityTypeFilter(e.target.value); setPage(1) }}
-          className="rounded-lg border border-slate-300 px-3 py-2 text-sm"
+          className="w-auto"
         >
           <option value="">All entities</option>
           <option value="activity">Activity</option>
           <option value="target">Target</option>
           <option value="user">User</option>
-        </select>
-        <select
+        </Select>
+        <Select
           value={statusFilter}
           onChange={(e) => { setStatusFilter(e.target.value); setPage(1) }}
-          className="rounded-lg border border-slate-300 px-3 py-2 text-sm"
+          className="w-auto"
         >
           <option value="">All statuses</option>
           <option value="pending">Pending</option>
           <option value="accepted">Accepted</option>
           <option value="false_positive">False Positive</option>
-        </select>
+        </Select>
         <span className="text-sm text-slate-500">{data?.total ?? 0} entries</span>
       </div>
 

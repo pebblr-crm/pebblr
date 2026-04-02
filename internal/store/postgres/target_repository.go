@@ -79,40 +79,20 @@ func (b *targetQueryBuilder) whereClause() string {
 	if len(b.conditions) == 0 {
 		return ""
 	}
-	return "WHERE " + strings.Join(b.conditions, " AND ")
+	return " WHERE " + strings.Join(b.conditions, " AND ")
 }
 
 // applyScope applies RBAC scope conditions to the query builder.
 // Returns false if the scope excludes all targets (empty result).
 func (b *targetQueryBuilder) applyScope(scope rbac.TargetScope) bool {
-	if scope.AllTargets {
+	scopeSQL, outArgs, nextIdx := targetScopeConditionsAliased("", scope, b.args, b.argIdx)
+	b.args = outArgs
+	b.argIdx = nextIdx
+	if scopeSQL != "" {
+		b.conditions = append(b.conditions, scopeSQL)
 		return true
 	}
-
-	var scopeParts []string
-	if len(scope.AssigneeIDs) > 0 {
-		placeholders := make([]string, len(scope.AssigneeIDs))
-		for i, id := range scope.AssigneeIDs {
-			placeholders[i] = fmt.Sprintf("$%d", b.argIdx)
-			b.args = append(b.args, id)
-			b.argIdx++
-		}
-		scopeParts = append(scopeParts, fmt.Sprintf("assignee_id::TEXT = ANY(ARRAY[%s])", strings.Join(placeholders, ",")))
-	}
-	if len(scope.TeamIDs) > 0 {
-		placeholders := make([]string, len(scope.TeamIDs))
-		for i, id := range scope.TeamIDs {
-			placeholders[i] = fmt.Sprintf("$%d", b.argIdx)
-			b.args = append(b.args, id)
-			b.argIdx++
-		}
-		scopeParts = append(scopeParts, fmt.Sprintf("team_id::TEXT = ANY(ARRAY[%s])", strings.Join(placeholders, ",")))
-	}
-	if len(scopeParts) == 0 {
-		return false
-	}
-	b.conditions = append(b.conditions, "("+strings.Join(scopeParts, " OR ")+")")
-	return true
+	return scope.AllTargets
 }
 
 // applyTargetFilter adds filter conditions to the query builder.
@@ -150,13 +130,13 @@ func (r *targetRepository) List(ctx context.Context, scope rbac.TargetScope, fil
 
 	where := qb.whereClause()
 
-	countQuery := `SELECT COUNT(*) FROM targets ` + where
+	countQuery := `SELECT COUNT(*) FROM targets` + where
 	var total int
 	if err := r.pool.QueryRow(ctx, countQuery, qb.args...).Scan(&total); err != nil {
 		return nil, fmt.Errorf("counting targets: %w", err)
 	}
 
-	listQuery := `SELECT ` + targetColumns + ` FROM targets ` + where +
+	listQuery := `SELECT ` + targetColumns + ` FROM targets` + where +
 		fmt.Sprintf(` ORDER BY name ASC LIMIT $%d OFFSET $%d`, qb.argIdx, qb.argIdx+1)
 	qb.args = append(qb.args, limit, offset)
 
@@ -279,33 +259,21 @@ type targetScopeResult struct {
 }
 
 // buildTargetScopeConditions generates SQL conditions and args for a target RBAC scope.
-// The prefix (e.g. "t.") is prepended to column names.
+// The prefix (e.g. "t.") is prepended to column names. It delegates to the shared
+// targetScopeConditionsAliased function to avoid duplicating scope-building logic.
 func buildTargetScopeConditions(scope rbac.TargetScope, prefix string, startArgIdx int) targetScopeResult {
-	result := targetScopeResult{argIdx: startArgIdx}
+	// Convert prefix "t." to alias "t" (strip trailing dot).
+	alias := strings.TrimSuffix(prefix, ".")
 
-	if scope.AllTargets {
-		return result
-	}
+	scopeSQL, outArgs, nextIdx := targetScopeConditionsAliased(alias, scope, nil, startArgIdx)
 
-	if len(scope.AssigneeIDs) > 0 {
-		phs := make([]string, len(scope.AssigneeIDs))
-		for i, id := range scope.AssigneeIDs {
-			phs[i] = fmt.Sprintf("$%d", result.argIdx)
-			result.args = append(result.args, id)
-			result.argIdx++
-		}
-		result.conditions = append(result.conditions, fmt.Sprintf("%sassignee_id::TEXT = ANY(ARRAY[%s])", prefix, strings.Join(phs, ",")))
+	result := targetScopeResult{
+		args:   outArgs,
+		argIdx: nextIdx,
 	}
-	if len(scope.TeamIDs) > 0 {
-		phs := make([]string, len(scope.TeamIDs))
-		for i, id := range scope.TeamIDs {
-			phs[i] = fmt.Sprintf("$%d", result.argIdx)
-			result.args = append(result.args, id)
-			result.argIdx++
-		}
-		result.conditions = append(result.conditions, fmt.Sprintf("%steam_id::TEXT = ANY(ARRAY[%s])", prefix, strings.Join(phs, ",")))
-	}
-	if len(result.conditions) == 0 {
+	if scopeSQL != "" {
+		result.conditions = []string{scopeSQL}
+	} else if !scope.AllTargets {
 		result.empty = true
 	}
 	return result
@@ -352,7 +320,10 @@ func (r *targetRepository) VisitStatus(ctx context.Context, scope rbac.TargetSco
 		}
 		result = append(result, vs)
 	}
-	return result, rows.Err()
+	if err := rows.Err(); err != nil {
+		return nil, fmt.Errorf("iterating visit status: %w", err)
+	}
+	return result, nil
 }
 
 func (r *targetRepository) FrequencyStatus(ctx context.Context, scope rbac.TargetScope, fieldTypes []string, dateFrom, dateTo time.Time) ([]store.TargetFrequencyStatus, error) {
@@ -413,7 +384,10 @@ func (r *targetRepository) FrequencyStatus(ctx context.Context, scope rbac.Targe
 		}
 		result = append(result, fs)
 	}
-	return result, rows.Err()
+	if err := rows.Err(); err != nil {
+		return nil, fmt.Errorf("iterating frequency status: %w", err)
+	}
+	return result, nil
 }
 
 func scanTargetWithFlag(row pgx.Row, flag *bool) (*domain.Target, error) {

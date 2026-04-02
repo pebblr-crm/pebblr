@@ -22,23 +22,7 @@ export const Route = createRoute({
 
 const columnHelper = createColumnHelper<Target>()
 
-function getClassification(fields: Record<string, unknown>): string {
-  return ((fields.potential as string) ?? 'c').toLowerCase()
-}
-
-function getCity(fields: Record<string, unknown>): string {
-  return (fields.city as string) ?? ''
-}
-
-function getLat(fields: Record<string, unknown>): number | null {
-  const v = fields.lat
-  return typeof v === 'number' ? v : null
-}
-
-function getLng(fields: Record<string, unknown>): number | null {
-  const v = fields.lng
-  return typeof v === 'number' ? v : null
-}
+import { getClassification, getCity, getLat, getLng } from '@/lib/target-fields'
 
 const priorityVariant: Record<string, 'danger' | 'warning' | 'default'> = {
   a: 'danger',

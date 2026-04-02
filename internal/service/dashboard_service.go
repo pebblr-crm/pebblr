@@ -129,7 +129,7 @@ func (s *DashboardService) Frequency(ctx context.Context, actor *domain.User, fi
 		}
 
 		// Expected = required visits per target * number of targets * number of months in period.
-		months := monthsInRange(filter.DateFrom, filter.DateTo)
+		months := calendarMonths(filter.DateFrom, filter.DateTo)
 		expected := required * row.TargetCount * months
 		var compliance float64
 		if expected > 0 {
@@ -175,7 +175,7 @@ func (s *DashboardService) RecoveryBalance(ctx context.Context, actor *domain.Us
 
 	scope := s.enforcer.ScopeActivityQuery(ctx, actor)
 	recoveryRule := s.cfg.Recovery
-	fieldTypes := fieldActivityTypeKeys(s.cfg)
+	fieldTypes := s.cfg.FieldActivityTypes()
 
 	weekendActivities, err := s.dashboard.WeekendFieldActivities(ctx, scope, fieldTypes, filter)
 	if err != nil {
@@ -232,17 +232,6 @@ func buildRecoveryResponse(weekendActivities []store.WeekendActivity, intervals 
 	}
 }
 
-// fieldActivityTypeKeys returns the keys of all field-category activity types from config.
-func fieldActivityTypeKeys(cfg *config.TenantConfig) []string {
-	var types []string
-	for i := range cfg.Activities.Types {
-		if cfg.Activities.Types[i].Category == "field" {
-			types = append(types, cfg.Activities.Types[i].Key)
-		}
-	}
-	return types
-}
-
 // nextBusinessDay returns the next Monday–Friday after the given date.
 func nextBusinessDay(d time.Time) time.Time {
 	d = d.AddDate(0, 0, 1)
@@ -263,14 +252,3 @@ func addBusinessDays(d time.Time, n int) time.Time {
 	return d
 }
 
-// monthsInRange returns the number of calendar months spanned by the date range (minimum 1).
-func monthsInRange(from, to time.Time) int {
-	if to.Before(from) {
-		return 1
-	}
-	months := (to.Year()-from.Year())*12 + int(to.Month()) - int(from.Month()) + 1
-	if months < 1 {
-		return 1
-	}
-	return months
-}

@@ -110,6 +110,31 @@ type validationErrorResponse struct {
 	Fields []config.FieldError  `json:"fields,omitempty"`
 }
 
+// safeBatchError maps a service error to a client-safe message for batch responses.
+// This prevents leaking internal error details (SQL errors, stack traces) to clients.
+func safeBatchError(err error) string {
+	switch {
+	case errors.Is(err, service.ErrForbidden):
+		return "access denied"
+	case errors.Is(err, store.ErrNotFound):
+		return "target not found"
+	case errors.Is(err, service.ErrInvalidInput):
+		return "invalid input"
+	case errors.Is(err, service.ErrSubmitted):
+		return "activity is submitted and locked"
+	case errors.Is(err, service.ErrMaxActivities):
+		return "maximum activities per day reached"
+	case errors.Is(err, service.ErrBlockedDay):
+		return "day is blocked by a non-field activity"
+	case errors.Is(err, service.ErrTargetRequired):
+		return "target is required"
+	case errors.Is(err, service.ErrDuplicateActivity):
+		return "activity for this target on this date already exists"
+	default:
+		return "an unexpected error occurred"
+	}
+}
+
 func mapActivityServiceError(w http.ResponseWriter, err error) {
 	var ve *service.ValidationErrors
 	if errors.As(err, &ve) {
@@ -199,6 +224,9 @@ func (h *ActivityHandler) List(w http.ResponseWriter, r *http.Request) {
 	limit, _ := strconv.Atoi(r.URL.Query().Get("limit"))
 	if limit < 1 {
 		limit = 20
+	}
+	if limit > maxPaginationLimit {
+		limit = maxPaginationLimit
 	}
 
 	filter := parseActivityFilter(r)
@@ -548,6 +576,10 @@ func (h *ActivityHandler) BatchCreate(w http.ResponseWriter, r *http.Request) {
 		writeError(w, http.StatusBadRequest, "BAD_REQUEST", "items is required")
 		return
 	}
+	if len(req.Items) > maxBatchItems {
+		writeError(w, http.StatusBadRequest, "BAD_REQUEST", "batch limited to 100 items per request")
+		return
+	}
 
 	var created []*domain.Activity
 	var batchErrors []map[string]string
@@ -571,7 +603,8 @@ func (h *ActivityHandler) BatchCreate(w http.ResponseWriter, r *http.Request) {
 		}
 		result, err := h.svc.Create(r.Context(), actor, activity)
 		if err != nil {
-			batchErrors = append(batchErrors, map[string]string{"targetId": item.TargetID, "error": err.Error()})
+			// Map to safe error message -- never leak raw service/DB errors to clients.
+			batchErrors = append(batchErrors, map[string]string{"targetId": item.TargetID, "error": safeBatchError(err)})
 			continue
 		}
 		prepareActivities(result)
@@ -632,7 +665,7 @@ func (h *ActivityHandler) CloneWeek(w http.ResponseWriter, r *http.Request) {
 
 	w.Header().Set(headerContentType, contentTypeJSON)
 	w.WriteHeader(http.StatusCreated)
-	_ = json.NewEncoder(w).Encode(result)
+	writeJSON(w, r, result)
 }
 
 // PatchStatus handles PATCH /api/v1/activities/{id}/status
