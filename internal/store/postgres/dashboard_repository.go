@@ -284,7 +284,10 @@ func (r *dashboardRepository) WeekendFieldActivities(ctx context.Context, scope 
 		}
 		result = append(result, wa)
 	}
-	return result, rows.Err()
+	if err := rows.Err(); err != nil {
+		return nil, fmt.Errorf("iterating weekend activities: %w", err)
+	}
+	return result, nil
 }
 
 // RecoveryActivities returns dates of recovery-type activities taken.
@@ -323,7 +326,10 @@ func (r *dashboardRepository) RecoveryActivities(ctx context.Context, scope rbac
 		}
 		result = append(result, t)
 	}
-	return result, rows.Err()
+	if err := rows.Err(); err != nil {
+		return nil, fmt.Errorf("iterating recovery activities: %w", err)
+	}
+	return result, nil
 }
 
 // appendDashboardFilter adds date range and user/team filter conditions.

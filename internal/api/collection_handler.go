@@ -105,7 +105,7 @@ func (h *CollectionHandler) List(w http.ResponseWriter, r *http.Request) {
 	writeJSON(w, r, map[string]any{"items": result})
 }
 
-// Get handles GET /api/v1/collections/:id
+// Get handles GET /api/v1/collections/{id}
 func (h *CollectionHandler) Get(w http.ResponseWriter, r *http.Request) {
 	actor, err := rbac.UserFromContext(r.Context())
 	if err != nil {
@@ -125,7 +125,7 @@ func (h *CollectionHandler) Get(w http.ResponseWriter, r *http.Request) {
 	writeJSON(w, r, c)
 }
 
-// Update handles PUT /api/v1/collections/:id
+// Update handles PUT /api/v1/collections/{id}
 func (h *CollectionHandler) Update(w http.ResponseWriter, r *http.Request) {
 	actor, err := rbac.UserFromContext(r.Context())
 	if err != nil {

@@ -2,6 +2,7 @@ package rbac
 
 import (
 	"context"
+	"slices"
 
 	"github.com/pebblr/pebblr/internal/domain"
 )
@@ -26,11 +27,14 @@ func (e *policyEnforcer) CanUpdateTarget(_ context.Context, actor *domain.User, 
 // based on their role. Both CanViewTarget and CanUpdateTarget share this logic
 // today; they are kept as separate methods so they can diverge in the future.
 func canAccessTarget(actor *domain.User, target *domain.Target) bool {
+	if actor == nil || target == nil {
+		return false
+	}
 	switch actor.Role {
 	case domain.RoleAdmin:
 		return true
 	case domain.RoleManager:
-		return containsString(actor.TeamIDs, target.TeamID)
+		return isTeamMember(actor, target.TeamID)
 	case domain.RoleRep:
 		return actor.ID == target.AssigneeID
 	}
@@ -38,6 +42,9 @@ func canAccessTarget(actor *domain.User, target *domain.Target) bool {
 }
 
 func (e *policyEnforcer) ScopeTargetQuery(_ context.Context, actor *domain.User) TargetScope {
+	if actor == nil || !actor.Role.Valid() {
+		return TargetScope{} // zero value: no IDs, AllTargets=false — matches nothing
+	}
 	switch actor.Role {
 	case domain.RoleAdmin:
 		return TargetScope{AllTargets: true}
@@ -46,20 +53,28 @@ func (e *policyEnforcer) ScopeTargetQuery(_ context.Context, actor *domain.User)
 	case domain.RoleRep:
 		return TargetScope{AssigneeIDs: []string{actor.ID}}
 	}
-	// Default: deny all.
-	return TargetScope{AssigneeIDs: []string{""}}
+	return TargetScope{}
 }
 
 func (e *policyEnforcer) CanViewActivity(_ context.Context, actor *domain.User, activity *domain.Activity) bool {
+	if actor == nil || activity == nil {
+		return false
+	}
 	switch actor.Role {
 	case domain.RoleAdmin:
 		return true
 	case domain.RoleManager:
-		return containsString(actor.TeamIDs, activity.TeamID)
+		return isTeamMember(actor, activity.TeamID)
 	case domain.RoleRep:
-		return actor.ID == activity.CreatorID || actor.ID == activity.JointVisitUID
+		return isCreatorOrJointVisitor(actor, activity)
 	}
 	return false
+}
+
+// isCreatorOrJointVisitor returns true if the actor created the activity
+// or is listed as the joint-visit participant.
+func isCreatorOrJointVisitor(actor *domain.User, activity *domain.Activity) bool {
+	return actor.ID == activity.CreatorID || actor.ID == activity.JointVisitUID
 }
 
 func (e *policyEnforcer) CanUpdateActivity(_ context.Context, actor *domain.User, activity *domain.Activity) bool {
@@ -75,11 +90,14 @@ func (e *policyEnforcer) CanDeleteActivity(_ context.Context, actor *domain.User
 // share this logic today; they are kept as separate methods so they can diverge
 // in the future.
 func canModifyActivity(actor *domain.User, activity *domain.Activity) bool {
+	if actor == nil || activity == nil {
+		return false
+	}
 	switch actor.Role {
 	case domain.RoleAdmin:
 		return true
 	case domain.RoleManager:
-		return containsString(actor.TeamIDs, activity.TeamID)
+		return isTeamMember(actor, activity.TeamID)
 	case domain.RoleRep:
 		return actor.ID == activity.CreatorID
 	}
@@ -87,23 +105,21 @@ func canModifyActivity(actor *domain.User, activity *domain.Activity) bool {
 }
 
 func (e *policyEnforcer) ScopeActivityQuery(_ context.Context, actor *domain.User) ActivityScope {
+	if actor == nil || !actor.Role.Valid() {
+		return ActivityScope{} // zero value: no IDs, AllActivities=false — matches nothing
+	}
 	switch actor.Role {
 	case domain.RoleAdmin:
 		return ActivityScope{AllActivities: true}
 	case domain.RoleManager:
 		return ActivityScope{TeamIDs: actor.TeamIDs}
 	case domain.RoleRep:
-		return ActivityScope{CreatorIDs: []string{actor.ID}}
+		return ActivityScope{CreatorIDs: []string{actor.ID}, JointVisitUID: actor.ID}
 	}
-	// Default: deny all.
-	return ActivityScope{CreatorIDs: []string{""}}
+	return ActivityScope{}
 }
 
-func containsString(slice []string, s string) bool {
-	for _, v := range slice {
-		if v == s {
-			return true
-		}
-	}
-	return false
+// isTeamMember reports whether the actor belongs to the given team.
+func isTeamMember(actor *domain.User, teamID string) bool {
+	return slices.Contains(actor.TeamIDs, teamID)
 }

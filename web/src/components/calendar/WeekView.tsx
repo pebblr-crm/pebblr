@@ -5,27 +5,27 @@ import type { Activity } from '@/types/activity'
 import type { Target } from '@/types/target'
 
 interface WeekViewProps {
-  weekStart: Date
-  activities: Activity[]
+  readonly weekStart: Date
+  readonly activities: readonly Activity[]
   /** Pending assignments: dateStr → target IDs not yet created */
-  dayAssignments?: Record<string, string[]>
-  targetMap?: Map<string, Target>
+  readonly dayAssignments?: Readonly<Record<string, string[]>>
+  readonly targetMap?: Map<string, Target>
   /** Whether something is currently being dragged */
-  isDragging?: boolean
+  readonly isDragging?: boolean
   /** ID of the activity currently being dragged (to dim its source card) */
-  draggingActivityId?: string | null
+  readonly draggingActivityId?: string | null
   /** Pending assignment currently being dragged: { sourceDate, targetId } */
-  draggingPending?: { sourceDate: string; targetId: string } | null
+  readonly draggingPending?: { sourceDate: string; targetId: string } | null
   /** Max visits per day from tenant config (default 10) */
-  maxPerDay?: number
-  onActivityClick?: (activity: Activity) => void
-  onDayClick?: (date: string) => void
-  onDrop?: (dateStr: string) => void
-  onRemoveAssignment?: (dateStr: string, targetId: string) => void
-  onActivityDragStart?: (activityId: string) => void
-  onActivityDragEnd?: () => void
-  onPendingDragStart?: (sourceDate: string, targetId: string) => void
-  onPendingDragEnd?: () => void
+  readonly maxPerDay?: number
+  readonly onActivityClick?: (activity: Activity) => void
+  readonly onDayClick?: (date: string) => void
+  readonly onDrop?: (dateStr: string) => void
+  readonly onRemoveAssignment?: (dateStr: string, targetId: string) => void
+  readonly onActivityDragStart?: (activityId: string) => void
+  readonly onActivityDragEnd?: () => void
+  readonly onPendingDragStart?: (sourceDate: string, targetId: string) => void
+  readonly onPendingDragEnd?: () => void
 }
 
 const DAY_NAMES = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri']
@@ -69,6 +69,34 @@ const blockerLabels: Record<string, string> = {
 }
 
 const HATCH_PATTERN = 'repeating-linear-gradient(45deg, transparent, transparent 10px, rgba(0,0,0,0.04) 10px, rgba(0,0,0,0.04) 20px)'
+
+/** Compute blocker-based capacity constraints for a day */
+function computeCapacity(blockers: readonly Activity[], maxPerDay: number) {
+  const blockerCapacity = blockers.reduce((sum, b) => {
+    return sum + (b.duration === 'full_day' ? 1.0 : 0.5)
+  }, 0)
+  const cappedCapacity = Math.min(blockerCapacity, 1.0)
+  const isFullyBlocked = cappedCapacity >= 1.0
+  const isHalfBlocked = cappedCapacity >= 0.5 && !isFullyBlocked
+  const maxVisits = isFullyBlocked ? 0 : isHalfBlocked ? Math.floor(maxPerDay / 2) : maxPerDay
+  return { isFullyBlocked, isHalfBlocked, maxVisits }
+}
+
+/** Build the header label text for a day column */
+function buildHeaderLabel(isFullyBlocked: boolean, isHalfBlocked: boolean, visitCount: number): string {
+  if (isFullyBlocked) return 'Blocked'
+  if (isHalfBlocked) return `${visitCount} visit${visitCount !== 1 ? 's' : ''} + blocker`
+  if (visitCount > 0) return `${visitCount} visit${visitCount !== 1 ? 's' : ''} planned`
+  return '0 visits planned'
+}
+
+/** Resolve the drop zone border/background classes */
+function dropZoneClasses(overCapacity: boolean, dragOver: boolean, isDragging: boolean): string {
+  if (overCapacity) return 'border-red-300 border-solid bg-red-50/30'
+  if (dragOver) return 'border-teal-500 bg-teal-50/50 border-solid'
+  if (isDragging) return 'border-dashed border-teal-200 bg-teal-50/20'
+  return 'border-slate-200 border-solid bg-slate-50'
+}
 
 export function WeekView({
   weekStart, activities, dayAssignments = {}, targetMap,
@@ -131,27 +159,27 @@ export function WeekView({
 /* ── Single day column with drop zone ── */
 
 interface DayColumnProps {
-  dayName: string
-  date: Date
-  dateStr: string
-  isToday: boolean
-  visits: Activity[]
-  blockers: Activity[]
-  pendingIds: string[]
-  targetMap?: Map<string, Target>
-  visitCount: number
-  isDragging: boolean
-  draggingActivityId?: string | null
-  draggingPending?: { sourceDate: string; targetId: string } | null
-  maxPerDay?: number
-  onDayClick?: (date: string) => void
-  onActivityClick?: (activity: Activity) => void
-  onDrop?: (dateStr: string) => void
-  onRemoveAssignment?: (dateStr: string, targetId: string) => void
-  onActivityDragStart?: (activityId: string) => void
-  onActivityDragEnd?: () => void
-  onPendingDragStart?: (sourceDate: string, targetId: string) => void
-  onPendingDragEnd?: () => void
+  readonly dayName: string
+  readonly date: Date
+  readonly dateStr: string
+  readonly isToday: boolean
+  readonly visits: readonly Activity[]
+  readonly blockers: readonly Activity[]
+  readonly pendingIds: readonly string[]
+  readonly targetMap?: Map<string, Target>
+  readonly visitCount: number
+  readonly isDragging: boolean
+  readonly draggingActivityId?: string | null
+  readonly draggingPending?: { sourceDate: string; targetId: string } | null
+  readonly maxPerDay?: number
+  readonly onDayClick?: (date: string) => void
+  readonly onActivityClick?: (activity: Activity) => void
+  readonly onDrop?: (dateStr: string) => void
+  readonly onRemoveAssignment?: (dateStr: string, targetId: string) => void
+  readonly onActivityDragStart?: (activityId: string) => void
+  readonly onActivityDragEnd?: () => void
+  readonly onPendingDragStart?: (sourceDate: string, targetId: string) => void
+  readonly onPendingDragEnd?: () => void
 }
 
 function DayColumn({
@@ -165,26 +193,9 @@ function DayColumn({
   const [dragOver, setDragOver] = useState(false)
   const dragCounter = useRef(0)
 
-  // Compute blocker capacity: full_day → 1.0, half_day → 0.5
-  const blockerCapacity = blockers.reduce((sum, b) => {
-    return sum + (b.duration === 'full_day' ? 1.0 : 0.5)
-  }, 0)
-  const cappedCapacity = Math.min(blockerCapacity, 1.0)
-  const isFullyBlocked = cappedCapacity >= 1.0
-  const isHalfBlocked = cappedCapacity >= 0.5 && !isFullyBlocked
-
-  // Capacity warning: full block = no visits allowed, half block = half the max
-  const maxVisits = isFullyBlocked ? 0 : isHalfBlocked ? Math.floor(maxPerDay / 2) : maxPerDay
+  const { isFullyBlocked, isHalfBlocked, maxVisits } = computeCapacity(blockers, maxPerDay)
   const overCapacity = visitCount > maxVisits
-
-  // Header label
-  const headerLabel = isFullyBlocked
-    ? 'Blocked'
-    : isHalfBlocked
-      ? `${visitCount} visit${visitCount !== 1 ? 's' : ''} + blocker`
-      : visitCount > 0
-        ? `${visitCount} visit${visitCount !== 1 ? 's' : ''} planned`
-        : '0 visits planned'
+  const headerLabel = buildHeaderLabel(isFullyBlocked, isHalfBlocked, visitCount)
 
   return (
     <div className="flex flex-col gap-2 min-h-[500px]">
@@ -210,15 +221,7 @@ function DayColumn({
         onDragOver={(e) => e.preventDefault()}
         onDragLeave={() => { dragCounter.current--; if (dragCounter.current === 0) setDragOver(false) }}
         onDrop={(e) => { e.preventDefault(); dragCounter.current = 0; setDragOver(false); onDrop?.(dateStr) }}
-        className={`flex-1 rounded-md border-2 p-2 gap-2 relative transition-colors flex flex-col overflow-hidden ${
-          overCapacity
-            ? 'border-red-300 border-solid bg-red-50/30'
-            : dragOver
-              ? 'border-teal-500 bg-teal-50/50 border-solid'
-              : isDragging
-                ? 'border-dashed border-teal-200 bg-teal-50/20'
-                : 'border-slate-200 border-solid bg-slate-50'
-        }`}
+        className={`flex-1 rounded-md border-2 p-2 gap-2 relative transition-colors flex flex-col overflow-hidden ${dropZoneClasses(overCapacity, dragOver, isDragging)}`}
       >
 
         {/* Visit cards */}
@@ -226,23 +229,21 @@ function DayColumn({
           const priority = getTargetPriority(activity)
           const borderClass = priorityBorder[priority] ?? priorityBorder.c
           return (
-            <div
+            <button
               key={activity.id}
+              type="button"
               draggable
-              role="button"
-              tabIndex={0}
               onDragStart={() => onActivityDragStart?.(activity.id)}
               onDragEnd={() => onActivityDragEnd?.()}
               onClick={() => onActivityClick?.(activity)}
-              onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); onActivityClick?.(activity) } }}
-              className={`bg-white p-2 rounded border-l-4 ${borderClass} shadow-sm text-sm cursor-grab hover:shadow-md transition-all ${
+              className={`bg-white p-2 rounded border-l-4 ${borderClass} shadow-sm text-sm cursor-grab hover:shadow-md transition-all text-left w-full ${
                 draggingActivityId === activity.id ? 'opacity-40 scale-95' : ''
               }`}
             >
               <div className="font-medium text-slate-800 truncate">
                 {activity.targetName ?? activity.label ?? activity.activityType}
               </div>
-            </div>
+            </button>
           )
         })}
 
@@ -280,13 +281,11 @@ function DayColumn({
           const details = (blocker.fields?.details as string) ?? ''
           const isFullDay = blocker.duration === 'full_day'
           return (
-            <div
+            <button
               key={blocker.id}
-              role="button"
-              tabIndex={0}
+              type="button"
               onClick={() => onActivityClick?.(blocker)}
-              onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); onActivityClick?.(blocker) } }}
-              className="rounded border border-slate-200 overflow-hidden cursor-pointer hover:border-slate-300 transition-colors relative flex-1 min-h-[70px]"
+              className="rounded border border-slate-200 overflow-hidden cursor-pointer hover:border-slate-300 transition-colors relative flex-1 min-h-[70px] w-full"
               style={{
                 backgroundImage: HATCH_PATTERN,
                 backgroundColor: 'rgb(241 245 249)',
@@ -303,7 +302,7 @@ function DayColumn({
                   {isFullDay ? 'All Day' : 'Half Day'}
                 </span>
               </div>
-            </div>
+            </button>
           )
         })}
 

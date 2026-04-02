@@ -7,9 +7,11 @@ import (
 	"github.com/pebblr/pebblr/internal/domain"
 )
 
-type contextKey string
+// contextKey is an unexported type for context keys in this package,
+// preventing collisions with keys defined in other packages.
+type contextKey struct{}
 
-const userKey contextKey = "rbac_user"
+var userKey contextKey
 
 // WithUser stores the authenticated User in the context for RBAC checks.
 func WithUser(ctx context.Context, user *domain.User) context.Context {

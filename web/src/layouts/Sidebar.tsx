@@ -1,3 +1,4 @@
+import { type ReactNode } from 'react'
 import { useTranslation } from 'react-i18next'
 import { Link } from '@tanstack/react-router'
 import { useQueryClient } from '@tanstack/react-query'
@@ -17,7 +18,7 @@ import {
 interface NavItem {
   label: string
   href: string
-  icon: React.ReactNode
+  icon: ReactNode
   roles: readonly string[]
 }
 

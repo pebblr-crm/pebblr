@@ -2,6 +2,7 @@ package main
 
 import (
 	"context"
+	"errors"
 	"flag"
 	"fmt"
 	"log/slog"
@@ -145,15 +146,21 @@ func serve(configPath, authProvider string) error {
 	ctx, cancel := signal.NotifyContext(context.Background(), syscall.SIGINT, syscall.SIGTERM)
 	defer cancel()
 
+	listenErr := make(chan error, 1)
 	go func() {
 		logger.Info("starting server", "addr", srv.Addr)
-		if err := srv.ListenAndServe(); err != nil && err != http.ErrServerClosed {
-			logger.Error("server error", "err", err)
-			os.Exit(1)
+		if err := srv.ListenAndServe(); err != nil && !errors.Is(err, http.ErrServerClosed) {
+			listenErr <- err
 		}
+		close(listenErr)
 	}()
 
-	<-ctx.Done()
+	select {
+	case err := <-listenErr:
+		return fmt.Errorf("listen: %w", err)
+	case <-ctx.Done():
+	}
+
 	logger.Info("shutting down server")
 
 	shutdownCtx, shutdownCancel := context.WithTimeout(context.Background(), 30*time.Second)

@@ -2,7 +2,6 @@ package auth
 
 import (
 	"context"
-	"encoding/json"
 	"net/http"
 	"strings"
 )
@@ -34,6 +33,14 @@ func Middleware(authenticator Authenticator) func(http.Handler) http.Handler {
 	}
 }
 
+// writeJSONError writes a structured JSON error response with the correct
+// Content-Type header. This avoids http.Error which sets text/plain.
+func writeJSONError(w http.ResponseWriter, status int, code, message string) {
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(status)
+	_, _ = w.Write([]byte(`{"error":{"code":"` + code + `","message":"` + message + `"}}`))
+}
+
 // WithClaims stores UserClaims in the context.
 func WithClaims(ctx context.Context, claims *UserClaims) context.Context {
 	return context.WithValue(ctx, claimsKey, claims)
@@ -44,23 +51,6 @@ func WithClaims(ctx context.Context, claims *UserClaims) context.Context {
 func ClaimsFromContext(ctx context.Context) *UserClaims {
 	claims, _ := ctx.Value(claimsKey).(*UserClaims)
 	return claims
-}
-
-// writeJSONError writes a structured JSON error response with the correct Content-Type.
-func writeJSONError(w http.ResponseWriter, status int, code, message string) {
-	w.Header().Set("Content-Type", "application/json")
-	w.WriteHeader(status)
-	_ = json.NewEncoder(w).Encode(struct {
-		Error struct {
-			Code    string `json:"code"`
-			Message string `json:"message"`
-		} `json:"error"`
-	}{
-		Error: struct {
-			Code    string `json:"code"`
-			Message string `json:"message"`
-		}{Code: code, Message: message},
-	})
 }
 
 // bearerToken extracts the Bearer token from the Authorization header.

@@ -1,3 +1,5 @@
+import { type ReactNode } from 'react'
+
 const variants = {
   default: 'bg-slate-100 text-slate-700',
   primary: 'bg-teal-50 text-teal-700',
@@ -8,7 +10,7 @@ const variants = {
 
 interface BadgeProps {
   variant?: keyof typeof variants
-  children: React.ReactNode
+  children: ReactNode
   className?: string
 }
 
