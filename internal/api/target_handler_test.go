@@ -17,7 +17,12 @@ import (
 	"github.com/pebblr/pebblr/internal/store"
 )
 
-const testDrName = "Dr. Test"
+const (
+	testDrName     = "Dr. Test"
+	fmtExpected403 = "expected 403, got %d: %s"
+	pathImport     = "/import"
+	pathTarget1    = "/target-1"
+)
 
 // --- stub TargetService ---
 
@@ -41,7 +46,7 @@ func (s *stubTargetSvc) Get(_ context.Context, actor *domain.User, id string) (*
 		Name:       testDrName,
 		Fields:     map[string]any{},
 		AssigneeID: actor.ID,
-		TeamID:     "team-1",
+		TeamID:     testTeamID,
 	}, nil
 }
 
@@ -111,7 +116,7 @@ func targetReq(t *testing.T, method, path string, body any) *httptest.ResponseRe
 	req := httptest.NewRequest(method, path, &buf)
 	req.Header.Set("Content-Type", "application/json")
 	// Inject an admin user into the context for auth.
-	user := &domain.User{ID: "admin-1", Role: domain.RoleAdmin, TeamIDs: []string{"team-1"}}
+	user := &domain.User{ID: testAdminID, Role: domain.RoleAdmin, TeamIDs: []string{testTeamID}}
 	ctx := rbac.WithUser(req.Context(), user)
 	req = req.WithContext(ctx)
 	w := httptest.NewRecorder()
@@ -129,7 +134,7 @@ func targetReqAsRep(t *testing.T, method, path string, body any) *httptest.Respo
 	}
 	req := httptest.NewRequest(method, path, &buf)
 	req.Header.Set("Content-Type", "application/json")
-	user := &domain.User{ID: "rep-1", Role: domain.RoleRep, TeamIDs: []string{"team-1"}}
+	user := &domain.User{ID: "rep-1", Role: domain.RoleRep, TeamIDs: []string{testTeamID}}
 	ctx := rbac.WithUser(req.Context(), user)
 	req = req.WithContext(ctx)
 	w := httptest.NewRecorder()
@@ -143,7 +148,7 @@ func TestTargetList_ReturnsOK(t *testing.T) {
 	t.Parallel()
 	w := targetReq(t, "GET", "/", nil)
 	if w.Code != http.StatusOK {
-		t.Fatalf("expected 200, got %d: %s", w.Code, w.Body.String())
+		t.Fatalf(fmtExpected200, w.Code, w.Body.String())
 	}
 
 	var resp map[string]any
@@ -179,7 +184,7 @@ func TestTargetCreate_RepForbidden(t *testing.T) {
 	}
 	w := targetReqAsRep(t, "POST", "/", body)
 	if w.Code != http.StatusForbidden {
-		t.Fatalf("expected 403, got %d: %s", w.Code, w.Body.String())
+		t.Fatalf(fmtExpected403, w.Code, w.Body.String())
 	}
 }
 
@@ -198,9 +203,9 @@ func TestTargetCreate_MissingName(t *testing.T) {
 
 func TestTargetGet_ReturnsOK(t *testing.T) {
 	t.Parallel()
-	w := targetReq(t, "GET", "/target-1", nil)
+	w := targetReq(t, "GET", pathTarget1, nil)
 	if w.Code != http.StatusOK {
-		t.Fatalf("expected 200, got %d: %s", w.Code, w.Body.String())
+		t.Fatalf(fmtExpected200, w.Code, w.Body.String())
 	}
 }
 
@@ -221,9 +226,9 @@ func TestTargetUpdate_AdminSucceeds(t *testing.T) {
 		"name":       "Dr. Updated",
 		"fields":     map[string]any{},
 	}
-	w := targetReq(t, "PUT", "/target-1", body)
+	w := targetReq(t, "PUT", pathTarget1, body)
 	if w.Code != http.StatusOK {
-		t.Fatalf("expected 200, got %d: %s", w.Code, w.Body.String())
+		t.Fatalf(fmtExpected200, w.Code, w.Body.String())
 	}
 }
 
@@ -234,9 +239,9 @@ func TestTargetUpdate_RepForbidden(t *testing.T) {
 		"name":       "Dr. Updated",
 		"fields":     map[string]any{},
 	}
-	w := targetReqAsRep(t, "PUT", "/target-1", body)
+	w := targetReqAsRep(t, "PUT", pathTarget1, body)
 	if w.Code != http.StatusForbidden {
-		t.Fatalf("expected 403, got %d: %s", w.Code, w.Body.String())
+		t.Fatalf(fmtExpected403, w.Code, w.Body.String())
 	}
 }
 
@@ -250,9 +255,9 @@ func TestTargetImport_AdminSucceeds(t *testing.T) {
 			{"externalId": "ext-2", "targetType": "pharmacy", "name": "Central Pharmacy", "fields": map[string]any{}},
 		},
 	}
-	w := targetReq(t, "POST", "/import", body)
+	w := targetReq(t, "POST", pathImport, body)
 	if w.Code != http.StatusOK {
-		t.Fatalf("expected 200, got %d: %s", w.Code, w.Body.String())
+		t.Fatalf(fmtExpected200, w.Code, w.Body.String())
 	}
 
 	var resp map[string]any
@@ -271,9 +276,9 @@ func TestTargetImport_RepForbidden(t *testing.T) {
 			{"externalId": "ext-1", "targetType": "doctor", "name": "Dr. Import"},
 		},
 	}
-	w := targetReqAsRep(t, "POST", "/import", body)
+	w := targetReqAsRep(t, "POST", pathImport, body)
 	if w.Code != http.StatusForbidden {
-		t.Fatalf("expected 403, got %d: %s", w.Code, w.Body.String())
+		t.Fatalf(fmtExpected403, w.Code, w.Body.String())
 	}
 }
 
@@ -282,7 +287,7 @@ func TestTargetImport_EmptyTargets(t *testing.T) {
 	body := map[string]any{
 		"targets": []map[string]any{},
 	}
-	w := targetReq(t, "POST", "/import", body)
+	w := targetReq(t, "POST", pathImport, body)
 	if w.Code != http.StatusBadRequest {
 		t.Fatalf("expected 400, got %d: %s", w.Code, w.Body.String())
 	}

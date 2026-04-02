@@ -30,6 +30,28 @@ const roleVariant: Record<string, 'danger' | 'warning' | 'primary'> = {
 
 const userColumnHelper = createColumnHelper<User>()
 
+function UserNameCell({ getValue }: Readonly<{ getValue: () => string }>) {
+  return (
+    <div className="flex items-center gap-2">
+      <div className="h-8 w-8 rounded-full bg-slate-200 flex items-center justify-center text-xs font-medium text-slate-600">
+        {getValue()?.charAt(0) ?? '?'}
+      </div>
+      <span className="font-medium text-slate-900">{getValue()}</span>
+    </div>
+  )
+}
+
+function UserRoleCell({ getValue }: Readonly<{ getValue: () => string }>) {
+  return (
+    <Badge variant={roleVariant[getValue()] ?? 'default'}>
+      {getValue()}
+    </Badge>
+  )
+}
+
+function renderUserNameCell(info: { getValue: () => string }) { return <UserNameCell getValue={info.getValue} /> }
+function renderUserRoleCell(info: { getValue: () => string }) { return <UserRoleCell getValue={info.getValue} /> }
+
 function ConsolePage() {
   const [section, setSection] = useState<Section>('users')
   const { data: usersData, isLoading: usersLoading, isError: usersError, refetch: refetchUsers } = useUsers()
@@ -45,23 +67,12 @@ function ConsolePage() {
     () => [
       userColumnHelper.accessor('displayName', {
         header: 'Name',
-        cell: (info) => (
-          <div className="flex items-center gap-2">
-            <div className="h-8 w-8 rounded-full bg-slate-200 flex items-center justify-center text-xs font-medium text-slate-600">
-              {info.getValue()?.charAt(0) ?? '?'}
-            </div>
-            <span className="font-medium text-slate-900">{info.getValue()}</span>
-          </div>
-        ),
+        cell: renderUserNameCell,
       }),
       userColumnHelper.accessor('email', { header: 'Email' }),
       userColumnHelper.accessor('role', {
         header: 'Role',
-        cell: (info) => (
-          <Badge variant={roleVariant[info.getValue()] ?? 'default'}>
-            {info.getValue()}
-          </Badge>
-        ),
+        cell: renderUserRoleCell,
       }),
     ],
     [],

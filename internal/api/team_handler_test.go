@@ -18,13 +18,13 @@ type stubTeamSvc struct{}
 
 func (s *stubTeamSvc) List(_ context.Context, _ *domain.User) ([]*domain.Team, error) {
 	return []*domain.Team{
-		{ID: "team-1", Name: "Alpha Team", ManagerID: "admin-1"},
+		{ID: testTeamID, Name: "Alpha Team", ManagerID: "admin-1"},
 	}, nil
 }
 
 func (s *stubTeamSvc) Get(_ context.Context, _ *domain.User, id string) (*domain.Team, error) {
-	if id == "team-1" {
-		return &domain.Team{ID: "team-1", Name: "Alpha Team", ManagerID: "admin-1"}, nil
+	if id == testTeamID {
+		return &domain.Team{ID: testTeamID, Name: "Alpha Team", ManagerID: "admin-1"}, nil
 	}
 	return nil, store.ErrNotFound
 }

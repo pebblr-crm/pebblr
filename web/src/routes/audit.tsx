@@ -1,4 +1,4 @@
-import { useState, useMemo } from 'react'
+import { useState, useMemo, useCallback } from 'react'
 import { createRoute } from '@tanstack/react-router'
 import { createColumnHelper } from '@tanstack/react-table'
 import { Route as rootRoute } from './__root'
@@ -26,6 +26,73 @@ const auditStatusVariant: Record<string, 'warning' | 'success' | 'default'> = {
 
 const columnHelper = createColumnHelper<AuditEntry>()
 
+function TimestampCell({ getValue }: Readonly<{ getValue: () => string }>) {
+  return (
+    <span className="text-xs text-slate-500 whitespace-nowrap">
+      {new Date(getValue()).toLocaleString('en-GB', {
+        day: '2-digit', month: 'short', year: 'numeric',
+        hour: '2-digit', minute: '2-digit',
+      })}
+    </span>
+  )
+}
+
+function ActorCell({ getValue }: Readonly<{ getValue: () => string }>) {
+  return (
+    <span className="text-sm text-slate-700 font-mono">{getValue().slice(0, 8)}...</span>
+  )
+}
+
+function EntityTypeCell({ getValue }: Readonly<{ getValue: () => string }>) {
+  return <Badge>{getValue()}</Badge>
+}
+
+function EventTypeCell({ getValue }: Readonly<{ getValue: () => string }>) {
+  return <span className="text-sm capitalize">{getValue().replace('_', ' ')}</span>
+}
+
+function StatusCell({ getValue }: Readonly<{ getValue: () => AuditStatus }>) {
+  return (
+    <Badge variant={auditStatusVariant[getValue()] ?? 'default'}>
+      {getValue().replace('_', ' ')}
+    </Badge>
+  )
+}
+
+function ReviewActionsCell({ entry, onAccept, onFalsePositive }: Readonly<{
+  entry: AuditEntry
+  onAccept: (id: string) => void
+  onFalsePositive: (id: string) => void
+}>) {
+  if (entry.status !== 'pending') return null
+  return (
+    <div className="flex gap-1">
+      <button
+        onClick={() => onAccept(entry.id)}
+        className="rounded p-1 text-emerald-600 hover:bg-emerald-50"
+        title="Accept"
+        aria-label="Accept audit entry"
+      >
+        <CheckCircle size={16} />
+      </button>
+      <button
+        onClick={() => onFalsePositive(entry.id)}
+        className="rounded p-1 text-slate-400 hover:bg-slate-100"
+        title="False positive"
+        aria-label="Mark as false positive"
+      >
+        <XCircle size={16} />
+      </button>
+    </div>
+  )
+}
+
+function renderTimestampCell(info: { getValue: () => string }) { return <TimestampCell getValue={info.getValue} /> }
+function renderActorCell(info: { getValue: () => string }) { return <ActorCell getValue={info.getValue} /> }
+function renderEntityTypeCell(info: { getValue: () => string }) { return <EntityTypeCell getValue={info.getValue} /> }
+function renderEventTypeCell(info: { getValue: () => string }) { return <EventTypeCell getValue={info.getValue} /> }
+function renderStatusCell(info: { getValue: () => AuditStatus }) { return <StatusCell getValue={info.getValue} /> }
+
 function AuditPage() {
   const [entityTypeFilter, setEntityTypeFilter] = useState('')
   const [statusFilter, setStatusFilter] = useState('')
@@ -42,70 +109,46 @@ function AuditPage() {
   const entries = useMemo(() => data?.items ?? [], [data])
   const pendingCount = useMemo(() => entries.filter((e) => e.status === 'pending').length, [entries])
 
+  const renderReviewActions = useCallback(
+    ({ row: { original } }: { row: { original: AuditEntry } }) => (
+      <ReviewActionsCell
+        entry={original}
+        onAccept={(id) => updateStatus.mutate({ id, status: 'accepted' })}
+        onFalsePositive={(id) => updateStatus.mutate({ id, status: 'false_positive' })}
+      />
+    ),
+    [updateStatus],
+  )
+
   const columns = useMemo(
     () => [
       columnHelper.accessor('createdAt', {
         header: 'Timestamp',
-        cell: (info) => (
-          <span className="text-xs text-slate-500 whitespace-nowrap">
-            {new Date(info.getValue()).toLocaleString('en-GB', {
-              day: '2-digit', month: 'short', year: 'numeric',
-              hour: '2-digit', minute: '2-digit',
-            })}
-          </span>
-        ),
+        cell: renderTimestampCell,
       }),
       columnHelper.accessor('actorId', {
         header: 'Actor',
-        cell: (info) => (
-          <span className="text-sm text-slate-700 font-mono">{info.getValue().slice(0, 8)}...</span>
-        ),
+        cell: renderActorCell,
       }),
       columnHelper.accessor('entityType', {
         header: 'Entity',
-        cell: (info) => <Badge>{info.getValue()}</Badge>,
+        cell: renderEntityTypeCell,
       }),
       columnHelper.accessor('eventType', {
         header: 'Action',
-        cell: (info) => <span className="text-sm capitalize">{info.getValue().replace('_', ' ')}</span>,
+        cell: renderEventTypeCell,
       }),
       columnHelper.accessor('status', {
         header: 'Status',
-        cell: (info) => (
-          <Badge variant={auditStatusVariant[info.getValue()] ?? 'default'}>
-            {info.getValue().replace('_', ' ')}
-          </Badge>
-        ),
+        cell: renderStatusCell,
       }),
       columnHelper.display({
         id: 'actions',
         header: 'Review',
-        cell: ({ row }) => {
-          if (row.original.status !== 'pending') return null
-          return (
-            <div className="flex gap-1">
-              <button
-                onClick={() => updateStatus.mutate({ id: row.original.id, status: 'accepted' })}
-                className="rounded p-1 text-emerald-600 hover:bg-emerald-50"
-                title="Accept"
-                aria-label="Accept audit entry"
-              >
-                <CheckCircle size={16} />
-              </button>
-              <button
-                onClick={() => updateStatus.mutate({ id: row.original.id, status: 'false_positive' })}
-                className="rounded p-1 text-slate-400 hover:bg-slate-100"
-                title="False positive"
-                aria-label="Mark as false positive"
-              >
-                <XCircle size={16} />
-              </button>
-            </div>
-          )
-        },
+        cell: renderReviewActions,
       }),
     ],
-    [updateStatus],
+    [renderReviewActions],
   )
 
   if (isLoading) return <Spinner />

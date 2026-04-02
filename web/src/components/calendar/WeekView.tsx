@@ -88,8 +88,8 @@ function computeCapacity(blockers: readonly Activity[], maxPerDay: number) {
 /** Build the header label text for a day column */
 function buildHeaderLabel(isFullyBlocked: boolean, isHalfBlocked: boolean, visitCount: number): string {
   if (isFullyBlocked) return 'Blocked'
-  if (isHalfBlocked) return `${visitCount} visit${visitCount !== 1 ? 's' : ''} + blocker`
-  if (visitCount > 0) return `${visitCount} visit${visitCount !== 1 ? 's' : ''} planned`
+  if (isHalfBlocked) return `${visitCount} visit${visitCount === 1 ? '' : 's'} + blocker`
+  if (visitCount > 0) return `${visitCount} visit${visitCount === 1 ? '' : 's'} planned`
   return '0 visits planned'
 }
 
@@ -219,7 +219,8 @@ function DayColumn({
       </button>
 
       {/* Day body / drop zone */}
-      <div
+      <section
+        aria-label={`${dayName} drop zone`}
         onDragEnter={(e) => { e.preventDefault(); dragCounter.current++; setDragOver(true) }}
         onDragOver={(e) => e.preventDefault()}
         onDragLeave={() => { dragCounter.current--; if (dragCounter.current === 0) setDragOver(false) }}
@@ -255,12 +256,12 @@ function DayColumn({
           const t = targetMap?.get(id)
           if (!t) return null
           return (
-            <div
+            <li
               key={id}
               draggable
               onDragStart={() => onPendingDragStart?.(dateStr, id)}
               onDragEnd={() => onPendingDragEnd?.()}
-              className={`flex items-center gap-1 bg-teal-50 border border-teal-200 rounded px-2 py-1.5 text-sm cursor-grab transition-all ${
+              className={`flex items-center gap-1 bg-teal-50 border border-teal-200 rounded px-2 py-1.5 text-sm cursor-grab transition-all list-none ${
                 draggingPending?.sourceDate === dateStr && draggingPending?.targetId === id
                   ? 'opacity-40 scale-95' : ''
               }`}
@@ -269,11 +270,12 @@ function DayColumn({
               <span className="truncate flex-1 text-teal-800 font-medium">{t.name}</span>
               <button
                 onClick={() => onRemoveAssignment?.(dateStr, id)}
+                onKeyDown={(e) => { if (e.key === 'Delete' || e.key === 'Backspace') onRemoveAssignment?.(dateStr, id) }}
                 className="text-teal-400 hover:text-red-500 shrink-0"
               >
                 <X size={12} />
               </button>
-            </div>
+            </li>
           )
         })}
 
@@ -317,7 +319,7 @@ function DayColumn({
             </span>
           </div>
         )}
-      </div>
+      </section>
     </div>
   )
 }

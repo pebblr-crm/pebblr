@@ -5,7 +5,7 @@
 
 # Declare all targets as phony, grouped by function.
 .PHONY: help build clean
-.PHONY: test lint typecheck
+.PHONY: ginkgo-install test lint typecheck
 .PHONY: dev-api dev-web dev-db dev-db-stop dev-db-reset seed
 .PHONY: cluster-up cluster-deps deploy migrate
 .PHONY: e2e e2e-teardown e2e-cluster e2e-db e2e-deploy e2e-web e2e-web-integration
@@ -34,8 +34,13 @@ build: ## Build Go binary and React frontend
 	@go build -o bin/pebblr ./$(GO_CMD)
 	@cd $(WEB_DIR) && bun install --frozen-lockfile && bun run build
 
+ginkgo-install: ## Install Ginkgo CLI and library dependencies
+	@go install github.com/onsi/ginkgo/v2/ginkgo@latest
+	@go get github.com/onsi/ginkgo/v2 github.com/onsi/gomega
+
 test: ## Run Go tests and frontend tests
-	@go test ./...
+	@go test $$(go list ./... | grep -v './cmd/')
+	@ginkgo run ./cmd/...
 	@cd $(WEB_DIR) && bun run test
 
 lint: ## Run golangci-lint and ESLint

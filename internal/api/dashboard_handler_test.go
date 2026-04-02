@@ -13,6 +13,11 @@ import (
 	"github.com/pebblr/pebblr/internal/store"
 )
 
+const (
+	fmtStatusWant    = "status = %d, want %d"
+	fmtDashDecodeErr = "decode: %v"
+)
+
 // --- stub dashboard service ---
 
 type stubDashboardService struct {
@@ -56,12 +61,12 @@ func TestDashboardHandler_ActivityStats_OK(t *testing.T) {
 	handler.ServeHTTP(rec, req)
 
 	if rec.Code != http.StatusOK {
-		t.Fatalf("status = %d, want %d", rec.Code, http.StatusOK)
+		t.Fatalf(fmtStatusWant, rec.Code, http.StatusOK)
 	}
 
 	var resp service.ActivityStatsResponse
 	if err := json.NewDecoder(rec.Body).Decode(&resp); err != nil {
-		t.Fatalf("decode: %v", err)
+		t.Fatalf(fmtDashDecodeErr, err)
 	}
 	if resp.Total != 8 {
 		t.Errorf("total = %d, want 8", resp.Total)
@@ -80,7 +85,7 @@ func TestDashboardHandler_ActivityStats_InvalidPeriod(t *testing.T) {
 	handler.ServeHTTP(rec, req)
 
 	if rec.Code != http.StatusBadRequest {
-		t.Fatalf("status = %d, want %d", rec.Code, http.StatusBadRequest)
+		t.Fatalf(fmtStatusWant, rec.Code, http.StatusBadRequest)
 	}
 }
 
@@ -102,7 +107,7 @@ func TestDashboardHandler_ActivityStats_DefaultsToCurrentMonth(t *testing.T) {
 	handler.ServeHTTP(rec, req)
 
 	if rec.Code != http.StatusOK {
-		t.Fatalf("status = %d, want %d", rec.Code, http.StatusOK)
+		t.Fatalf(fmtStatusWant, rec.Code, http.StatusOK)
 	}
 }
 
@@ -117,7 +122,7 @@ func TestDashboardHandler_ActivityStats_Unauthorized(t *testing.T) {
 	router.ServeHTTP(rec, req)
 
 	if rec.Code != http.StatusUnauthorized {
-		t.Fatalf("status = %d, want %d", rec.Code, http.StatusUnauthorized)
+		t.Fatalf(fmtStatusWant, rec.Code, http.StatusUnauthorized)
 	}
 }
 
@@ -139,12 +144,12 @@ func TestDashboardHandler_Coverage_OK(t *testing.T) {
 	handler.ServeHTTP(rec, req)
 
 	if rec.Code != http.StatusOK {
-		t.Fatalf("status = %d, want %d", rec.Code, http.StatusOK)
+		t.Fatalf(fmtStatusWant, rec.Code, http.StatusOK)
 	}
 
 	var resp service.CoverageResponse
 	if err := json.NewDecoder(rec.Body).Decode(&resp); err != nil {
-		t.Fatalf("decode: %v", err)
+		t.Fatalf(fmtDashDecodeErr, err)
 	}
 	if resp.Percentage != 75 {
 		t.Errorf("percentage = %f, want 75", resp.Percentage)
@@ -169,12 +174,12 @@ func TestDashboardHandler_Frequency_OK(t *testing.T) {
 	handler.ServeHTTP(rec, req)
 
 	if rec.Code != http.StatusOK {
-		t.Fatalf("status = %d, want %d", rec.Code, http.StatusOK)
+		t.Fatalf(fmtStatusWant, rec.Code, http.StatusOK)
 	}
 
 	var resp service.FrequencyResponse
 	if err := json.NewDecoder(rec.Body).Decode(&resp); err != nil {
-		t.Fatalf("decode: %v", err)
+		t.Fatalf(fmtDashDecodeErr, err)
 	}
 	if len(resp.Items) != 1 {
 		t.Fatalf("items = %d, want 1", len(resp.Items))
@@ -202,7 +207,7 @@ func TestDashboardHandler_DateRangeFilter(t *testing.T) {
 	handler.ServeHTTP(rec, req)
 
 	if rec.Code != http.StatusOK {
-		t.Fatalf("status = %d, want %d", rec.Code, http.StatusOK)
+		t.Fatalf(fmtStatusWant, rec.Code, http.StatusOK)
 	}
 }
 
@@ -224,6 +229,6 @@ func TestDashboardHandler_UserAndTeamFilter(t *testing.T) {
 	handler.ServeHTTP(rec, req)
 
 	if rec.Code != http.StatusOK {
-		t.Fatalf("status = %d, want %d", rec.Code, http.StatusOK)
+		t.Fatalf(fmtStatusWant, rec.Code, http.StatusOK)
 	}
 }

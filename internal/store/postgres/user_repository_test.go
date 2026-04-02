@@ -9,6 +9,10 @@ import (
 	"github.com/pebblr/pebblr/internal/store"
 )
 
+const (
+	querySelectCount = "SELECT COUNT"
+)
+
 func TestUserGetByID_NotFound(t *testing.T) {
 	t.Parallel()
 	mock := newMockPool(t)
@@ -31,7 +35,7 @@ func TestUserListPaginated_Success(t *testing.T) {
 	mock := newMockPool(t)
 	repo := &userRepository{pool: mock}
 
-	mock.ExpectQuery("SELECT COUNT").
+	mock.ExpectQuery(querySelectCount).
 		WillReturnRows(mock.NewRows([]string{"count"}).AddRow(25))
 
 	mock.ExpectQuery("SELECT u.id.+FROM users u").
@@ -60,7 +64,7 @@ func TestUserListPaginated_Defaults(t *testing.T) {
 	mock := newMockPool(t)
 	repo := &userRepository{pool: mock}
 
-	mock.ExpectQuery("SELECT COUNT").
+	mock.ExpectQuery(querySelectCount).
 		WillReturnRows(mock.NewRows([]string{"count"}).AddRow(0))
 
 	mock.ExpectQuery("SELECT u.id.+FROM users u").
@@ -86,7 +90,7 @@ func TestUserListPaginated_CountError(t *testing.T) {
 	mock := newMockPool(t)
 	repo := &userRepository{pool: mock}
 
-	mock.ExpectQuery("SELECT COUNT").
+	mock.ExpectQuery(querySelectCount).
 		WillReturnError(fmt.Errorf("db error"))
 
 	_, err := repo.ListPaginated(context.Background(), 1, 20)

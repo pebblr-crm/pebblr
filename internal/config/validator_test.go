@@ -2,6 +2,8 @@ package config
 
 import "testing"
 
+const fmtExpectedNoErrors = "expected no errors, got %v"
+
 func testConfig(t *testing.T) *TenantConfig {
 	t.Helper()
 	return writeTestConfig(t, validConfigJSON())
@@ -13,7 +15,7 @@ func TestValidateActivity_ValidSave(t *testing.T) {
 	fields := map[string]any{}
 	errs := ValidateActivity(cfg, "visit", fields, "save")
 	if len(errs) != 0 {
-		t.Fatalf("expected no errors, got %v", errs)
+		t.Fatalf(fmtExpectedNoErrors, errs)
 	}
 }
 
@@ -94,7 +96,7 @@ func TestValidateActivity_ValidSelectOption(t *testing.T) {
 	}
 	errs := ValidateActivity(cfg, "visit", fields, "save")
 	if len(errs) != 0 {
-		t.Fatalf("expected no errors, got %v", errs)
+		t.Fatalf(fmtExpectedNoErrors, errs)
 	}
 }
 
@@ -134,7 +136,7 @@ func TestValidateActivity_ValidMultiSelect(t *testing.T) {
 	}
 	errs := ValidateActivity(cfg, "visit", fields, "save")
 	if len(errs) != 0 {
-		t.Fatalf("expected no errors, got %v", errs)
+		t.Fatalf(fmtExpectedNoErrors, errs)
 	}
 }
 

@@ -2,10 +2,14 @@ package postgres
 
 import (
 	"testing"
+	"time"
 
 	"github.com/pebblr/pebblr/internal/rbac"
 	"github.com/pebblr/pebblr/internal/store"
-	"time"
+)
+
+const (
+	fmtExpected2Args = "expected 2 args, got %d"
 )
 
 func TestQueryBuilder_Add(t *testing.T) {
@@ -20,7 +24,7 @@ func TestQueryBuilder_Add(t *testing.T) {
 		t.Errorf("expected %q, got %q", expected, where)
 	}
 	if len(qb.args) != 2 {
-		t.Errorf("expected 2 args, got %d", len(qb.args))
+		t.Errorf(fmtExpected2Args, len(qb.args))
 	}
 }
 
@@ -68,7 +72,7 @@ func TestQueryBuilder_ActivityScope_CreatorIDs(t *testing.T) {
 		t.Fatalf("expected 1 condition, got %d", len(qb.conditions))
 	}
 	if len(qb.args) != 2 {
-		t.Errorf("expected 2 args, got %d", len(qb.args))
+		t.Errorf(fmtExpected2Args, len(qb.args))
 	}
 }
 
@@ -122,6 +126,6 @@ func TestQueryBuilder_NextPlaceholder(t *testing.T) {
 		t.Errorf("expected $2, got %s", ph2)
 	}
 	if len(qb.args) != 2 {
-		t.Errorf("expected 2 args, got %d", len(qb.args))
+		t.Errorf(fmtExpected2Args, len(qb.args))
 	}
 }

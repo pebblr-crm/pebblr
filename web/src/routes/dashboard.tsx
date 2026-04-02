@@ -29,6 +29,28 @@ export const Route = createRoute({
 
 const freqColumnHelper = createColumnHelper<FrequencyItem>()
 
+function classificationVariant(v: string): 'danger' | 'warning' | 'default' {
+  if (v === 'A') return 'danger'
+  if (v === 'B') return 'warning'
+  return 'default'
+}
+
+function ClassificationCell({ getValue }: Readonly<{ getValue: () => string }>) {
+  const v = getValue()
+  return <Badge variant={classificationVariant(v)}>{v}</Badge>
+}
+
+function complianceColor(v: number): string {
+  if (v >= 80) return 'text-emerald-600'
+  if (v >= 50) return 'text-amber-600'
+  return 'text-red-600'
+}
+
+function ComplianceCell({ getValue }: Readonly<{ getValue: () => number }>) {
+  const v = Math.round(getValue())
+  return <span className={`font-semibold ${complianceColor(v)}`}>{v}%</span>
+}
+
 /* ── Helpers ── */
 
 function statusDotColor(status: string): string {
@@ -48,6 +70,9 @@ function getMonthStart(d: Date): Date {
 function getMonthEnd(d: Date): Date {
   return new Date(d.getFullYear(), d.getMonth() + 1, 0)
 }
+
+function renderClassificationCell(info: { getValue: () => string }) { return <ClassificationCell getValue={info.getValue} /> }
+function renderComplianceCell(info: { getValue: () => number }) { return <ComplianceCell getValue={info.getValue} /> }
 
 /* ── Main Page ── */
 
@@ -113,24 +138,14 @@ function DashboardPage() {
     () => [
       freqColumnHelper.accessor('classification', {
         header: 'Classification',
-        cell: (info) => {
-          const v = info.getValue()
-          const variant = ({ A: 'danger', B: 'warning' } as const)[v] ?? 'default'
-          return <Badge variant={variant}>{v}</Badge>
-        },
+        cell: renderClassificationCell,
       }),
       freqColumnHelper.accessor('targetCount', { header: 'Targets' }),
       freqColumnHelper.accessor('totalVisits', { header: 'Visits' }),
       freqColumnHelper.accessor('required', { header: 'Required' }),
       freqColumnHelper.accessor('compliance', {
         header: 'Compliance',
-        cell: (info) => {
-          const v = Math.round(info.getValue())
-          let color = 'text-red-600'
-          if (v >= 80) color = 'text-emerald-600'
-          else if (v >= 50) color = 'text-amber-600'
-          return <span className={`font-semibold ${color}`}>{v}%</span>
-        },
+        cell: renderComplianceCell,
       }),
     ],
     [],
@@ -185,62 +200,20 @@ function DashboardPage() {
 
         {/* Rep Calendar Section */}
         <Card className="!p-0 overflow-hidden">
-          {/* Calendar toolbar */}
-          <div className="px-4 py-3 border-b border-slate-200 bg-slate-50 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-            <div className="flex items-center gap-3">
-              <Users size={16} className="text-slate-500" />
-              <select
-                value={selectedRep}
-                onChange={(e) => setSelectedRep(e.target.value)}
-                className="text-sm border border-slate-300 rounded-md py-1.5 px-3 bg-white focus:border-teal-500 focus:ring-1 focus:ring-teal-500 focus:outline-none"
-              >
-                <option value="">All Reps</option>
-                {repUsers.map((u) => (
-                  <option key={u.id} value={u.id}>{u.name || u.displayName}</option>
-                ))}
-              </select>
-
-              {/* View mode toggle */}
-              <div className="flex bg-slate-100 rounded-md p-0.5 border border-slate-200">
-                <button
-                  onClick={() => setViewMode('week')}
-                  className={`px-2.5 py-1 rounded text-xs font-medium transition-colors ${
-                    viewMode === 'week' ? 'bg-white shadow-sm text-slate-700' : 'text-slate-500 hover:text-slate-700'
-                  }`}
-                >
-                  <CalendarDays size={12} className="inline mr-1" />
-                  Week
-                </button>
-                <button
-                  onClick={() => setViewMode('month')}
-                  className={`px-2.5 py-1 rounded text-xs font-medium transition-colors ${
-                    viewMode === 'month' ? 'bg-white shadow-sm text-slate-700' : 'text-slate-500 hover:text-slate-700'
-                  }`}
-                >
-                  <CalendarRange size={12} className="inline mr-1" />
-                  Month
-                </button>
-              </div>
-            </div>
-
-            <div className="flex items-center gap-2">
-              <div className="flex items-center gap-1 rounded-lg border border-slate-200 bg-white">
-                <button onClick={viewMode === 'week' ? prevWeek : prevMonth} className="p-1.5 hover:bg-slate-100 rounded-l-lg" aria-label="Previous period">
-                  <ChevronLeft size={16} />
-                </button>
-                <span className="px-3 text-sm font-medium text-slate-700">
-                  {viewMode === 'week'
-                    ? `${weekStart.toLocaleDateString('en-GB', { month: 'short', day: 'numeric' })} — ${weekEnd.toLocaleDateString('en-GB', { month: 'short', day: 'numeric' })}`
-                    : monthDate.toLocaleDateString('en-GB', { month: 'long', year: 'numeric' })
-                  }
-                </span>
-                <button onClick={viewMode === 'week' ? nextWeek : nextMonth} className="p-1.5 hover:bg-slate-100 rounded-r-lg" aria-label="Next period">
-                  <ChevronRight size={16} />
-                </button>
-              </div>
-              <Button variant="ghost" size="sm" onClick={goToday}>Today</Button>
-            </div>
-          </div>
+          <CalendarToolbar
+            selectedRep={selectedRep}
+            onRepChange={setSelectedRep}
+            repUsers={repUsers}
+            viewMode={viewMode}
+            onViewModeChange={setViewMode}
+            onPrev={viewMode === 'week' ? prevWeek : prevMonth}
+            onNext={viewMode === 'week' ? nextWeek : nextMonth}
+            onToday={goToday}
+            periodLabel={viewMode === 'week'
+              ? `${weekStart.toLocaleDateString('en-GB', { month: 'short', day: 'numeric' })} — ${weekEnd.toLocaleDateString('en-GB', { month: 'short', day: 'numeric' })}`
+              : monthDate.toLocaleDateString('en-GB', { month: 'long', year: 'numeric' })
+            }
+          />
 
           {/* Calendar body */}
           <div className="p-4">
@@ -306,6 +279,80 @@ function DashboardPage() {
 
       {/* Activity detail modal */}
       <ActivityDetailModal activityId={detailActivityId} onClose={() => setDetailActivityId(null)} />
+    </div>
+  )
+}
+
+/* ── Calendar Toolbar ── */
+
+interface CalendarToolbarProps {
+  readonly selectedRep: string
+  readonly onRepChange: (value: string) => void
+  readonly repUsers: Array<{ id: string; name: string; displayName: string }>
+  readonly viewMode: 'week' | 'month'
+  readonly onViewModeChange: (mode: 'week' | 'month') => void
+  readonly onPrev: () => void
+  readonly onNext: () => void
+  readonly onToday: () => void
+  readonly periodLabel: string
+}
+
+function CalendarToolbar({
+  selectedRep, onRepChange, repUsers, viewMode, onViewModeChange,
+  onPrev, onNext, onToday, periodLabel,
+}: CalendarToolbarProps) {
+  return (
+    <div className="px-4 py-3 border-b border-slate-200 bg-slate-50 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+      <div className="flex items-center gap-3">
+        <Users size={16} className="text-slate-500" />
+        <select
+          value={selectedRep}
+          onChange={(e) => onRepChange(e.target.value)}
+          className="text-sm border border-slate-300 rounded-md py-1.5 px-3 bg-white focus:border-teal-500 focus:ring-1 focus:ring-teal-500 focus:outline-none"
+        >
+          <option value="">All Reps</option>
+          {repUsers.map((u) => (
+            <option key={u.id} value={u.id}>{u.name || u.displayName}</option>
+          ))}
+        </select>
+
+        {/* View mode toggle */}
+        <div className="flex bg-slate-100 rounded-md p-0.5 border border-slate-200">
+          <button
+            onClick={() => onViewModeChange('week')}
+            className={`px-2.5 py-1 rounded text-xs font-medium transition-colors ${
+              viewMode === 'week' ? 'bg-white shadow-sm text-slate-700' : 'text-slate-500 hover:text-slate-700'
+            }`}
+          >
+            <CalendarDays size={12} className="inline mr-1" />
+            Week
+          </button>
+          <button
+            onClick={() => onViewModeChange('month')}
+            className={`px-2.5 py-1 rounded text-xs font-medium transition-colors ${
+              viewMode === 'month' ? 'bg-white shadow-sm text-slate-700' : 'text-slate-500 hover:text-slate-700'
+            }`}
+          >
+            <CalendarRange size={12} className="inline mr-1" />
+            Month
+          </button>
+        </div>
+      </div>
+
+      <div className="flex items-center gap-2">
+        <div className="flex items-center gap-1 rounded-lg border border-slate-200 bg-white">
+          <button onClick={onPrev} className="p-1.5 hover:bg-slate-100 rounded-l-lg" aria-label="Previous period">
+            <ChevronLeft size={16} />
+          </button>
+          <span className="px-3 text-sm font-medium text-slate-700">
+            {periodLabel}
+          </span>
+          <button onClick={onNext} className="p-1.5 hover:bg-slate-100 rounded-r-lg" aria-label="Next period">
+            <ChevronRight size={16} />
+          </button>
+        </div>
+        <Button variant="ghost" size="sm" onClick={onToday}>Today</Button>
+      </div>
     </div>
   )
 }
@@ -433,6 +480,10 @@ function MonthGrid({ monthDate, activities, onWeekClick, selectedRep, repName }:
                 const isToday = dateStr === today
                 const counts = dayCounts.get(dateStr)
 
+                const dayTextClass = isToday
+                  ? 'text-white bg-teal-600 w-6 h-6 rounded-full flex items-center justify-center'
+                  : isCurrentMonth ? 'text-slate-700' : 'text-slate-300'
+
                 return (
                   <div
                     key={dateStr}
@@ -440,10 +491,7 @@ function MonthGrid({ monthDate, activities, onWeekClick, selectedRep, repName }:
                       isCurrentMonth ? '' : 'bg-slate-50/50'
                     }`}
                   >
-                    <div className={`text-xs font-medium mb-1 ${
-                      isToday ? 'text-white bg-teal-600 w-6 h-6 rounded-full flex items-center justify-center'
-                        : isCurrentMonth ? 'text-slate-700' : 'text-slate-300'
-                    }`}>
+                    <div className={`text-xs font-medium mb-1 ${dayTextClass}`}>
                       {day.getDate()}
                     </div>
                     {counts && isCurrentMonth && (
@@ -451,7 +499,7 @@ function MonthGrid({ monthDate, activities, onWeekClick, selectedRep, repName }:
                         {counts.visits > 0 && (
                           <div className="flex items-center gap-1">
                             <span className="w-1.5 h-1.5 rounded-full bg-amber-400" />
-                            <span className="text-[10px] text-slate-600">{counts.visits} visit{counts.visits !== 1 ? 's' : ''}</span>
+                            <span className="text-[10px] text-slate-600">{counts.visits} visit{counts.visits === 1 ? '' : 's'}</span>
                           </div>
                         )}
                         {counts.nonField > 0 && (

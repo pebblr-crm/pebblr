@@ -7,6 +7,27 @@ import { Button } from '@/components/ui/Button'
 import { Modal } from '@/components/ui/Modal'
 import { Check } from 'lucide-react'
 
+function MultiSelectOption({ option, selected, onToggle }: Readonly<{
+  option: { key: string; label: string }
+  selected: boolean
+  onToggle: () => void
+}>) {
+  return (
+    <button
+      type="button"
+      onClick={onToggle}
+      className={`rounded-full border px-3 py-1.5 text-xs font-medium transition-colors ${
+        selected
+          ? 'border-teal-500 bg-teal-50 text-teal-700'
+          : 'border-slate-200 bg-white text-slate-600 hover:border-slate-300'
+      }`}
+    >
+      {selected && <Check size={12} className="mr-1 inline" />}
+      {option.label}
+    </button>
+  )
+}
+
 const CORE_WIDGET_FIELDS = new Set(['duration', 'account_id'])
 const inputCls = 'w-full rounded-lg border border-slate-300 px-3 py-2 text-sm focus:border-teal-500 focus:outline-none focus:ring-1 focus:ring-teal-500'
 
@@ -201,7 +222,7 @@ export function CreateActivityModal({ open, onClose }: Readonly<{ open: boolean;
             <div className="flex items-center justify-between">
               <span className="text-sm font-medium text-slate-700">Recovery Balance</span>
               <span className={`text-lg font-semibold ${recovery.balance > 0 ? 'text-teal-700' : 'text-red-700'}`}>
-                {recovery.balance} day{recovery.balance !== 1 ? 's' : ''}
+                {recovery.balance} day{recovery.balance === 1 ? '' : 's'}
               </span>
             </div>
             <p className="text-xs text-slate-500 mt-1">{recovery.earned} earned, {recovery.taken} taken</p>
@@ -256,33 +277,24 @@ export function CreateActivityModal({ open, onClose }: Readonly<{ open: boolean;
                 case 'multi_select': {
                   const opts = resolveOptions(fieldDef)
                   const selected = Array.isArray(value) ? (value as string[]) : []
+                  const toggleMulti = (key: string) => {
+                    const next = selected.includes(key) ? selected.filter((s) => s !== key) : [...selected, key]
+                    setFieldValue(fieldDef.key, next)
+                  }
                   return (
                     <div key={fieldDef.key}>
                       <label className="mb-1.5 block text-sm font-medium text-slate-700">
                         {label} {required && <span className="text-red-400">*</span>}
                       </label>
                       <div className="flex flex-wrap gap-2">
-                        {opts.map((o) => {
-                          const isSelected = selected.includes(o.key)
-                          return (
-                            <button
-                              key={o.key}
-                              type="button"
-                              onClick={() => setFieldValue(
-                                fieldDef.key,
-                                isSelected ? selected.filter((s) => s !== o.key) : [...selected, o.key],
-                              )}
-                              className={`rounded-full border px-3 py-1.5 text-xs font-medium transition-colors ${
-                                isSelected
-                                  ? 'border-teal-500 bg-teal-50 text-teal-700'
-                                  : 'border-slate-200 bg-white text-slate-600 hover:border-slate-300'
-                              }`}
-                            >
-                              {isSelected && <Check size={12} className="mr-1 inline" />}
-                              {o.label}
-                            </button>
-                          )
-                        })}
+                        {opts.map((o) => (
+                          <MultiSelectOption
+                            key={o.key}
+                            option={o}
+                            selected={selected.includes(o.key)}
+                            onToggle={() => toggleMulti(o.key)}
+                          />
+                        ))}
                       </div>
                     </div>
                   )

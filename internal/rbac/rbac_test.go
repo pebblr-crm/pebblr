@@ -8,13 +8,19 @@ import (
 	"github.com/pebblr/pebblr/internal/rbac"
 )
 
+const (
+	testTeamID   = "team-1"
+	testAdminID  = "admin-1"
+	testTargetID = "target-1"
+)
+
 func TestRepCanOnlySeeOwnTargets(t *testing.T) {
 	t.Parallel()
 	enforcer := rbac.NewEnforcer()
 
 	rep := &domain.User{ID: "rep-1", Role: domain.RoleRep}
-	ownTarget := &domain.Target{ID: "target-1", AssigneeID: "rep-1", TeamID: "team-1"}
-	otherTarget := &domain.Target{ID: "target-2", AssigneeID: "rep-2", TeamID: "team-1"}
+	ownTarget := &domain.Target{ID: testTargetID, AssigneeID: "rep-1", TeamID: testTeamID}
+	otherTarget := &domain.Target{ID: "target-2", AssigneeID: "rep-2", TeamID: testTeamID}
 
 	if !enforcer.CanViewTarget(rep, ownTarget) {
 		t.Error("rep should be able to view own target")
@@ -28,8 +34,8 @@ func TestManagerCanSeeTeamTargets(t *testing.T) {
 	t.Parallel()
 	enforcer := rbac.NewEnforcer()
 
-	manager := &domain.User{ID: "mgr-1", Role: domain.RoleManager, TeamIDs: []string{"team-1"}}
-	teamTarget := &domain.Target{ID: "target-1", AssigneeID: "rep-1", TeamID: "team-1"}
+	manager := &domain.User{ID: "mgr-1", Role: domain.RoleManager, TeamIDs: []string{testTeamID}}
+	teamTarget := &domain.Target{ID: testTargetID, AssigneeID: "rep-1", TeamID: testTeamID}
 	otherTeamTarget := &domain.Target{ID: "target-2", AssigneeID: "rep-2", TeamID: "team-2"}
 
 	if !enforcer.CanViewTarget(manager, teamTarget) {
@@ -44,8 +50,8 @@ func TestAdminCanSeeAllTargets(t *testing.T) {
 	t.Parallel()
 	enforcer := rbac.NewEnforcer()
 
-	admin := &domain.User{ID: "admin-1", Role: domain.RoleAdmin}
-	anyTarget := &domain.Target{ID: "target-1", AssigneeID: "someone", TeamID: "any-team"}
+	admin := &domain.User{ID: testAdminID, Role: domain.RoleAdmin}
+	anyTarget := &domain.Target{ID: testTargetID, AssigneeID: "someone", TeamID: "any-team"}
 
 	if !enforcer.CanViewTarget(admin, anyTarget) {
 		t.Error("admin should see all targets")
@@ -89,9 +95,9 @@ func TestRepCanOnlySeeOwnActivities(t *testing.T) {
 	enforcer := rbac.NewEnforcer()
 
 	rep := &domain.User{ID: "rep-1", Role: domain.RoleRep}
-	ownActivity := &domain.Activity{ID: "act-1", CreatorID: "rep-1", TeamID: "team-1"}
-	jointActivity := &domain.Activity{ID: "act-2", CreatorID: "rep-2", JointVisitUID: "rep-1", TeamID: "team-1"}
-	otherActivity := &domain.Activity{ID: "act-3", CreatorID: "rep-2", TeamID: "team-1"}
+	ownActivity := &domain.Activity{ID: "act-1", CreatorID: "rep-1", TeamID: testTeamID}
+	jointActivity := &domain.Activity{ID: "act-2", CreatorID: "rep-2", JointVisitUID: "rep-1", TeamID: testTeamID}
+	otherActivity := &domain.Activity{ID: "act-3", CreatorID: "rep-2", TeamID: testTeamID}
 
 	if !enforcer.CanViewActivity(rep, ownActivity) {
 		t.Error("rep should view own activity")
@@ -109,8 +115,8 @@ func TestRepCanOnlyUpdateOwnActivities(t *testing.T) {
 	enforcer := rbac.NewEnforcer()
 
 	rep := &domain.User{ID: "rep-1", Role: domain.RoleRep}
-	ownActivity := &domain.Activity{ID: "act-1", CreatorID: "rep-1", TeamID: "team-1"}
-	jointActivity := &domain.Activity{ID: "act-2", CreatorID: "rep-2", JointVisitUID: "rep-1", TeamID: "team-1"}
+	ownActivity := &domain.Activity{ID: "act-1", CreatorID: "rep-1", TeamID: testTeamID}
+	jointActivity := &domain.Activity{ID: "act-2", CreatorID: "rep-2", JointVisitUID: "rep-1", TeamID: testTeamID}
 
 	if !enforcer.CanUpdateActivity(rep, ownActivity) {
 		t.Error("rep should update own activity")
@@ -124,8 +130,8 @@ func TestManagerCanSeeTeamActivities(t *testing.T) {
 	t.Parallel()
 	enforcer := rbac.NewEnforcer()
 
-	manager := &domain.User{ID: "mgr-1", Role: domain.RoleManager, TeamIDs: []string{"team-1"}}
-	teamActivity := &domain.Activity{ID: "act-1", CreatorID: "rep-1", TeamID: "team-1"}
+	manager := &domain.User{ID: "mgr-1", Role: domain.RoleManager, TeamIDs: []string{testTeamID}}
+	teamActivity := &domain.Activity{ID: "act-1", CreatorID: "rep-1", TeamID: testTeamID}
 	otherTeamActivity := &domain.Activity{ID: "act-2", CreatorID: "rep-2", TeamID: "team-2"}
 
 	if !enforcer.CanViewActivity(manager, teamActivity) {
@@ -140,7 +146,7 @@ func TestAdminCanSeeAllActivities(t *testing.T) {
 	t.Parallel()
 	enforcer := rbac.NewEnforcer()
 
-	admin := &domain.User{ID: "admin-1", Role: domain.RoleAdmin}
+	admin := &domain.User{ID: testAdminID, Role: domain.RoleAdmin}
 	anyActivity := &domain.Activity{ID: "act-1", CreatorID: "someone", TeamID: "any-team"}
 
 	if !enforcer.CanViewActivity(admin, anyActivity) {
@@ -176,7 +182,7 @@ func TestScopeActivityQueryForAdmin(t *testing.T) {
 	t.Parallel()
 	enforcer := rbac.NewEnforcer()
 
-	admin := &domain.User{ID: "admin-1", Role: domain.RoleAdmin}
+	admin := &domain.User{ID: testAdminID, Role: domain.RoleAdmin}
 	scope := enforcer.ScopeActivityQuery(admin)
 
 	if !scope.AllActivities {
@@ -200,8 +206,8 @@ func TestNilActorDeniesAccess(t *testing.T) {
 	t.Parallel()
 	enforcer := rbac.NewEnforcer()
 
-	target := &domain.Target{ID: "t-1", AssigneeID: "rep-1", TeamID: "team-1"}
-	activity := &domain.Activity{ID: "a-1", CreatorID: "rep-1", TeamID: "team-1"}
+	target := &domain.Target{ID: "t-1", AssigneeID: "rep-1", TeamID: testTeamID}
+	activity := &domain.Activity{ID: "a-1", CreatorID: "rep-1", TeamID: testTeamID}
 
 	if enforcer.CanViewTarget(nil, target) {
 		t.Error("nil actor must not view targets")
@@ -225,8 +231,8 @@ func TestInvalidRoleDeniesAccess(t *testing.T) {
 	enforcer := rbac.NewEnforcer()
 
 	bogus := &domain.User{ID: "x", Role: domain.Role("superuser")}
-	target := &domain.Target{ID: "t-1", AssigneeID: "x", TeamID: "team-1"}
-	activity := &domain.Activity{ID: "a-1", CreatorID: "x", TeamID: "team-1"}
+	target := &domain.Target{ID: "t-1", AssigneeID: "x", TeamID: testTeamID}
+	activity := &domain.Activity{ID: "a-1", CreatorID: "x", TeamID: testTeamID}
 
 	if enforcer.CanViewTarget(bogus, target) {
 		t.Error("invalid role must not view targets")
@@ -245,7 +251,7 @@ func TestNilResourceDeniesAccess(t *testing.T) {
 	t.Parallel()
 	enforcer := rbac.NewEnforcer()
 
-	admin := &domain.User{ID: "admin-1", Role: domain.RoleAdmin}
+	admin := &domain.User{ID: testAdminID, Role: domain.RoleAdmin}
 
 	if enforcer.CanViewTarget(admin, nil) {
 		t.Error("nil target must deny access even for admin")
