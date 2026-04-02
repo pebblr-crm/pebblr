@@ -8,6 +8,7 @@ import { Badge } from '@/components/ui/Badge'
 import { Button } from '@/components/ui/Button'
 import { Spinner } from '@/components/ui/Spinner'
 import { FileText, CheckCircle, XCircle } from 'lucide-react'
+import { Select } from '@/components/ui/Select'
 import type { AuditEntry, AuditStatus } from '@/types/audit'
 
 export const Route = createRoute({
@@ -16,7 +17,7 @@ export const Route = createRoute({
   component: AuditPage,
 })
 
-const statusVariant: Record<string, 'warning' | 'success' | 'default'> = {
+const auditStatusVariant: Record<string, 'warning' | 'success' | 'default'> = {
   pending: 'warning',
   accepted: 'success',
   false_positive: 'default',
@@ -70,7 +71,7 @@ function AuditPage() {
       columnHelper.accessor('status', {
         header: 'Status',
         cell: (info) => (
-          <Badge variant={statusVariant[info.getValue()] ?? 'default'}>
+          <Badge variant={auditStatusVariant[info.getValue()] ?? 'default'}>
             {info.getValue().replace('_', ' ')}
           </Badge>
         ),
@@ -129,26 +130,26 @@ function AuditPage() {
 
       {/* Filters */}
       <div className="mb-4 flex flex-wrap items-center gap-3">
-        <select
+        <Select
           value={entityTypeFilter}
           onChange={(e) => { setEntityTypeFilter(e.target.value); setPage(1) }}
-          className="rounded-lg border border-slate-300 px-3 py-2 text-sm"
+          className="w-auto"
         >
           <option value="">All entities</option>
           <option value="activity">Activity</option>
           <option value="target">Target</option>
           <option value="user">User</option>
-        </select>
-        <select
+        </Select>
+        <Select
           value={statusFilter}
           onChange={(e) => { setStatusFilter(e.target.value); setPage(1) }}
-          className="rounded-lg border border-slate-300 px-3 py-2 text-sm"
+          className="w-auto"
         >
           <option value="">All statuses</option>
           <option value="pending">Pending</option>
           <option value="accepted">Accepted</option>
           <option value="false_positive">False Positive</option>
-        </select>
+        </Select>
         <span className="text-sm text-slate-500">{data?.total ?? 0} entries</span>
       </div>
 

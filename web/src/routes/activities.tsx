@@ -14,6 +14,7 @@ import { Spinner } from '@/components/ui/Spinner'
 import { Modal } from '@/components/ui/Modal'
 import { statusVariant, priorityStyle } from '@/lib/styles'
 import { str } from '@/lib/helpers'
+import { inputStyles } from '@/components/ui/Input'
 import { Plus, Clock, AlertTriangle, Check, Stethoscope, Building2, Briefcase } from 'lucide-react'
 import type { Activity } from '@/types/activity'
 
@@ -84,7 +85,7 @@ function getTargetPriority(a: Activity): string {
 // --- Create Activity Modal ---
 
 const CORE_WIDGET_FIELDS = new Set(['duration', 'account_id'])
-const inputCls = 'w-full rounded-lg border border-slate-300 px-3 py-2 text-sm focus:border-teal-500 focus:outline-none focus:ring-1 focus:ring-teal-500'
+const inputCls = inputStyles
 
 function CreateActivityModal({ open, onClose }: { open: boolean; onClose: () => void }) {
   const { data: config } = useConfig()
@@ -496,7 +497,7 @@ function ActivityCard({ activity, allStatuses, canFilterByRep, userMap, onSelect
 // --- Main Page ---
 
 const PAGE_SIZE = 20
-const selectCls = 'w-full text-sm border border-slate-300 rounded-md py-2 px-3 bg-white focus:border-teal-500 focus:ring-1 focus:ring-teal-500 focus:outline-none'
+const selectCls = `${inputStyles} bg-white`
 
 function ActivitiesPage() {
   const { data: config } = useConfig()
