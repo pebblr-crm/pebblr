@@ -8,6 +8,48 @@ import { statusVariant, transitionColors } from '@/lib/styles'
 import { str } from '@/lib/helpers'
 import { Send, ExternalLink, AlertCircle, Check } from 'lucide-react'
 
+function ActionFooter({ transitions, config, isSubmittable, isPending, patchPending, submitPending, onTransition, onSubmit }: {
+  transitions: string[]
+  config: ReturnType<typeof useConfig>['data']
+  isSubmittable: boolean
+  isPending: boolean
+  patchPending: boolean
+  submitPending: boolean
+  onTransition: (nextStatus: string) => void
+  onSubmit: () => void
+}) {
+  return (
+    <div className="space-y-3">
+      <div className="flex gap-2">
+        {transitions.map((nextStatus) => {
+          const label = config?.activities.statuses.find((s) => s.key === nextStatus)?.label ?? nextStatus
+          const colorCls = transitionColors[nextStatus] ?? 'bg-slate-600 text-white hover:bg-slate-700'
+          return (
+            <button
+              key={nextStatus}
+              disabled={isPending}
+              onClick={() => onTransition(nextStatus)}
+              className={`flex-1 rounded-lg px-4 py-2.5 text-sm font-medium shadow-sm transition-colors disabled:opacity-50 ${colorCls}`}
+            >
+              {label}
+            </button>
+          )
+        })}
+        {isSubmittable && (
+          <button
+            disabled={submitPending || patchPending}
+            onClick={onSubmit}
+            className="flex-1 inline-flex items-center justify-center gap-2 rounded-lg bg-teal-600 px-4 py-2.5 text-sm font-medium text-white shadow-sm transition-colors hover:bg-teal-700 disabled:opacity-50"
+          >
+            <Send size={16} />
+            Submit
+          </button>
+        )}
+      </div>
+    </div>
+  )
+}
+
 interface ActivityDetailModalProps {
   readonly activityId: string | null
   readonly onClose: () => void
@@ -144,34 +186,16 @@ export function ActivityDetailModal({ activityId, onClose }: ActivityDetailModal
   const isLocked = !!activity?.submittedAt
 
   const actionFooter = activity && canAct && !isLocked ? (
-    <div className="space-y-3">
-      <div className="flex gap-2">
-        {transitions.map((nextStatus) => {
-          const label = config?.activities.statuses.find((s) => s.key === nextStatus)?.label ?? nextStatus
-          const colorCls = transitionColors[nextStatus] ?? 'bg-slate-600 text-white hover:bg-slate-700'
-          return (
-            <button
-              key={nextStatus}
-              disabled={patchStatus.isPending}
-              onClick={() => handleTransition(nextStatus)}
-              className={`flex-1 rounded-lg px-4 py-2.5 text-sm font-medium shadow-sm transition-colors disabled:opacity-50 ${colorCls}`}
-            >
-              {label}
-            </button>
-          )
-        })}
-        {isSubmittable && (
-          <button
-            disabled={submitActivity.isPending || patchActivity.isPending}
-            onClick={handleSubmit}
-            className="flex-1 inline-flex items-center justify-center gap-2 rounded-lg bg-teal-600 px-4 py-2.5 text-sm font-medium text-white shadow-sm transition-colors hover:bg-teal-700 disabled:opacity-50"
-          >
-            <Send size={16} />
-            Submit
-          </button>
-        )}
-      </div>
-    </div>
+    <ActionFooter
+      transitions={transitions}
+      config={config}
+      isSubmittable={isSubmittable}
+      isPending={patchStatus.isPending}
+      patchPending={patchActivity.isPending}
+      submitPending={submitActivity.isPending}
+      onTransition={handleTransition}
+      onSubmit={handleSubmit}
+    />
   ) : undefined
 
   return (

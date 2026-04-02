@@ -33,6 +33,7 @@ const (
 	sqlSelectVisitStatus  = "SELECT t.id::TEXT, MAX\\(a.due_date\\)"
 	tgtErrExpected1Result = "expected 1 result, got %d"
 	tgtErrExpectedEmpty   = "expected empty=false"
+	queryCountTargets     = "SELECT COUNT\\(\\*\\) FROM targets"
 )
 
 func targetRow(mock pgxmock.PgxPoolIface) *pgxmock.Rows {
@@ -127,7 +128,7 @@ func TestTargetList_AllTargets(t *testing.T) {
 	ctx := context.Background()
 	scope := rbac.TargetScope{AllTargets: true}
 
-	mock.ExpectQuery("SELECT COUNT\\(\\*\\) FROM targets").
+	mock.ExpectQuery(queryCountTargets).
 		WillReturnRows(mock.NewRows([]string{"count"}).AddRow(1))
 
 	// AllTargets, no filters: 2 pagination args
@@ -172,7 +173,7 @@ func TestTargetList_ScopedByAssigneeIDs(t *testing.T) {
 	ctx := context.Background()
 	scope := rbac.TargetScope{AssigneeIDs: []string{tgtTestUserID}}
 
-	mock.ExpectQuery("SELECT COUNT\\(\\*\\) FROM targets").
+	mock.ExpectQuery(queryCountTargets).
 		WithArgs(tgtTestUserID).
 		WillReturnRows(mock.NewRows([]string{"count"}).AddRow(1))
 
@@ -196,7 +197,7 @@ func TestTargetList_ScopedByTeamIDs(t *testing.T) {
 	ctx := context.Background()
 	scope := rbac.TargetScope{TeamIDs: []string{tgtTestTeamID}}
 
-	mock.ExpectQuery("SELECT COUNT\\(\\*\\) FROM targets").
+	mock.ExpectQuery(queryCountTargets).
 		WithArgs(tgtTestTeamID).
 		WillReturnRows(mock.NewRows([]string{"count"}).AddRow(0))
 
@@ -227,7 +228,7 @@ func TestTargetList_WithFilters(t *testing.T) {
 		Query:      strPtr("Pharm"),
 	}
 
-	mock.ExpectQuery("SELECT COUNT\\(\\*\\) FROM targets").
+	mock.ExpectQuery(queryCountTargets).
 		WithArgs("pharmacy", tgtTestUserID, tgtTestTeamID, "%Pharm%").
 		WillReturnRows(mock.NewRows([]string{"count"}).AddRow(1))
 
@@ -251,7 +252,7 @@ func TestTargetList_PaginationDefaults(t *testing.T) {
 	ctx := context.Background()
 	scope := rbac.TargetScope{AllTargets: true}
 
-	mock.ExpectQuery("SELECT COUNT\\(\\*\\) FROM targets").
+	mock.ExpectQuery(queryCountTargets).
 		WillReturnRows(mock.NewRows([]string{"count"}).AddRow(0))
 
 	mock.ExpectQuery(sqlSelectTargets).
@@ -277,7 +278,7 @@ func TestTargetList_CountError(t *testing.T) {
 	ctx := context.Background()
 	scope := rbac.TargetScope{AllTargets: true}
 
-	mock.ExpectQuery("SELECT COUNT\\(\\*\\) FROM targets").
+	mock.ExpectQuery(queryCountTargets).
 		WillReturnError(errors.New(tgtTestDBError))
 
 	_, err := repo.List(ctx, scope, store.TargetFilter{}, 1, 20)
@@ -293,7 +294,7 @@ func TestTargetList_QueryError(t *testing.T) {
 	ctx := context.Background()
 	scope := rbac.TargetScope{AllTargets: true}
 
-	mock.ExpectQuery("SELECT COUNT\\(\\*\\) FROM targets").
+	mock.ExpectQuery(queryCountTargets).
 		WillReturnRows(mock.NewRows([]string{"count"}).AddRow(1))
 
 	mock.ExpectQuery(sqlSelectTargets).

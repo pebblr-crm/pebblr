@@ -20,9 +20,15 @@ const (
 	testActTeamID2               = "team-2"
 	testActOtherDr               = "Other Dr"
 	testActTargetID2             = "target-2"
-	testActErrNoRecoveryBalance  = "expected ErrNoRecoveryBalance, got: %v"
-	testActErrUnexpected         = "unexpected error: %v"
+	testActErrNoRecoveryBalance   = "expected ErrNoRecoveryBalance, got: %v"
+	testActErrUnexpected          = "unexpected error: %v"
 	testActErrTargetNotAccessible = "expected ErrTargetNotAccessible, got %v"
+	testActOtherRep               = "other-rep"
+	fmtExpectedActivity1          = "expected activity-1, got %s"
+	fmtExpectedForbidden          = "expected ErrForbidden, got %v"
+	fmtExpectedSubmitted          = "expected ErrSubmitted, got %v"
+	msgExpectedIDSet              = "expected ID to be set"
+	fmtExpectedInvalidInput       = "expected ErrInvalidInput, got %v"
 )
 
 // --- stub activity repo ---
@@ -254,7 +260,7 @@ func TestActivityCreate_RepSucceeds(t *testing.T) {
 		t.Fatalf(testActErrUnexpected, err)
 	}
 	if created.ID == "" {
-		t.Error("expected ID to be set")
+		t.Error(msgExpectedIDSet)
 	}
 	if created.CreatorID != "rep-1" {
 		t.Errorf("expected creator rep-1, got %s", created.CreatorID)
@@ -280,7 +286,7 @@ func TestActivityCreate_InvalidType(t *testing.T) {
 	}
 	_, err := svc.Create(context.Background(), repUser(), activity)
 	if !errors.Is(err, service.ErrInvalidInput) {
-		t.Errorf("expected ErrInvalidInput, got %v", err)
+		t.Errorf(fmtExpectedInvalidInput, err)
 	}
 }
 
@@ -296,7 +302,7 @@ func TestActivityCreate_MissingDueDate(t *testing.T) {
 	}
 	_, err := svc.Create(context.Background(), repUser(), activity)
 	if !errors.Is(err, service.ErrInvalidInput) {
-		t.Errorf("expected ErrInvalidInput, got %v", err)
+		t.Errorf(fmtExpectedInvalidInput, err)
 	}
 }
 
@@ -314,7 +320,7 @@ func TestActivityCreate_InvalidDuration(t *testing.T) {
 	}
 	_, err := svc.Create(context.Background(), repUser(), activity)
 	if !errors.Is(err, service.ErrInvalidInput) {
-		t.Errorf("expected ErrInvalidInput, got %v", err)
+		t.Errorf(fmtExpectedInvalidInput, err)
 	}
 }
 
@@ -387,7 +393,7 @@ func TestActivityCreate_VacationAllowedOnEmptyDay(t *testing.T) {
 		t.Fatalf(testActErrUnexpected, err)
 	}
 	if created.ID == "" {
-		t.Error("expected ID to be set")
+		t.Error(msgExpectedIDSet)
 	}
 }
 
@@ -426,7 +432,7 @@ func TestActivityCreate_TargetNotRequiredForNonField(t *testing.T) {
 		t.Fatalf(testActErrUnexpected, err)
 	}
 	if created.ID == "" {
-		t.Error("expected ID to be set")
+		t.Error(msgExpectedIDSet)
 	}
 }
 
@@ -443,14 +449,14 @@ func TestActivityGet_RepOwnsActivity(t *testing.T) {
 		t.Fatalf(testActErrUnexpected, err)
 	}
 	if activity.ID != testActActivityID {
-		t.Errorf("expected activity-1, got %s", activity.ID)
+		t.Errorf(fmtExpectedActivity1, activity.ID)
 	}
 }
 
 func TestActivityGet_RepForbiddenOther(t *testing.T) {
 	t.Parallel()
 	other := sampleActivity()
-	other.CreatorID = "other-rep"
+	other.CreatorID = testActOtherRep
 	other.TeamID = testActTeamID2
 	repo := &stubActivityRepo{activity: other}
 	audit := &stubAuditRepo{}
@@ -458,7 +464,7 @@ func TestActivityGet_RepForbiddenOther(t *testing.T) {
 
 	_, err := svc.Get(context.Background(), repUser(), testActActivityID)
 	if !errors.Is(err, service.ErrForbidden) {
-		t.Errorf("expected ErrForbidden, got %v", err)
+		t.Errorf(fmtExpectedForbidden, err)
 	}
 }
 
@@ -506,12 +512,12 @@ func TestActivityUpdate_RepOwnsActivity(t *testing.T) {
 		DueDate:      time.Date(2026, 3, 24, 0, 0, 0, 0, time.UTC),
 		Fields:       map[string]any{},
 	}
-	updated, err := svc.Update(context.Background(), repUser(), "activity-1", update)
+	updated, err := svc.Update(context.Background(), repUser(), testActActivityID, update)
 	if err != nil {
 		t.Fatalf(testActErrUnexpected, err)
 	}
 	if updated.ID != testActActivityID {
-		t.Errorf("expected activity-1, got %s", updated.ID)
+		t.Errorf(fmtExpectedActivity1, updated.ID)
 	}
 	if updated.CreatorID != "rep-1" {
 		t.Errorf("expected creator preserved as rep-1, got %s", updated.CreatorID)
@@ -521,7 +527,7 @@ func TestActivityUpdate_RepOwnsActivity(t *testing.T) {
 func TestActivityUpdate_RepForbiddenOther(t *testing.T) {
 	t.Parallel()
 	other := sampleActivity()
-	other.CreatorID = "other-rep"
+	other.CreatorID = testActOtherRep
 	other.TeamID = testActTeamID2
 	repo := &stubActivityRepo{activity: other}
 	audit := &stubAuditRepo{}
@@ -533,9 +539,9 @@ func TestActivityUpdate_RepForbiddenOther(t *testing.T) {
 		DueDate:      time.Date(2026, 3, 24, 0, 0, 0, 0, time.UTC),
 		Fields:       map[string]any{},
 	}
-	_, err := svc.Update(context.Background(), repUser(), "activity-1", update)
+	_, err := svc.Update(context.Background(), repUser(), testActActivityID, update)
 	if !errors.Is(err, service.ErrForbidden) {
-		t.Errorf("expected ErrForbidden, got %v", err)
+		t.Errorf(fmtExpectedForbidden, err)
 	}
 }
 
@@ -554,9 +560,9 @@ func TestActivityUpdate_SubmittedBlocked(t *testing.T) {
 		DueDate:      time.Date(2026, 3, 24, 0, 0, 0, 0, time.UTC),
 		Fields:       map[string]any{},
 	}
-	_, err := svc.Update(context.Background(), repUser(), "activity-1", update)
+	_, err := svc.Update(context.Background(), repUser(), testActActivityID, update)
 	if !errors.Is(err, service.ErrSubmitted) {
-		t.Errorf("expected ErrSubmitted, got %v", err)
+		t.Errorf(fmtExpectedSubmitted, err)
 	}
 }
 
@@ -588,7 +594,7 @@ func TestActivityDelete_SubmittedBlocked(t *testing.T) {
 
 	err := svc.Delete(context.Background(), repUser(), testActActivityID)
 	if !errors.Is(err, service.ErrSubmitted) {
-		t.Errorf("expected ErrSubmitted, got %v", err)
+		t.Errorf(fmtExpectedSubmitted, err)
 	}
 }
 
@@ -656,7 +662,7 @@ func TestActivitySubmit_AlreadySubmitted(t *testing.T) {
 
 	_, err := svc.Submit(context.Background(), repUser(), testActActivityID)
 	if !errors.Is(err, service.ErrSubmitted) {
-		t.Errorf("expected ErrSubmitted, got %v", err)
+		t.Errorf(fmtExpectedSubmitted, err)
 	}
 }
 
@@ -671,7 +677,7 @@ func TestActivityPartialUpdate_StatusOnly(t *testing.T) {
 
 	newStatus := "realizat"
 	patch := &domain.ActivityPatch{Status: &newStatus}
-	updated, err := svc.PartialUpdate(context.Background(), repUser(), "activity-1", patch)
+	updated, err := svc.PartialUpdate(context.Background(), repUser(), testActActivityID, patch)
 	if err != nil {
 		t.Fatalf(testActErrUnexpected, err)
 	}
@@ -693,7 +699,7 @@ func TestActivityPartialUpdate_DueDate(t *testing.T) {
 
 	newDate := time.Date(2026, 3, 30, 0, 0, 0, 0, time.UTC)
 	patch := &domain.ActivityPatch{DueDate: &newDate}
-	updated, err := svc.PartialUpdate(context.Background(), repUser(), "activity-1", patch)
+	updated, err := svc.PartialUpdate(context.Background(), repUser(), testActActivityID, patch)
 	if err != nil {
 		t.Fatalf(testActErrUnexpected, err)
 	}
@@ -714,7 +720,7 @@ func TestActivityPartialUpdate_FieldsMerge(t *testing.T) {
 		Fields:        map[string]any{"notes": "new note"},
 		FieldsPresent: true,
 	}
-	updated, err := svc.PartialUpdate(context.Background(), repUser(), "activity-1", patch)
+	updated, err := svc.PartialUpdate(context.Background(), repUser(), testActActivityID, patch)
 	if err != nil {
 		t.Fatalf(testActErrUnexpected, err)
 	}
@@ -739,7 +745,7 @@ func TestActivityPartialUpdate_FieldsNullClearsKey(t *testing.T) {
 		Fields:        map[string]any{"notes": nil},
 		FieldsPresent: true,
 	}
-	updated, err := svc.PartialUpdate(context.Background(), repUser(), "activity-1", patch)
+	updated, err := svc.PartialUpdate(context.Background(), repUser(), testActActivityID, patch)
 	if err != nil {
 		t.Fatalf(testActErrUnexpected, err)
 	}
@@ -759,7 +765,7 @@ func TestActivityPartialUpdate_FieldsAbsentLeavesUntouched(t *testing.T) {
 	// Patch with no fields key.
 	newStatus := "realizat"
 	patch := &domain.ActivityPatch{Status: &newStatus}
-	updated, err := svc.PartialUpdate(context.Background(), repUser(), "activity-1", patch)
+	updated, err := svc.PartialUpdate(context.Background(), repUser(), testActActivityID, patch)
 	if err != nil {
 		t.Fatalf(testActErrUnexpected, err)
 	}
@@ -771,7 +777,7 @@ func TestActivityPartialUpdate_FieldsAbsentLeavesUntouched(t *testing.T) {
 func TestActivityPartialUpdate_ForbiddenOtherRep(t *testing.T) {
 	t.Parallel()
 	other := sampleActivity()
-	other.CreatorID = "other-rep"
+	other.CreatorID = testActOtherRep
 	other.TeamID = testActTeamID2
 	repo := &stubActivityRepo{activity: other}
 	audit := &stubAuditRepo{}
@@ -779,9 +785,9 @@ func TestActivityPartialUpdate_ForbiddenOtherRep(t *testing.T) {
 
 	newStatus := "realizat"
 	patch := &domain.ActivityPatch{Status: &newStatus}
-	_, err := svc.PartialUpdate(context.Background(), repUser(), "activity-1", patch)
+	_, err := svc.PartialUpdate(context.Background(), repUser(), testActActivityID, patch)
 	if !errors.Is(err, service.ErrForbidden) {
-		t.Errorf("expected ErrForbidden, got %v", err)
+		t.Errorf(fmtExpectedForbidden, err)
 	}
 }
 
@@ -796,9 +802,9 @@ func TestActivityPartialUpdate_SubmittedBlocked(t *testing.T) {
 
 	newStatus := "anulat"
 	patch := &domain.ActivityPatch{Status: &newStatus}
-	_, err := svc.PartialUpdate(context.Background(), repUser(), "activity-1", patch)
+	_, err := svc.PartialUpdate(context.Background(), repUser(), testActActivityID, patch)
 	if !errors.Is(err, service.ErrSubmitted) {
-		t.Errorf("expected ErrSubmitted, got %v", err)
+		t.Errorf(fmtExpectedSubmitted, err)
 	}
 }
 
@@ -811,7 +817,7 @@ func TestActivityPartialUpdate_AuditRecorded(t *testing.T) {
 
 	newStatus := "realizat"
 	patch := &domain.ActivityPatch{Status: &newStatus}
-	_, err := svc.PartialUpdate(context.Background(), repUser(), "activity-1", patch)
+	_, err := svc.PartialUpdate(context.Background(), repUser(), testActActivityID, patch)
 	if err != nil {
 		t.Fatalf(testActErrUnexpected, err)
 	}
@@ -829,7 +835,7 @@ func TestActivityPatchStatus_ValidTransition(t *testing.T) {
 	audit := &stubAuditRepo{}
 	svc := newActivitySvc(repo, audit)
 
-	updated, err := svc.PatchStatus(context.Background(), repUser(), "activity-1", "realizat")
+	updated, err := svc.PatchStatus(context.Background(), repUser(), testActActivityID, "realizat")
 	if err != nil {
 		t.Fatalf(testActErrUnexpected, err)
 	}
@@ -856,7 +862,7 @@ func TestActivityPatchStatus_InvalidTransition(t *testing.T) {
 	audit := &stubAuditRepo{}
 	svc := newActivitySvc(repo, audit)
 
-	_, err := svc.PatchStatus(context.Background(), repUser(), "activity-1", "planificat")
+	_, err := svc.PatchStatus(context.Background(), repUser(), testActActivityID, "planificat")
 	var ve *service.ValidationErrors
 	if !errors.As(err, &ve) {
 		t.Fatalf("expected ValidationErrors, got %v", err)
@@ -872,9 +878,9 @@ func TestActivityPatchStatus_SubmittedBlocked(t *testing.T) {
 	audit := &stubAuditRepo{}
 	svc := newActivitySvc(repo, audit)
 
-	_, err := svc.PatchStatus(context.Background(), repUser(), "activity-1", "realizat")
+	_, err := svc.PatchStatus(context.Background(), repUser(), testActActivityID, "realizat")
 	if !errors.Is(err, service.ErrSubmitted) {
-		t.Errorf("expected ErrSubmitted, got %v", err)
+		t.Errorf(fmtExpectedSubmitted, err)
 	}
 }
 
@@ -957,7 +963,7 @@ func TestActivityGet_RepCanViewAsJointVisitor(t *testing.T) {
 		t.Fatalf(testActErrUnexpected, err)
 	}
 	if activity.ID != testActActivityID {
-		t.Errorf("expected activity-1, got %s", activity.ID)
+		t.Errorf(fmtExpectedActivity1, activity.ID)
 	}
 }
 
@@ -976,7 +982,7 @@ func TestActivityUpdate_JointVisitorCannotUpdate(t *testing.T) {
 		DueDate:      time.Date(2026, 3, 24, 0, 0, 0, 0, time.UTC),
 		Fields:       map[string]any{},
 	}
-	_, err := svc.Update(context.Background(), repUser(), "activity-1", update)
+	_, err := svc.Update(context.Background(), repUser(), testActActivityID, update)
 	if !errors.Is(err, service.ErrForbidden) {
 		t.Errorf("expected ErrForbidden for joint visitor update, got %v", err)
 	}
@@ -1334,7 +1340,7 @@ func TestActivityUpdate_TargetChangedToInaccessibleFails(t *testing.T) {
 	updated.Fields = map[string]any{}
 	updated.TargetID = testActTargetID2
 
-	_, err := svc.Update(context.Background(), repUser(), "activity-1", &updated)
+	_, err := svc.Update(context.Background(), repUser(), testActActivityID, &updated)
 	if !errors.Is(err, service.ErrTargetNotAccessible) {
 		t.Errorf(testActErrTargetNotAccessible, err)
 	}

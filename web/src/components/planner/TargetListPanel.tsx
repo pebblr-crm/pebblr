@@ -172,6 +172,10 @@ export function TargetListPanel({
               const isSelected = selectedTargetIds.has(t.id)
               const isHovered = hoveredTargetId === t.id
 
+              const stateClass = isSelected
+                ? 'bg-teal-50 border-l-2 border-l-teal-500'
+                : isHovered ? 'bg-slate-50' : 'hover:bg-slate-50'
+
               return (
                 <li
                   key={t.id}
@@ -180,13 +184,7 @@ export function TargetListPanel({
                   onDragEnd={onDragTargetEnd}
                   onMouseEnter={() => onHoverTarget(t.id)}
                   onMouseLeave={() => onHoverTarget(null)}
-                  className={`border-b border-slate-50 flex text-xs transition-colors ${
-                    isSelected
-                      ? 'bg-teal-50 border-l-2 border-l-teal-500'
-                      : isHovered
-                        ? 'bg-slate-50'
-                        : 'hover:bg-slate-50'
-                  }`}
+                  className={`px-3 py-2 border-b border-slate-50 flex items-center gap-2 text-xs cursor-pointer transition-colors ${stateClass}`}
                 >
                 <button
                   type="button"

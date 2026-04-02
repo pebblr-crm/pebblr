@@ -10,6 +10,13 @@ import (
 	"github.com/pebblr/pebblr/internal/store"
 )
 
+const (
+	testTeamID      = "team-1"
+	testTeam2ID     = "team-2"
+	fmtUnexpectedErr = "unexpected error: %v"
+	fmtExpectedTeam1 = "expected team-1, got %s"
+)
+
 // --- stub team repo ---
 
 type stubTeamRepo struct {
@@ -49,8 +56,8 @@ func (r *stubTeamRepo) ListMembers(_ context.Context, _ string) ([]*domain.User,
 func defaultTeamRepo() *stubTeamRepo {
 	return &stubTeamRepo{
 		teams: []*domain.Team{
-			{ID: "team-1", Name: "Alpha", ManagerID: "mgr-1"},
-			{ID: "team-2", Name: "Beta", ManagerID: "mgr-2"},
+			{ID: testTeamID, Name: "Alpha", ManagerID: "mgr-1"},
+			{ID: testTeam2ID, Name: "Beta", ManagerID: "mgr-2"},
 		},
 		members: []*domain.User{
 			{ID: "rep-1", Name: "Rep", Role: domain.RoleRep},
@@ -65,7 +72,7 @@ func TestTeamService_List_AdminSeesAll(t *testing.T) {
 	svc := service.NewTeamService(defaultTeamRepo())
 	teams, err := svc.List(context.Background(), adminUser())
 	if err != nil {
-		t.Fatalf("unexpected error: %v", err)
+		t.Fatalf(fmtUnexpectedErr, err)
 	}
 	if len(teams) != 2 {
 		t.Errorf("admin should see all 2 teams, got %d", len(teams))
@@ -78,13 +85,13 @@ func TestTeamService_List_ManagerSeesOwnTeams(t *testing.T) {
 	// managerUser() has TeamIDs: ["team-1"]
 	teams, err := svc.List(context.Background(), managerUser())
 	if err != nil {
-		t.Fatalf("unexpected error: %v", err)
+		t.Fatalf(fmtUnexpectedErr, err)
 	}
 	if len(teams) != 1 {
 		t.Fatalf("manager should see 1 team, got %d", len(teams))
 	}
-	if teams[0].ID != "team-1" {
-		t.Errorf("expected team-1, got %s", teams[0].ID)
+	if teams[0].ID != testTeamID {
+		t.Errorf(fmtExpectedTeam1, teams[0].ID)
 	}
 }
 
@@ -94,20 +101,20 @@ func TestTeamService_List_RepSeesOwnTeams(t *testing.T) {
 	// repUser() has TeamIDs: ["team-1"]
 	teams, err := svc.List(context.Background(), repUser())
 	if err != nil {
-		t.Fatalf("unexpected error: %v", err)
+		t.Fatalf(fmtUnexpectedErr, err)
 	}
 	if len(teams) != 1 {
 		t.Fatalf("rep should see 1 team, got %d", len(teams))
 	}
-	if teams[0].ID != "team-1" {
-		t.Errorf("expected team-1, got %s", teams[0].ID)
+	if teams[0].ID != testTeamID {
+		t.Errorf(fmtExpectedTeam1, teams[0].ID)
 	}
 }
 
 func TestTeamService_Get_RepCannotAccessOtherTeam(t *testing.T) {
 	t.Parallel()
 	svc := service.NewTeamService(defaultTeamRepo())
-	_, err := svc.Get(context.Background(), repUser(), "team-2")
+	_, err := svc.Get(context.Background(), repUser(), testTeam2ID)
 	if !errors.Is(err, service.ErrForbidden) {
 		t.Errorf("expected ErrForbidden, got %v", err)
 	}
@@ -116,19 +123,19 @@ func TestTeamService_Get_RepCannotAccessOtherTeam(t *testing.T) {
 func TestTeamService_Get_RepCanAccessOwnTeam(t *testing.T) {
 	t.Parallel()
 	svc := service.NewTeamService(defaultTeamRepo())
-	team, err := svc.Get(context.Background(), repUser(), "team-1")
+	team, err := svc.Get(context.Background(), repUser(), testTeamID)
 	if err != nil {
-		t.Fatalf("unexpected error: %v", err)
+		t.Fatalf(fmtUnexpectedErr, err)
 	}
-	if team.ID != "team-1" {
-		t.Errorf("expected team-1, got %s", team.ID)
+	if team.ID != testTeamID {
+		t.Errorf(fmtExpectedTeam1, team.ID)
 	}
 }
 
 func TestTeamService_ListMembers_Forbidden(t *testing.T) {
 	t.Parallel()
 	svc := service.NewTeamService(defaultTeamRepo())
-	_, err := svc.ListMembers(context.Background(), repUser(), "team-2")
+	_, err := svc.ListMembers(context.Background(), repUser(), testTeam2ID)
 	if !errors.Is(err, service.ErrForbidden) {
 		t.Errorf("expected ErrForbidden, got %v", err)
 	}
@@ -137,9 +144,9 @@ func TestTeamService_ListMembers_Forbidden(t *testing.T) {
 func TestTeamService_ListMembers_Allowed(t *testing.T) {
 	t.Parallel()
 	svc := service.NewTeamService(defaultTeamRepo())
-	members, err := svc.ListMembers(context.Background(), adminUser(), "team-1")
+	members, err := svc.ListMembers(context.Background(), adminUser(), testTeamID)
 	if err != nil {
-		t.Fatalf("unexpected error: %v", err)
+		t.Fatalf(fmtUnexpectedErr, err)
 	}
 	if len(members) != 1 {
 		t.Errorf("expected 1 member, got %d", len(members))

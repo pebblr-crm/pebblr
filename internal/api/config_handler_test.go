@@ -11,6 +11,8 @@ import (
 	"github.com/pebblr/pebblr/internal/domain"
 )
 
+const pathConfig = "/config"
+
 func testTenantConfig() *config.TenantConfig {
 	return &config.TenantConfig{
 		Tenant: config.TenantInfo{Name: "Test Tenant", Locale: "en"},
@@ -44,7 +46,7 @@ func testTenantConfig() *config.TenantConfig {
 func newTestConfigHandler(user *domain.User) http.Handler {
 	h := api.NewConfigHandler(testTenantConfig())
 	mux := http.NewServeMux()
-	mux.HandleFunc("/config", h.Get)
+	mux.HandleFunc(pathConfig, h.Get)
 	if user != nil {
 		return injectUser(user, mux)
 	}
@@ -53,7 +55,7 @@ func newTestConfigHandler(user *domain.User) http.Handler {
 
 func TestConfigGet_ReturnsOK(t *testing.T) {
 	t.Parallel()
-	req := httptest.NewRequest(http.MethodGet, "/config", http.NoBody)
+	req := httptest.NewRequest(http.MethodGet, pathConfig, http.NoBody)
 	w := httptest.NewRecorder()
 	newTestConfigHandler(testRepUser()).ServeHTTP(w, req)
 
@@ -78,7 +80,7 @@ func TestConfigGet_ReturnsOK(t *testing.T) {
 
 func TestConfigGet_NoUser_Returns401(t *testing.T) {
 	t.Parallel()
-	req := httptest.NewRequest(http.MethodGet, "/config", http.NoBody)
+	req := httptest.NewRequest(http.MethodGet, pathConfig, http.NoBody)
 	w := httptest.NewRecorder()
 	newTestConfigHandler(nil).ServeHTTP(w, req)
 

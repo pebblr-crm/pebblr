@@ -8,10 +8,12 @@ import (
 	"github.com/pebblr/pebblr/internal/domain"
 )
 
+const testSecret = "test-secret"
+
 func TestStaticAuthenticator_ValidToken(t *testing.T) {
 	t.Parallel()
-	a := auth.NewStaticAuthenticator("test-secret")
-	claims, err := a.ValidateToken(context.Background(), "test-secret")
+	a := auth.NewStaticAuthenticator(testSecret)
+	claims, err := a.ValidateToken(context.Background(), testSecret)
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
@@ -28,7 +30,7 @@ func TestStaticAuthenticator_ValidToken(t *testing.T) {
 
 func TestStaticAuthenticator_InvalidToken(t *testing.T) {
 	t.Parallel()
-	a := auth.NewStaticAuthenticator("test-secret")
+	a := auth.NewStaticAuthenticator(testSecret)
 	_, err := a.ValidateToken(context.Background(), "wrong-token")
 	if err == nil {
 		t.Fatal("expected error for invalid token")
@@ -37,7 +39,7 @@ func TestStaticAuthenticator_InvalidToken(t *testing.T) {
 
 func TestStaticAuthenticator_EmptyToken(t *testing.T) {
 	t.Parallel()
-	a := auth.NewStaticAuthenticator("test-secret")
+	a := auth.NewStaticAuthenticator(testSecret)
 	_, err := a.ValidateToken(context.Background(), "")
 	if err == nil {
 		t.Fatal("expected error for empty token")

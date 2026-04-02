@@ -10,6 +10,12 @@ import (
 	"github.com/pebblr/pebblr/internal/rbac"
 )
 
+const (
+	testTeamID       = "team-1"
+	fmtUserFromCtxErr = "UserFromContext error: %v"
+	fmtExpected200   = "expected 200, got %d"
+)
+
 func TestClaimsBridge_SetsUser(t *testing.T) {
 	t.Parallel()
 	claims := &auth.UserClaims{
@@ -17,7 +23,7 @@ func TestClaimsBridge_SetsUser(t *testing.T) {
 		Email:   "test@example.com",
 		Name:    "Test User",
 		Roles:   []domain.Role{domain.RoleManager},
-		TeamIDs: []string{"team-1"},
+		TeamIDs: []string{testTeamID},
 	}
 
 	var got *domain.User
@@ -25,7 +31,7 @@ func TestClaimsBridge_SetsUser(t *testing.T) {
 		var err error
 		got, err = rbac.UserFromContext(r.Context())
 		if err != nil {
-			t.Fatalf("UserFromContext error: %v", err)
+			t.Fatalf(fmtUserFromCtxErr, err)
 		}
 		w.WriteHeader(http.StatusOK)
 	}))
@@ -36,7 +42,7 @@ func TestClaimsBridge_SetsUser(t *testing.T) {
 	handler.ServeHTTP(rec, req)
 
 	if rec.Code != http.StatusOK {
-		t.Fatalf("expected 200, got %d", rec.Code)
+		t.Fatalf(fmtExpected200, rec.Code)
 	}
 	if got.ID != "user-123" {
 		t.Errorf("expected user ID user-123, got %q", got.ID)
@@ -44,7 +50,7 @@ func TestClaimsBridge_SetsUser(t *testing.T) {
 	if got.Role != domain.RoleManager {
 		t.Errorf("expected role manager, got %q", got.Role)
 	}
-	if len(got.TeamIDs) != 1 || got.TeamIDs[0] != "team-1" {
+	if len(got.TeamIDs) != 1 || got.TeamIDs[0] != testTeamID {
 		t.Errorf("expected teamIDs [team-1], got %v", got.TeamIDs)
 	}
 }
@@ -56,7 +62,7 @@ func TestClaimsBridge_MultiRole_PicksHighest(t *testing.T) {
 		Email:   "multi@example.com",
 		Name:    "Multi-Role User",
 		Roles:   []domain.Role{domain.RoleRep, domain.RoleAdmin, domain.RoleManager},
-		TeamIDs: []string{"team-1"},
+		TeamIDs: []string{testTeamID},
 	}
 
 	var got *domain.User
@@ -64,7 +70,7 @@ func TestClaimsBridge_MultiRole_PicksHighest(t *testing.T) {
 		var err error
 		got, err = rbac.UserFromContext(r.Context())
 		if err != nil {
-			t.Fatalf("UserFromContext error: %v", err)
+			t.Fatalf(fmtUserFromCtxErr, err)
 		}
 		w.WriteHeader(http.StatusOK)
 	}))
@@ -75,7 +81,7 @@ func TestClaimsBridge_MultiRole_PicksHighest(t *testing.T) {
 	handler.ServeHTTP(rec, req)
 
 	if rec.Code != http.StatusOK {
-		t.Fatalf("expected 200, got %d", rec.Code)
+		t.Fatalf(fmtExpected200, rec.Code)
 	}
 	if got.Role != domain.RoleAdmin {
 		t.Errorf("expected highest role admin, got %q", got.Role)
@@ -97,7 +103,7 @@ func TestClaimsBridge_EmptyRoles_DefaultsToRep(t *testing.T) {
 		var err error
 		got, err = rbac.UserFromContext(r.Context())
 		if err != nil {
-			t.Fatalf("UserFromContext error: %v", err)
+			t.Fatalf(fmtUserFromCtxErr, err)
 		}
 		w.WriteHeader(http.StatusOK)
 	}))
@@ -108,7 +114,7 @@ func TestClaimsBridge_EmptyRoles_DefaultsToRep(t *testing.T) {
 	handler.ServeHTTP(rec, req)
 
 	if rec.Code != http.StatusOK {
-		t.Fatalf("expected 200, got %d", rec.Code)
+		t.Fatalf(fmtExpected200, rec.Code)
 	}
 	if got.Role != domain.RoleRep {
 		t.Errorf("expected default role rep, got %q", got.Role)

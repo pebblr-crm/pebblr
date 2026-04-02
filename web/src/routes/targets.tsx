@@ -28,6 +28,39 @@ const priorityVariant: Record<string, 'danger' | 'warning' | 'default'> = {
   c: 'default',
 }
 
+function TargetNameCell({ name, id, onNavigate }: { name: string; id: string; onNavigate: (id: string) => void }) {
+  return (
+    <a
+      href={`/targets/${id}`}
+      className="font-medium text-slate-900 hover:text-teal-600 hover:underline inline-flex items-center gap-1"
+      onClick={(e) => { e.preventDefault(); onNavigate(id) }}
+    >
+      {name}
+      <ExternalLink size={12} className="text-slate-400" />
+    </a>
+  )
+}
+
+function PriorityCell({ getValue }: { getValue: () => string }) {
+  return (
+    <Badge variant={priorityVariant[getValue()] ?? 'default'}>
+      {getValue().toUpperCase()}
+    </Badge>
+  )
+}
+
+function TargetTypeCell({ getValue }: { getValue: () => string }) {
+  return <span className="capitalize">{getValue()}</span>
+}
+
+function TargetComplianceCell({ getValue }: { getValue: () => number | undefined }) {
+  const v = getValue()
+  if (v == null) return <span className="text-slate-400">-</span>
+  const pct = Math.round(v)
+  const color = pct >= 80 ? 'text-emerald-600' : pct >= 50 ? 'text-amber-600' : 'text-red-600'
+  return <span className={`font-medium ${color}`}>{pct}%</span>
+}
+
 function TargetsPage() {
   const navigate = useNavigate()
   const [search, setSearch] = useState('')
@@ -47,24 +80,17 @@ function TargetsPage() {
       columnHelper.accessor('name', {
         header: 'Name',
         cell: (info) => (
-          <a
-            href={`/targets/${info.row.original.id}`}
-            className="font-medium text-slate-900 hover:text-teal-600 hover:underline inline-flex items-center gap-1"
-            onClick={(e) => { e.preventDefault(); navigate({ to: '/targets/$id', params: { id: info.row.original.id } }) }}
-          >
-            {info.getValue()}
-            <ExternalLink size={12} className="text-slate-400" />
-          </a>
+          <TargetNameCell
+            name={info.getValue()}
+            id={info.row.original.id}
+            onNavigate={(id) => navigate({ to: '/targets/$id', params: { id } })}
+          />
         ),
       }),
       columnHelper.accessor((row) => getClassification(row.fields), {
         id: 'priority',
         header: 'Priority',
-        cell: (info) => (
-          <Badge variant={priorityVariant[info.getValue()] ?? 'default'}>
-            {info.getValue().toUpperCase()}
-          </Badge>
-        ),
+        cell: (info) => <PriorityCell getValue={info.getValue} />,
       }),
       columnHelper.accessor((row) => getCity(row.fields), {
         id: 'city',
@@ -72,20 +98,12 @@ function TargetsPage() {
       }),
       columnHelper.accessor('targetType', {
         header: 'Type',
-        cell: (info) => <span className="capitalize">{info.getValue()}</span>,
+        cell: (info) => <TargetTypeCell getValue={info.getValue} />,
       }),
       columnHelper.accessor((row) => freqMap.get(row.id), {
         id: 'compliance',
         header: 'Compliance',
-        cell: (info) => {
-          const v = info.getValue()
-          if (v == null) return <span className="text-slate-400">-</span>
-          const pct = Math.round(v)
-          let color = 'text-red-600'
-          if (pct >= 80) color = 'text-emerald-600'
-          else if (pct >= 50) color = 'text-amber-600'
-          return <span className={`font-medium ${color}`}>{pct}%</span>
-        },
+        cell: (info) => <TargetComplianceCell getValue={info.getValue} />,
       }),
     ],
     [freqMap, navigate],

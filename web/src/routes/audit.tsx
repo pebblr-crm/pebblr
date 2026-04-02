@@ -26,6 +26,67 @@ const auditStatusVariant: Record<string, 'warning' | 'success' | 'default'> = {
 
 const columnHelper = createColumnHelper<AuditEntry>()
 
+function TimestampCell({ getValue }: { getValue: () => string }) {
+  return (
+    <span className="text-xs text-slate-500 whitespace-nowrap">
+      {new Date(getValue()).toLocaleString('en-GB', {
+        day: '2-digit', month: 'short', year: 'numeric',
+        hour: '2-digit', minute: '2-digit',
+      })}
+    </span>
+  )
+}
+
+function ActorCell({ getValue }: { getValue: () => string }) {
+  return (
+    <span className="text-sm text-slate-700 font-mono">{getValue().slice(0, 8)}...</span>
+  )
+}
+
+function EntityTypeCell({ getValue }: { getValue: () => string }) {
+  return <Badge>{getValue()}</Badge>
+}
+
+function EventTypeCell({ getValue }: { getValue: () => string }) {
+  return <span className="text-sm capitalize">{getValue().replace('_', ' ')}</span>
+}
+
+function StatusCell({ getValue }: { getValue: () => AuditStatus }) {
+  return (
+    <Badge variant={auditStatusVariant[getValue()] ?? 'default'}>
+      {getValue().replace('_', ' ')}
+    </Badge>
+  )
+}
+
+function ReviewActionsCell({ entry, onAccept, onFalsePositive }: {
+  entry: AuditEntry
+  onAccept: (id: string) => void
+  onFalsePositive: (id: string) => void
+}) {
+  if (entry.status !== 'pending') return null
+  return (
+    <div className="flex gap-1">
+      <button
+        onClick={() => onAccept(entry.id)}
+        className="rounded p-1 text-emerald-600 hover:bg-emerald-50"
+        title="Accept"
+        aria-label="Accept audit entry"
+      >
+        <CheckCircle size={16} />
+      </button>
+      <button
+        onClick={() => onFalsePositive(entry.id)}
+        className="rounded p-1 text-slate-400 hover:bg-slate-100"
+        title="False positive"
+        aria-label="Mark as false positive"
+      >
+        <XCircle size={16} />
+      </button>
+    </div>
+  )
+}
+
 function AuditPage() {
   const [entityTypeFilter, setEntityTypeFilter] = useState('')
   const [statusFilter, setStatusFilter] = useState('')
@@ -46,63 +107,34 @@ function AuditPage() {
     () => [
       columnHelper.accessor('createdAt', {
         header: 'Timestamp',
-        cell: (info) => (
-          <span className="text-xs text-slate-500 whitespace-nowrap">
-            {new Date(info.getValue()).toLocaleString('en-GB', {
-              day: '2-digit', month: 'short', year: 'numeric',
-              hour: '2-digit', minute: '2-digit',
-            })}
-          </span>
-        ),
+        cell: (info) => <TimestampCell getValue={info.getValue} />,
       }),
       columnHelper.accessor('actorId', {
         header: 'Actor',
-        cell: (info) => (
-          <span className="text-sm text-slate-700 font-mono">{info.getValue().slice(0, 8)}...</span>
-        ),
+        cell: (info) => <ActorCell getValue={info.getValue} />,
       }),
       columnHelper.accessor('entityType', {
         header: 'Entity',
-        cell: (info) => <Badge>{info.getValue()}</Badge>,
+        cell: (info) => <EntityTypeCell getValue={info.getValue} />,
       }),
       columnHelper.accessor('eventType', {
         header: 'Action',
-        cell: (info) => <span className="text-sm capitalize">{info.getValue().replace('_', ' ')}</span>,
+        cell: (info) => <EventTypeCell getValue={info.getValue} />,
       }),
       columnHelper.accessor('status', {
         header: 'Status',
-        cell: (info) => (
-          <Badge variant={auditStatusVariant[info.getValue()] ?? 'default'}>
-            {info.getValue().replace('_', ' ')}
-          </Badge>
-        ),
+        cell: (info) => <StatusCell getValue={info.getValue} />,
       }),
       columnHelper.display({
         id: 'actions',
         header: 'Review',
-        cell: ({ row }) => {
-          if (row.original.status !== 'pending') return null
-          return (
-            <div className="flex gap-1">
-              <button
-                onClick={() => updateStatus.mutate({ id: row.original.id, status: 'accepted' })}
-                className="rounded p-1 text-emerald-600 hover:bg-emerald-50"
-                title="Accept"
-                aria-label="Accept audit entry"
-              >
-                <CheckCircle size={16} />
-              </button>
-              <button
-                onClick={() => updateStatus.mutate({ id: row.original.id, status: 'false_positive' })}
-                className="rounded p-1 text-slate-400 hover:bg-slate-100"
-                title="False positive"
-                aria-label="Mark as false positive"
-              >
-                <XCircle size={16} />
-              </button>
-            </div>
-          )
-        },
+        cell: ({ row }) => (
+          <ReviewActionsCell
+            entry={row.original}
+            onAccept={(id) => updateStatus.mutate({ id, status: 'accepted' })}
+            onFalsePositive={(id) => updateStatus.mutate({ id, status: 'false_positive' })}
+          />
+        ),
       }),
     ],
     [updateStatus],

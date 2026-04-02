@@ -377,7 +377,7 @@ function ScheduleVisitModal({ open, onClose, targetId, targetName }: Readonly<{
                   visitType === vt.key
                     ? 'bg-teal-600 text-white'
                     : 'bg-white text-slate-600 hover:bg-slate-50'
-                } ${vt.key !== visitTypes[0].key ? 'border-l border-slate-200' : ''}`}
+                } ${vt.key === visitTypes[0].key ? '' : 'border-l border-slate-200'}`}
               >
                 {vt.label}
               </button>

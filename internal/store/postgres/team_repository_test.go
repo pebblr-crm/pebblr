@@ -11,13 +11,19 @@ import (
 	"github.com/pebblr/pebblr/internal/store"
 )
 
+const (
+	testTeamID        = "team-1"
+	fmtUnexpectedErr  = "unexpected error: %v"
+	fmtExpectedNotFound = "expected ErrNotFound, got: %v"
+)
+
 func newTeamRepo(pool pgxmock.PgxPoolIface) *teamRepository {
 	return &teamRepository{pool: pool}
 }
 
 func teamRows(mock pgxmock.PgxPoolIface) *pgxmock.Rows {
 	return mock.NewRows([]string{"id", "name", "manager_id"}).
-		AddRow("team-1", "Alpha", "mgr-1")
+		AddRow(testTeamID, "Alpha", "mgr-1")
 }
 
 func TestTeamGet_Success(t *testing.T) {
@@ -26,14 +32,14 @@ func TestTeamGet_Success(t *testing.T) {
 	repo := newTeamRepo(mock)
 
 	mock.ExpectQuery("SELECT .+ FROM teams WHERE id").
-		WithArgs("team-1").
+		WithArgs(testTeamID).
 		WillReturnRows(teamRows(mock))
 
-	team, err := repo.Get(context.Background(), "team-1")
+	team, err := repo.Get(context.Background(), testTeamID)
 	if err != nil {
-		t.Fatalf("unexpected error: %v", err)
+		t.Fatalf(fmtUnexpectedErr, err)
 	}
-	if team.ID != "team-1" {
+	if team.ID != testTeamID {
 		t.Errorf("expected team-1, got %s", team.ID)
 	}
 	if team.Name != "Alpha" {
@@ -55,7 +61,7 @@ func TestTeamGet_NotFound(t *testing.T) {
 
 	_, err := repo.Get(context.Background(), "missing")
 	if !errors.Is(err, store.ErrNotFound) {
-		t.Errorf("expected ErrNotFound, got: %v", err)
+		t.Errorf(fmtExpectedNotFound, err)
 	}
 }
 
@@ -69,7 +75,7 @@ func TestTeamList_Success(t *testing.T) {
 
 	teams, err := repo.List(context.Background())
 	if err != nil {
-		t.Fatalf("unexpected error: %v", err)
+		t.Fatalf(fmtUnexpectedErr, err)
 	}
 	if len(teams) != 1 {
 		t.Errorf("expected 1 team, got %d", len(teams))
@@ -102,7 +108,7 @@ func TestTeamCreate_Success(t *testing.T) {
 
 	team, err := repo.Create(context.Background(), &domain.Team{Name: "Beta", ManagerID: "mgr-2"})
 	if err != nil {
-		t.Fatalf("unexpected error: %v", err)
+		t.Fatalf(fmtUnexpectedErr, err)
 	}
 	if team.ID != "team-2" {
 		t.Errorf("expected team-2, got %s", team.ID)
@@ -120,7 +126,7 @@ func TestTeamUpdate_NotFound(t *testing.T) {
 
 	_, err := repo.Update(context.Background(), &domain.Team{ID: "missing", Name: "Updated", ManagerID: "mgr-1"})
 	if !errors.Is(err, store.ErrNotFound) {
-		t.Errorf("expected ErrNotFound, got: %v", err)
+		t.Errorf(fmtExpectedNotFound, err)
 	}
 }
 
@@ -130,12 +136,12 @@ func TestTeamDelete_Success(t *testing.T) {
 	repo := newTeamRepo(mock)
 
 	mock.ExpectExec("DELETE FROM teams WHERE id").
-		WithArgs("team-1").
+		WithArgs(testTeamID).
 		WillReturnResult(pgxmock.NewResult("DELETE", 1))
 
-	err := repo.Delete(context.Background(), "team-1")
+	err := repo.Delete(context.Background(), testTeamID)
 	if err != nil {
-		t.Fatalf("unexpected error: %v", err)
+		t.Fatalf(fmtUnexpectedErr, err)
 	}
 }
 
@@ -150,7 +156,7 @@ func TestTeamDelete_NotFound(t *testing.T) {
 
 	err := repo.Delete(context.Background(), "missing")
 	if !errors.Is(err, store.ErrNotFound) {
-		t.Errorf("expected ErrNotFound, got: %v", err)
+		t.Errorf(fmtExpectedNotFound, err)
 	}
 }
 
@@ -160,14 +166,14 @@ func TestTeamListMembers_Success(t *testing.T) {
 	repo := newTeamRepo(mock)
 
 	mock.ExpectQuery("SELECT u.id.+FROM users u.+JOIN team_members").
-		WithArgs("team-1").
+		WithArgs(testTeamID).
 		WillReturnRows(mock.NewRows([]string{
 			"id", "external_id", "email", "name", "role", "avatar", "online_status",
 		}).AddRow("user-1", "ext-1", "user@test.com", "Test User", "rep", "", "offline"))
 
-	members, err := repo.ListMembers(context.Background(), "team-1")
+	members, err := repo.ListMembers(context.Background(), testTeamID)
 	if err != nil {
-		t.Fatalf("unexpected error: %v", err)
+		t.Fatalf(fmtUnexpectedErr, err)
 	}
 	if len(members) != 1 {
 		t.Errorf("expected 1 member, got %d", len(members))
@@ -180,10 +186,10 @@ func TestTeamListMembers_DBError(t *testing.T) {
 	repo := newTeamRepo(mock)
 
 	mock.ExpectQuery("SELECT u.id.+FROM users u.+JOIN team_members").
-		WithArgs("team-1").
+		WithArgs(testTeamID).
 		WillReturnError(fmt.Errorf("db error"))
 
-	_, err := repo.ListMembers(context.Background(), "team-1")
+	_, err := repo.ListMembers(context.Background(), testTeamID)
 	if err == nil {
 		t.Fatal("expected error, got nil")
 	}

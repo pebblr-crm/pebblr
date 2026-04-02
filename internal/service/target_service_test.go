@@ -16,11 +16,13 @@ import (
 )
 
 const (
-	testTargetID1              = "target-1"
-	testErrUnexpected          = "unexpected error: %v"
-	testErrExpectedForbidden   = "expected ErrForbidden, got %v"
+	testTargetID1               = "target-1"
+	testTarget2ID               = "target-2"
+	testDrImport                = "Dr. Import"
+	testErrUnexpected           = "unexpected error: %v"
+	testErrExpectedForbidden    = "expected ErrForbidden, got %v"
 	testErrExpectedInvalidInput = "expected ErrInvalidInput, got %v"
-	testDrTest                 = "Dr. Test"
+	testDrTest                  = "Dr. Test"
 )
 
 // --- stub target repo ---
@@ -118,7 +120,7 @@ func sampleTarget() *domain.Target {
 		Name:       "Dr. Smith",
 		Fields:     map[string]any{},
 		AssigneeID: "rep-1",
-		TeamID:     "team-1",
+		TeamID:     testTeamID,
 	}
 }
 
@@ -209,11 +211,11 @@ func TestTargetGet_RepOwnsTarget(t *testing.T) {
 
 func TestTargetGet_RepForbiddenOtherTarget(t *testing.T) {
 	t.Parallel()
-	otherTarget := &domain.Target{ID: "target-2", AssigneeID: "other-rep", TeamID: "team-1"}
+	otherTarget := &domain.Target{ID: testTarget2ID, AssigneeID: "other-rep", TeamID: testTeamID}
 	repo := &stubTargetRepo{target: otherTarget}
 	svc := newTargetSvc(repo)
 
-	_, err := svc.Get(context.Background(), repUser(), "target-2")
+	_, err := svc.Get(context.Background(), repUser(), testTarget2ID)
 	if !errors.Is(err, service.ErrForbidden) {
 		t.Errorf(testErrExpectedForbidden, err)
 	}
@@ -267,7 +269,7 @@ func TestTargetUpdate_RepCanUpdateOwnTarget(t *testing.T) {
 
 func TestTargetUpdate_RepForbiddenOnOtherTarget(t *testing.T) {
 	t.Parallel()
-	otherTarget := &domain.Target{ID: "target-2", TargetType: "doctor", Name: "Other", AssigneeID: "other-rep", TeamID: "team-1", Fields: map[string]any{}}
+	otherTarget := &domain.Target{ID: testTarget2ID, TargetType: "doctor", Name: "Other", AssigneeID: "other-rep", TeamID: testTeamID, Fields: map[string]any{}}
 	repo := &stubTargetRepo{target: otherTarget}
 	svc := newTargetSvc(repo)
 
@@ -286,7 +288,7 @@ func TestTargetImport_AdminSucceeds(t *testing.T) {
 	svc := newTargetSvc(repo)
 
 	targets := []*domain.Target{
-		{ExternalID: "ext-1", TargetType: "doctor", Name: "Dr. Import", Fields: map[string]any{}},
+		{ExternalID: "ext-1", TargetType: "doctor", Name: testDrImport, Fields: map[string]any{}},
 		{ExternalID: "ext-2", TargetType: "pharmacy", Name: "Central Pharmacy", Fields: map[string]any{}},
 	}
 	result, err := svc.Import(context.Background(), adminUser(), targets)
@@ -307,7 +309,7 @@ func TestTargetImport_RepForbidden(t *testing.T) {
 	svc := newTargetSvc(repo)
 
 	targets := []*domain.Target{
-		{ExternalID: "ext-1", TargetType: "doctor", Name: "Dr. Import", Fields: map[string]any{}},
+		{ExternalID: "ext-1", TargetType: "doctor", Name: testDrImport, Fields: map[string]any{}},
 	}
 	_, err := svc.Import(context.Background(), repUser(), targets)
 	if !errors.Is(err, service.ErrForbidden) {
@@ -321,7 +323,7 @@ func TestTargetImport_ManagerForbidden(t *testing.T) {
 	svc := newTargetSvc(repo)
 
 	targets := []*domain.Target{
-		{ExternalID: "ext-1", TargetType: "doctor", Name: "Dr. Import", Fields: map[string]any{}},
+		{ExternalID: "ext-1", TargetType: "doctor", Name: testDrImport, Fields: map[string]any{}},
 	}
 	_, err := svc.Import(context.Background(), managerUser(), targets)
 	if !errors.Is(err, service.ErrForbidden) {
@@ -335,7 +337,7 @@ func TestTargetImport_MissingExternalID(t *testing.T) {
 	svc := newTargetSvc(repo)
 
 	targets := []*domain.Target{
-		{ExternalID: "", TargetType: "doctor", Name: "Dr. Import", Fields: map[string]any{}},
+		{ExternalID: "", TargetType: "doctor", Name: testDrImport, Fields: map[string]any{}},
 	}
 	_, err := svc.Import(context.Background(), adminUser(), targets)
 	if !errors.Is(err, service.ErrInvalidInput) {

@@ -11,6 +11,8 @@ import (
 	"github.com/pebblr/pebblr/internal/auth"
 )
 
+const pathHealth = "/api/v1/health"
+
 func testRouter() http.Handler {
 	return api.NewRouter(api.RouterConfig{
 		Logger:        slog.New(slog.NewTextHandler(os.Stdout, nil)),
@@ -35,7 +37,7 @@ func TestAuthenticatedHealthEndpoint(t *testing.T) {
 	t.Parallel()
 	router := testRouter()
 
-	req := httptest.NewRequest(http.MethodGet, "/api/v1/health", http.NoBody)
+	req := httptest.NewRequest(http.MethodGet, pathHealth, http.NoBody)
 	req.Header.Set("Authorization", "Bearer test-token")
 	w := httptest.NewRecorder()
 	router.ServeHTTP(w, req)
@@ -49,7 +51,7 @@ func TestUnauthenticatedReturns401(t *testing.T) {
 	t.Parallel()
 	router := testRouter()
 
-	req := httptest.NewRequest(http.MethodGet, "/api/v1/health", http.NoBody)
+	req := httptest.NewRequest(http.MethodGet, pathHealth, http.NoBody)
 	w := httptest.NewRecorder()
 	router.ServeHTTP(w, req)
 
@@ -62,7 +64,7 @@ func TestWrongTokenReturns401(t *testing.T) {
 	t.Parallel()
 	router := testRouter()
 
-	req := httptest.NewRequest(http.MethodGet, "/api/v1/health", http.NoBody)
+	req := httptest.NewRequest(http.MethodGet, pathHealth, http.NoBody)
 	req.Header.Set("Authorization", "Bearer wrong-token")
 	w := httptest.NewRecorder()
 	router.ServeHTTP(w, req)
