@@ -20,13 +20,17 @@ type dbPool interface {
 }
 
 // DB wraps a pgx connection pool and implements store.Store.
+// Repository instances are cached to avoid per-call allocations.
 type DB struct {
 	pool dbPool
+	r    repos
 }
 
 // New creates a new DB using the given connection pool.
 func New(pool *pgxpool.Pool) *DB {
-	return &DB{pool: pool}
+	db := &DB{pool: pool}
+	db.initRepos()
+	return db
 }
 
 // Connect opens a connection pool using the DSN read from the given file path.

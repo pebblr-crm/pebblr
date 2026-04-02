@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"net/http"
 	"net/url"
+	"time"
 )
 
 // GoogleGeocoder implements Geocoder using the Google Maps Geocoding API.
@@ -19,7 +20,7 @@ type GoogleGeocoder struct {
 func NewGoogleGeocoder(apiKey string) *GoogleGeocoder {
 	return &GoogleGeocoder{
 		apiKey:     apiKey,
-		httpClient: http.DefaultClient,
+		httpClient: &http.Client{Timeout: 10 * time.Second},
 		baseURL:    "https://maps.googleapis.com/maps/api/geocode/json",
 	}
 }

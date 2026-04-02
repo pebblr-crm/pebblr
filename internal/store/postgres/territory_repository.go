@@ -28,11 +28,8 @@ func (r *territoryRepository) Get(ctx context.Context, id string) (*domain.Terri
 		}
 		return nil, fmt.Errorf("getting territory: %w", err)
 	}
-	if len(boundaryJSON) > 0 {
-		t.Boundary = make(map[string]any)
-		if err := json.Unmarshal(boundaryJSON, &t.Boundary); err != nil {
-			return nil, fmt.Errorf("unmarshalling territory boundary: %w", err)
-		}
+	if t.Boundary, err = unmarshalBoundary(boundaryJSON); err != nil {
+		return nil, err
 	}
 	return &t, nil
 }
@@ -70,11 +67,8 @@ func (r *territoryRepository) List(ctx context.Context, filter store.TerritoryFi
 		if err := rows.Scan(&t.ID, &t.Name, &t.TeamID, &t.Region, &boundaryJSON, &t.CreatedAt, &t.UpdatedAt); err != nil {
 			return nil, fmt.Errorf("scanning territory: %w", err)
 		}
-		if len(boundaryJSON) > 0 {
-			t.Boundary = make(map[string]any)
-			if err := json.Unmarshal(boundaryJSON, &t.Boundary); err != nil {
-				return nil, fmt.Errorf("unmarshalling territory boundary: %w", err)
-			}
+		if t.Boundary, err = unmarshalBoundary(boundaryJSON); err != nil {
+			return nil, err
 		}
 		territories = append(territories, &t)
 	}
@@ -101,11 +95,8 @@ func (r *territoryRepository) Create(ctx context.Context, t *domain.Territory) (
 	if err != nil {
 		return nil, fmt.Errorf("creating territory: %w", err)
 	}
-	if len(retBoundary) > 0 {
-		created.Boundary = make(map[string]any)
-		if err := json.Unmarshal(retBoundary, &created.Boundary); err != nil {
-			return nil, fmt.Errorf("unmarshalling created territory boundary: %w", err)
-		}
+	if created.Boundary, err = unmarshalBoundary(retBoundary); err != nil {
+		return nil, err
 	}
 	return &created, nil
 }
@@ -130,11 +121,8 @@ func (r *territoryRepository) Update(ctx context.Context, t *domain.Territory) (
 		}
 		return nil, fmt.Errorf("updating territory: %w", err)
 	}
-	if len(retBoundary) > 0 {
-		updated.Boundary = make(map[string]any)
-		if err := json.Unmarshal(retBoundary, &updated.Boundary); err != nil {
-			return nil, fmt.Errorf("unmarshalling updated territory boundary: %w", err)
-		}
+	if updated.Boundary, err = unmarshalBoundary(retBoundary); err != nil {
+		return nil, err
 	}
 	return &updated, nil
 }
@@ -150,3 +138,14 @@ func (r *territoryRepository) Delete(ctx context.Context, id string) error {
 	return nil
 }
 
+// unmarshalBoundary decodes a JSON boundary into a map, returning nil for empty data.
+func unmarshalBoundary(data []byte) (map[string]any, error) {
+	if len(data) == 0 {
+		return nil, nil
+	}
+	m := make(map[string]any)
+	if err := json.Unmarshal(data, &m); err != nil {
+		return nil, fmt.Errorf("unmarshalling territory boundary: %w", err)
+	}
+	return m, nil
+}

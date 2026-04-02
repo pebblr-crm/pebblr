@@ -3,6 +3,7 @@ package service
 import (
 	"context"
 	"fmt"
+	"slices"
 
 	"github.com/pebblr/pebblr/internal/domain"
 	"github.com/pebblr/pebblr/internal/store"
@@ -115,7 +116,7 @@ func (s *TerritoryService) canView(actor *domain.User, t *domain.Territory) bool
 	case domain.RoleAdmin:
 		return true
 	default:
-		return containsString(actor.TeamIDs, t.TeamID)
+		return slices.Contains(actor.TeamIDs, t.TeamID)
 	}
 }
 
@@ -124,7 +125,7 @@ func (s *TerritoryService) canModify(actor *domain.User, t *domain.Territory) bo
 	case domain.RoleAdmin:
 		return true
 	case domain.RoleManager:
-		return containsString(actor.TeamIDs, t.TeamID)
+		return slices.Contains(actor.TeamIDs, t.TeamID)
 	default:
 		return false
 	}
