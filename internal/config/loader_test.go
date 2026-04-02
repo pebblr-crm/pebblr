@@ -3,6 +3,7 @@ package config
 import (
 	"os"
 	"path/filepath"
+	"strings"
 	"testing"
 )
 
@@ -291,22 +292,5 @@ func loadFromString(t *testing.T, content string) (*TenantConfig, error) {
 }
 
 func replaceInJSON(json, old, replacement string) string {
-	return replaceFirst(json, old, replacement)
-}
-
-func replaceFirst(s, old, replacement string) string {
-	i := indexOf(s, old)
-	if i < 0 {
-		return s
-	}
-	return s[:i] + replacement + s[i+len(old):]
-}
-
-func indexOf(s, substr string) int {
-	for i := 0; i <= len(s)-len(substr); i++ {
-		if s[i:i+len(substr)] == substr {
-			return i
-		}
-	}
-	return -1
+	return strings.Replace(json, old, replacement, 1)
 }

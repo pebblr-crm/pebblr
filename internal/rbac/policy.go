@@ -2,6 +2,7 @@ package rbac
 
 import (
 	"context"
+	"slices"
 
 	"github.com/pebblr/pebblr/internal/domain"
 )
@@ -30,7 +31,7 @@ func canAccessTarget(actor *domain.User, target *domain.Target) bool {
 	case domain.RoleAdmin:
 		return true
 	case domain.RoleManager:
-		return containsString(actor.TeamIDs, target.TeamID)
+		return isTeamMember(actor, target.TeamID)
 	case domain.RoleRep:
 		return actor.ID == target.AssigneeID
 	}
@@ -46,7 +47,7 @@ func (e *policyEnforcer) ScopeTargetQuery(_ context.Context, actor *domain.User)
 	case domain.RoleRep:
 		return TargetScope{AssigneeIDs: []string{actor.ID}}
 	}
-	// Default: deny all.
+	// Default: deny all — empty-string ID matches nothing in the database.
 	return TargetScope{AssigneeIDs: []string{""}}
 }
 
@@ -55,11 +56,17 @@ func (e *policyEnforcer) CanViewActivity(_ context.Context, actor *domain.User, 
 	case domain.RoleAdmin:
 		return true
 	case domain.RoleManager:
-		return containsString(actor.TeamIDs, activity.TeamID)
+		return isTeamMember(actor, activity.TeamID)
 	case domain.RoleRep:
-		return actor.ID == activity.CreatorID || actor.ID == activity.JointVisitUID
+		return isCreatorOrJointVisitor(actor, activity)
 	}
 	return false
+}
+
+// isCreatorOrJointVisitor returns true if the actor created the activity
+// or is listed as the joint-visit participant.
+func isCreatorOrJointVisitor(actor *domain.User, activity *domain.Activity) bool {
+	return actor.ID == activity.CreatorID || actor.ID == activity.JointVisitUID
 }
 
 func (e *policyEnforcer) CanUpdateActivity(_ context.Context, actor *domain.User, activity *domain.Activity) bool {
@@ -79,7 +86,7 @@ func canModifyActivity(actor *domain.User, activity *domain.Activity) bool {
 	case domain.RoleAdmin:
 		return true
 	case domain.RoleManager:
-		return containsString(actor.TeamIDs, activity.TeamID)
+		return isTeamMember(actor, activity.TeamID)
 	case domain.RoleRep:
 		return actor.ID == activity.CreatorID
 	}
@@ -95,15 +102,11 @@ func (e *policyEnforcer) ScopeActivityQuery(_ context.Context, actor *domain.Use
 	case domain.RoleRep:
 		return ActivityScope{CreatorIDs: []string{actor.ID}}
 	}
-	// Default: deny all.
+	// Default: deny all — empty-string ID matches nothing in the database.
 	return ActivityScope{CreatorIDs: []string{""}}
 }
 
-func containsString(slice []string, s string) bool {
-	for _, v := range slice {
-		if v == s {
-			return true
-		}
-	}
-	return false
+// isTeamMember reports whether the actor belongs to the given team.
+func isTeamMember(actor *domain.User, teamID string) bool {
+	return slices.Contains(actor.TeamIDs, teamID)
 }

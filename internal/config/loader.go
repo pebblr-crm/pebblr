@@ -128,8 +128,8 @@ func validateSingleActivityType(cfg *TenantConfig, at *ActivityTypeConfig, seen 
 	}
 	seen[at.Key] = true
 
-	if at.Category != "field" && at.Category != "non_field" {
-		return fmt.Errorf("activity type %q: category must be \"field\" or \"non_field\", got %q", at.Key, at.Category)
+	if at.Category != CategoryField && at.Category != CategoryNonField {
+		return fmt.Errorf("activity type %q: category must be %q or %q, got %q", at.Key, CategoryField, CategoryNonField, at.Category)
 	}
 
 	if err := validateFieldConfigs(cfg, at.Fields, "activities.types["+at.Key+"]"); err != nil {
@@ -162,23 +162,25 @@ var dbBackedRefs = map[string]bool{
 	"users": true,
 }
 
+// validFieldTypes enumerates the recognized field type values
+// for account and activity field configurations.
+var validFieldTypes = map[string]bool{
+	"text": true, "select": true, "multi_select": true,
+	"relation": true, "date": true,
+}
+
 // validateFieldConfigs checks that field configs are valid and that
 // options_ref values resolve to known option lists.
-func validateFieldConfigs(cfg *TenantConfig, fields []FieldConfig, context string) error {
-	validTypes := map[string]bool{
-		"text": true, "select": true, "multi_select": true,
-		"relation": true, "date": true,
-	}
-
+func validateFieldConfigs(cfg *TenantConfig, fields []FieldConfig, location string) error {
 	for _, f := range fields {
 		if f.Key == "" {
-			return fmt.Errorf("%s: field key must not be empty", context)
+			return fmt.Errorf("%s: field key must not be empty", location)
 		}
-		if !validTypes[f.Type] {
-			return fmt.Errorf("%s: field %q has invalid type %q", context, f.Key, f.Type)
+		if !validFieldTypes[f.Type] {
+			return fmt.Errorf("%s: field %q has invalid type %q", location, f.Key, f.Type)
 		}
 		if f.OptionsRef != "" && !dbBackedRefs[f.OptionsRef] && cfg.ResolveOptions(f.OptionsRef) == nil {
-			return fmt.Errorf("%s: field %q references unknown options_ref %q", context, f.Key, f.OptionsRef)
+			return fmt.Errorf("%s: field %q references unknown options_ref %q", location, f.Key, f.OptionsRef)
 		}
 	}
 	return nil

@@ -56,6 +56,13 @@ type OptionDef struct {
 	Label string `json:"label"`
 }
 
+// Activity category constants classify activity types as requiring field
+// work (e.g. visits to a target) or not (e.g. administrative, time-off).
+const (
+	CategoryField    = "field"
+	CategoryNonField = "non_field"
+)
+
 // ActivityTypeConfig defines a kind of activity (e.g. visit, administrative).
 type ActivityTypeConfig struct {
 	Key                    string        `json:"key"`
