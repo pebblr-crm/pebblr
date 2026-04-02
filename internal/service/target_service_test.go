@@ -591,6 +591,9 @@ func (r *stubAssignUserRepo) GetByExternalID(_ context.Context, _ string) (*doma
 	return nil, store.ErrNotFound
 }
 func (r *stubAssignUserRepo) List(_ context.Context) ([]*domain.User, error) { return nil, nil }
+func (r *stubAssignUserRepo) ListPaginated(_ context.Context, _, _ int) (*store.UserPage, error) {
+	return &store.UserPage{}, nil
+}
 func (r *stubAssignUserRepo) Upsert(_ context.Context, u *domain.User) (*domain.User, error) {
 	return u, nil
 }

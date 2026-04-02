@@ -188,14 +188,16 @@ func (s *ActivityService) Get(ctx context.Context, actor *domain.User, id string
 }
 
 // List returns a paginated list of activities scoped to the actor's permissions.
-// Non-field activities whose due date has passed are auto-completed.
+// Past non-field activities are annotated as "completed" in-memory for display
+// purposes only; the database is not mutated. Use AutoCompleteExpired to persist
+// those transitions.
 func (s *ActivityService) List(ctx context.Context, actor *domain.User, filter store.ActivityFilter, page, limit int) (*store.ActivityPage, error) {
 	scope := s.enforcer.ScopeActivityQuery(ctx, actor)
 	result, err := s.activities.List(ctx, scope, filter, page, limit)
 	if err != nil {
 		return nil, fmt.Errorf("listing activities: %w", err)
 	}
-	s.autoCompleteNonFieldActivities(ctx, result.Activities)
+	s.annotateExpiredNonField(result.Activities)
 	return result, nil
 }
 
@@ -219,10 +221,10 @@ func shouldAutoComplete(a *domain.Activity, nonFieldTypes map[string]bool, initi
 	return a.DueDate.Before(today)
 }
 
-// autoCompleteNonFieldActivities transitions non-field activities whose due date
-// is in the past from the initial status to "completed". This is fire-and-forget
-// — errors are logged but don't block the response.
-func (s *ActivityService) autoCompleteNonFieldActivities(ctx context.Context, activities []*domain.Activity) {
+// annotateExpiredNonField sets the Status field to "completed" in-memory for
+// non-field activities whose due date has passed and that are still in the
+// initial status. No database writes occur.
+func (s *ActivityService) annotateExpiredNonField(activities []*domain.Activity) {
 	if s.cfg == nil {
 		return
 	}
@@ -239,10 +241,48 @@ func (s *ActivityService) autoCompleteNonFieldActivities(ctx context.Context, ac
 			continue
 		}
 		a.Status = "completed"
+	}
+}
+
+// AutoCompleteExpired persists the "completed" transition for non-field activities
+// whose due date has passed. Intended to be called from a background job or a
+// dedicated POST endpoint, not from a GET handler.
+func (s *ActivityService) AutoCompleteExpired(ctx context.Context, actor *domain.User) (int, error) {
+	if s.cfg == nil {
+		return 0, nil
+	}
+	initialStatus := s.cfg.InitialStatus()
+	if initialStatus == "" {
+		return 0, nil
+	}
+
+	nonFieldTypes := s.nonFieldTypeSet()
+
+	scope := s.enforcer.ScopeActivityQuery(ctx, actor)
+	today := time.Now().Truncate(24 * time.Hour)
+	yesterday := today.AddDate(0, 0, -1)
+	statusFilter := initialStatus
+	result, err := s.activities.List(ctx, scope, store.ActivityFilter{
+		DateTo: &yesterday,
+		Status: &statusFilter,
+	}, 1, 200)
+	if err != nil {
+		return 0, fmt.Errorf("listing expired activities: %w", err)
+	}
+
+	completed := 0
+	for _, a := range result.Activities {
+		if !shouldAutoComplete(a, nonFieldTypes, initialStatus, today) {
+			continue
+		}
+		a.Status = "completed"
 		if _, err := s.activities.Update(ctx, a); err != nil {
 			slog.Default().Warn("auto-complete non-field activity failed", "id", a.ID, "err", err)
+			continue
 		}
+		completed++
 	}
+	return completed, nil
 }
 
 // Update persists changes to an existing activity. Blocked if submitted.
