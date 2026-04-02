@@ -7,6 +7,29 @@ func testConfig(t *testing.T) *TenantConfig {
 	return writeTestConfig(t, validConfigJSON())
 }
 
+func TestHoistedFieldKeys(t *testing.T) {
+	t.Parallel()
+	keys := HoistedFieldKeys()
+	if len(keys) == 0 {
+		t.Fatal("expected at least one hoisted field key")
+	}
+
+	expected := map[string]bool{
+		"duration":            true,
+		"account_id":          true,
+		"routing":             true,
+		"joint_visit_user_id": true,
+	}
+	if len(keys) != len(expected) {
+		t.Fatalf("expected %d hoisted keys, got %d", len(expected), len(keys))
+	}
+	for _, k := range keys {
+		if !expected[k] {
+			t.Errorf("unexpected hoisted key %q", k)
+		}
+	}
+}
+
 func TestValidateActivity_ValidSave(t *testing.T) {
 	t.Parallel()
 	cfg := testConfig(t)

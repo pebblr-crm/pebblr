@@ -176,6 +176,51 @@ func TestScopeActivityQueryForAdmin(t *testing.T) {
 	}
 }
 
+func TestScopeTargetQueryForManager(t *testing.T) {
+	t.Parallel()
+	enforcer := rbac.NewEnforcer()
+	ctx := context.Background()
+
+	manager := &domain.User{ID: "mgr-1", Role: domain.RoleManager, TeamIDs: []string{"team-1", "team-2"}}
+	scope := enforcer.ScopeTargetQuery(ctx, manager)
+
+	if scope.AllTargets {
+		t.Error("manager scope should not be all targets")
+	}
+	if len(scope.TeamIDs) != 2 {
+		t.Errorf("manager scope should restrict to team IDs, got %v", scope.TeamIDs)
+	}
+}
+
+func TestScopeTargetQueryForAdmin(t *testing.T) {
+	t.Parallel()
+	enforcer := rbac.NewEnforcer()
+	ctx := context.Background()
+
+	admin := &domain.User{ID: "admin-1", Role: domain.RoleAdmin}
+	scope := enforcer.ScopeTargetQuery(ctx, admin)
+
+	if !scope.AllTargets {
+		t.Error("admin scope should be all targets")
+	}
+}
+
+func TestScopeActivityQueryForManager(t *testing.T) {
+	t.Parallel()
+	enforcer := rbac.NewEnforcer()
+	ctx := context.Background()
+
+	manager := &domain.User{ID: "mgr-1", Role: domain.RoleManager, TeamIDs: []string{"team-1"}}
+	scope := enforcer.ScopeActivityQuery(ctx, manager)
+
+	if scope.AllActivities {
+		t.Error("manager scope should not be all activities")
+	}
+	if len(scope.TeamIDs) != 1 || scope.TeamIDs[0] != "team-1" {
+		t.Errorf("manager scope should restrict to team IDs, got %v", scope.TeamIDs)
+	}
+}
+
 func TestContextUserRoundtrip(t *testing.T) {
 	t.Parallel()
 	user := &domain.User{ID: "user-1", Role: domain.RoleRep}
@@ -187,5 +232,13 @@ func TestContextUserRoundtrip(t *testing.T) {
 	}
 	if got.ID != user.ID {
 		t.Errorf("expected user ID %q, got %q", user.ID, got.ID)
+	}
+}
+
+func TestUserFromContextMissing(t *testing.T) {
+	t.Parallel()
+	_, err := rbac.UserFromContext(context.Background())
+	if err == nil {
+		t.Fatal("expected error when no user is in context")
 	}
 }

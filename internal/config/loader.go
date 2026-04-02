@@ -164,7 +164,7 @@ var dbBackedRefs = map[string]bool{
 
 // validateFieldConfigs checks that field configs are valid and that
 // options_ref values resolve to known option lists.
-func validateFieldConfigs(cfg *TenantConfig, fields []FieldConfig, context string) error {
+func validateFieldConfigs(cfg *TenantConfig, fields []FieldConfig, location string) error {
 	validTypes := map[string]bool{
 		"text": true, "select": true, "multi_select": true,
 		"relation": true, "date": true,
@@ -172,13 +172,13 @@ func validateFieldConfigs(cfg *TenantConfig, fields []FieldConfig, context strin
 
 	for _, f := range fields {
 		if f.Key == "" {
-			return fmt.Errorf("%s: field key must not be empty", context)
+			return fmt.Errorf("%s: field key must not be empty", location)
 		}
 		if !validTypes[f.Type] {
-			return fmt.Errorf("%s: field %q has invalid type %q", context, f.Key, f.Type)
+			return fmt.Errorf("%s: field %q has invalid type %q", location, f.Key, f.Type)
 		}
 		if f.OptionsRef != "" && !dbBackedRefs[f.OptionsRef] && cfg.ResolveOptions(f.OptionsRef) == nil {
-			return fmt.Errorf("%s: field %q references unknown options_ref %q", context, f.Key, f.OptionsRef)
+			return fmt.Errorf("%s: field %q references unknown options_ref %q", location, f.Key, f.OptionsRef)
 		}
 	}
 	return nil

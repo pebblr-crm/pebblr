@@ -26,4 +26,3 @@ func UserFromContext(ctx context.Context) (*domain.User, error) {
 	}
 	return user, nil
 }
-
