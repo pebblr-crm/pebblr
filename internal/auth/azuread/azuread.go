@@ -32,14 +32,19 @@ type Config struct {
 	IssuerURL string
 }
 
+// minRefreshInterval is the minimum time between JWKS refreshes to prevent
+// an attacker from forcing continuous outbound requests with forged kid values.
+const minRefreshInterval = 60 * time.Second
+
 // Authenticator validates Azure AD OIDC bearer tokens.
 type Authenticator struct {
 	clientID  string
 	issuerURL string
 	jwksURL   string
 
-	mu   sync.RWMutex
-	keys map[string]*rsa.PublicKey
+	mu          sync.RWMutex
+	keys        map[string]*rsa.PublicKey
+	lastRefresh time.Time
 
 	httpClient *http.Client
 }
@@ -140,13 +145,20 @@ func (a *Authenticator) ValidateToken(ctx context.Context, token string) (*auth.
 }
 
 // getKey returns the RSA public key for the given key ID, refreshing the
-// key set if the kid is not found.
+// key set if the kid is not found and the cooldown has elapsed.
 func (a *Authenticator) getKey(ctx context.Context, kid string) (*rsa.PublicKey, error) {
 	a.mu.RLock()
 	key, ok := a.keys[kid]
+	lastRefresh := a.lastRefresh
 	a.mu.RUnlock()
 	if ok {
 		return key, nil
+	}
+
+	// Rate-limit JWKS refreshes to prevent amplification attacks where
+	// an attacker sends tokens with random kid values.
+	if time.Since(lastRefresh) < minRefreshInterval {
+		return nil, fmt.Errorf("azuread: unknown key ID %q (refresh on cooldown)", kid)
 	}
 
 	// Key not found — refresh JWKS (key rotation).
@@ -204,6 +216,7 @@ func (a *Authenticator) refreshKeys(ctx context.Context) error {
 
 	a.mu.Lock()
 	a.keys = keys
+	a.lastRefresh = time.Now()
 	a.mu.Unlock()
 
 	return nil

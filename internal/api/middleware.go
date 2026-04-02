@@ -9,6 +9,22 @@ import (
 	"github.com/go-chi/chi/v5/middleware"
 )
 
+// defaultMaxBodySize is the default request body limit (1 MB).
+// Specific endpoints (e.g., import) can override this per-route.
+const defaultMaxBodySize = 1 << 20 // 1 MB
+
+// maxBodySize returns middleware that limits the size of request bodies.
+// It wraps r.Body with http.MaxBytesReader so the JSON decoder will fail
+// with a clear error rather than consuming unbounded memory.
+func maxBodySize(limit int64) func(http.Handler) http.Handler {
+	return func(next http.Handler) http.Handler {
+		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			r.Body = http.MaxBytesReader(w, r.Body, limit)
+			next.ServeHTTP(w, r)
+		})
+	}
+}
+
 type contextKey string
 
 const loggerKey contextKey = "logger"
