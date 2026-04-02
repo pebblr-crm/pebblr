@@ -16,22 +16,28 @@ kind: Deployment
 metadata:
   name: postgres
   labels:
-    app: postgres
+    app.kubernetes.io/name: postgres
+    app.kubernetes.io/component: database
+    app.kubernetes.io/part-of: pebblr
 spec:
   replicas: 1
   selector:
     matchLabels:
-      app: postgres
+      app.kubernetes.io/name: postgres
   template:
     metadata:
       labels:
-        app: postgres
+        app.kubernetes.io/name: postgres
+        app.kubernetes.io/component: database
+        app.kubernetes.io/part-of: pebblr
     spec:
       containers:
         - name: postgres
           image: postgres:16-alpine
           ports:
-            - containerPort: 5432
+            - name: postgresql
+              containerPort: 5432
+              protocol: TCP
           envFrom:
             - secretRef:
                 name: postgres-credentials
@@ -53,11 +59,15 @@ kind: Service
 metadata:
   name: postgres
   labels:
-    app: postgres
+    app.kubernetes.io/name: postgres
+    app.kubernetes.io/component: database
+    app.kubernetes.io/part-of: pebblr
 spec:
   type: ClusterIP
   ports:
     - port: 5432
-      targetPort: 5432
+      targetPort: postgresql
+      protocol: TCP
+      name: postgresql
   selector:
-    app: postgres
+    app.kubernetes.io/name: postgres

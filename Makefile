@@ -2,7 +2,14 @@
 # CI/CD pipelines call these targets only.
 
 .DEFAULT_GOAL := help
-.PHONY: help build test lint typecheck dev-api dev-web dev-db dev-db-stop dev-db-reset seed cluster-up cluster-deps deploy migrate validate-config clean helm-validate e2e e2e-teardown e2e-cluster e2e-db e2e-deploy e2e-web e2e-web-integration sonar
+
+# Declare all targets as phony, grouped by function.
+.PHONY: help build clean
+.PHONY: test lint typecheck
+.PHONY: dev-api dev-web dev-db dev-db-stop dev-db-reset seed
+.PHONY: cluster-up cluster-deps deploy migrate
+.PHONY: e2e e2e-teardown e2e-cluster e2e-db e2e-deploy e2e-web e2e-web-integration
+.PHONY: helm-validate validate-config sonar
 
 # ── Pinned versions ───────────────────────────────────────────────────────────
 ESO_VERSION           := 0.12.1
