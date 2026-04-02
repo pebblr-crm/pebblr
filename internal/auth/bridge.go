@@ -14,7 +14,7 @@ func ClaimsBridge(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		claims := ClaimsFromContext(r.Context())
 		if claims == nil {
-			http.Error(w, `{"error":{"code":"UNAUTHORIZED","message":"no claims in context"}}`, http.StatusUnauthorized)
+			writeJSONError(w, http.StatusUnauthorized, "UNAUTHORIZED", "no claims in context")
 			return
 		}
 
