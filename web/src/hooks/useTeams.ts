@@ -4,12 +4,14 @@ import type { Team, TeamDetail } from '@/types/team'
 
 export const teamKeys = {
   all: ['teams'] as const,
-  detail: (id: string) => [...teamKeys.all, id] as const,
+  lists: () => [...teamKeys.all, 'list'] as const,
+  details: () => [...teamKeys.all, 'detail'] as const,
+  detail: (id: string) => [...teamKeys.details(), id] as const,
 }
 
 export function useTeams() {
   return useQuery({
-    queryKey: teamKeys.all,
+    queryKey: teamKeys.lists(),
     queryFn: () => api.get<{ items: Team[]; total: number }>('/teams'),
   })
 }

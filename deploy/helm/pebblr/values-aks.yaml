@@ -22,6 +22,8 @@ tls:
     certKeyVaultKey: "origin-tls-cert"
     privateKeyKeyVaultKey: "origin-tls-key"
 
+# TODO: Enable once SecretStore is provisioned in the AKS cluster.
+# The header says "External Secrets from Azure KeyVault" but ESO is disabled.
 externalSecrets:
   enabled: false
 

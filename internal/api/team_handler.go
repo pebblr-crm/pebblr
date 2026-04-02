@@ -54,14 +54,14 @@ func mapTeamServiceError(w http.ResponseWriter, err error) {
 		writeError(w, http.StatusNotFound, "NOT_FOUND", "team not found")
 		return
 	}
-	writeError(w, http.StatusInternalServerError, "INTERNAL_ERROR", "an unexpected error occurred")
+	writeError(w, http.StatusInternalServerError, "INTERNAL_ERROR", errUnexpected)
 }
 
 // List handles GET /api/v1/teams
 func (h *TeamHandler) List(w http.ResponseWriter, r *http.Request) {
 	_, err := rbac.UserFromContext(r.Context())
 	if err != nil {
-		writeError(w, http.StatusUnauthorized, "UNAUTHORIZED", "missing authenticated user")
+		writeError(w, http.StatusUnauthorized, "UNAUTHORIZED", errMissingUser)
 		return
 	}
 
@@ -75,7 +75,7 @@ func (h *TeamHandler) List(w http.ResponseWriter, r *http.Request) {
 		teams = []*domain.Team{}
 	}
 
-	w.Header().Set("Content-Type", "application/json")
+	w.Header().Set(headerContentType, contentTypeJSON)
 	w.WriteHeader(http.StatusOK)
 	writeJSON(w, r, teamListResponse{Items: teams, Total: len(teams)})
 }
@@ -84,7 +84,7 @@ func (h *TeamHandler) List(w http.ResponseWriter, r *http.Request) {
 func (h *TeamHandler) Get(w http.ResponseWriter, r *http.Request) {
 	_, err := rbac.UserFromContext(r.Context())
 	if err != nil {
-		writeError(w, http.StatusUnauthorized, "UNAUTHORIZED", "missing authenticated user")
+		writeError(w, http.StatusUnauthorized, "UNAUTHORIZED", errMissingUser)
 		return
 	}
 
@@ -104,7 +104,7 @@ func (h *TeamHandler) Get(w http.ResponseWriter, r *http.Request) {
 		members = []*domain.User{}
 	}
 
-	w.Header().Set("Content-Type", "application/json")
+	w.Header().Set(headerContentType, contentTypeJSON)
 	w.WriteHeader(http.StatusOK)
 	writeJSON(w, r, teamDetailResponse{Team: team, Members: members})
 }

@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react'
+import { useState, useEffect, useCallback, type ReactNode } from 'react'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { createRouter, RouterProvider } from '@tanstack/react-router'
 import { AuthProvider } from '@/auth/provider'
@@ -56,7 +56,7 @@ interface DemoAccount {
   role: string
 }
 
-function DemoGate({ children }: { children: React.ReactNode }) {
+function DemoGate({ children }: { children: ReactNode }) {
   const { user, isDemoMode, demoLogin } = useAuth()
   const [accounts, setAccounts] = useState<DemoAccount[]>([])
 

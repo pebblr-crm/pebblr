@@ -6,7 +6,9 @@ replicaCount: 1
 image:
   repository: pebblr-api
   pullPolicy: IfNotPresent
-  tag: "latest"
+  # Do not use "latest" -- it combines poorly with IfNotPresent pull policy.
+  # Leave empty to default to Chart.AppVersion (see deployment.yaml template).
+  tag: ""
 
 serviceAccount:
   create: true
@@ -116,6 +118,9 @@ autoscaling:
   minReplicas: 1
   maxReplicas: 3
   targetCPUUtilizationPercentage: 80
+
+networkPolicy:
+  enabled: false
 
 nodeSelector: {}
 tolerations: []

@@ -83,7 +83,7 @@ func (h *CollectionHandler) Create(w http.ResponseWriter, r *http.Request) {
 
 	w.Header().Set(headerContentType, contentTypeJSON)
 	w.WriteHeader(http.StatusCreated)
-	_ = json.NewEncoder(w).Encode(c)
+	writeJSON(w, r, c)
 }
 
 // List handles GET /api/v1/collections
@@ -101,10 +101,10 @@ func (h *CollectionHandler) List(w http.ResponseWriter, r *http.Request) {
 	}
 
 	w.Header().Set(headerContentType, contentTypeJSON)
-	_ = json.NewEncoder(w).Encode(map[string]any{"items": result})
+	writeJSON(w, r, map[string]any{"items": result})
 }
 
-// Get handles GET /api/v1/collections/:id
+// Get handles GET /api/v1/collections/{id}
 func (h *CollectionHandler) Get(w http.ResponseWriter, r *http.Request) {
 	actor, err := rbac.UserFromContext(r.Context())
 	if err != nil {
@@ -120,10 +120,10 @@ func (h *CollectionHandler) Get(w http.ResponseWriter, r *http.Request) {
 	}
 
 	w.Header().Set(headerContentType, contentTypeJSON)
-	_ = json.NewEncoder(w).Encode(c)
+	writeJSON(w, r, c)
 }
 
-// Update handles PUT /api/v1/collections/:id
+// Update handles PUT /api/v1/collections/{id}
 func (h *CollectionHandler) Update(w http.ResponseWriter, r *http.Request) {
 	actor, err := rbac.UserFromContext(r.Context())
 	if err != nil {
@@ -146,7 +146,7 @@ func (h *CollectionHandler) Update(w http.ResponseWriter, r *http.Request) {
 	}
 
 	w.Header().Set(headerContentType, contentTypeJSON)
-	_ = json.NewEncoder(w).Encode(c)
+	writeJSON(w, r, c)
 }
 
 // Delete handles DELETE /api/v1/collections/:id

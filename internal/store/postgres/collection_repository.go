@@ -91,7 +91,10 @@ func (r *collectionRepository) List(ctx context.Context, filter store.Collection
 		}
 		result = append(result, &c)
 	}
-	return result, rows.Err()
+	if err := rows.Err(); err != nil {
+		return nil, fmt.Errorf("iterating collections: %w", err)
+	}
+	return result, nil
 }
 
 func (r *collectionRepository) Get(ctx context.Context, id string) (*domain.Collection, error) {
