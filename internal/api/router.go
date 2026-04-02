@@ -48,6 +48,7 @@ func NewRouter(cfg RouterConfig) http.Handler {
 	mountDemoRoutes(r, cfg)
 
 	r.Route("/api/v1", func(r chi.Router) {
+		r.Use(maxBodySize(defaultMaxBodySize))
 		r.Use(auth.Middleware(cfg.Authenticator))
 		r.Use(auth.ClaimsBridge)
 

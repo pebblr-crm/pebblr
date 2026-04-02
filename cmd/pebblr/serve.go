@@ -135,25 +135,33 @@ func serve(configPath, authProvider string) error {
 	})
 
 	srv := &http.Server{
-		Addr:         ":8080",
-		Handler:      router,
-		ReadTimeout:  15 * time.Second,
-		WriteTimeout: 15 * time.Second,
-		IdleTimeout:  60 * time.Second,
+		Addr:              ":8080",
+		Handler:           router,
+		ReadHeaderTimeout: 5 * time.Second,
+		ReadTimeout:       15 * time.Second,
+		WriteTimeout:      15 * time.Second,
+		IdleTimeout:       60 * time.Second,
 	}
 
 	ctx, cancel := signal.NotifyContext(context.Background(), syscall.SIGINT, syscall.SIGTERM)
 	defer cancel()
 
+	// Channel to surface ListenAndServe errors back to the main goroutine
+	// instead of calling os.Exit (which skips deferred cleanup like pool.Close).
+	listenErr := make(chan error, 1)
 	go func() {
 		logger.Info("starting server", "addr", srv.Addr)
 		if err := srv.ListenAndServe(); err != nil && err != http.ErrServerClosed {
-			logger.Error("server error", "err", err)
-			os.Exit(1)
+			listenErr <- err
 		}
 	}()
 
-	<-ctx.Done()
+	select {
+	case err := <-listenErr:
+		return fmt.Errorf("server listen: %w", err)
+	case <-ctx.Done():
+	}
+
 	logger.Info("shutting down server")
 
 	shutdownCtx, shutdownCancel := context.WithTimeout(context.Background(), 30*time.Second)
@@ -163,7 +171,7 @@ func serve(configPath, authProvider string) error {
 		return fmt.Errorf("shutdown: %w", err)
 	}
 
-	fmt.Println("server stopped")
+	logger.Info("server stopped")
 	return nil
 }
 
