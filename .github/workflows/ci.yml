@@ -1,8 +1,6 @@
 name: CI
 
 on:
-  push:
-    branches: [main, develop]
   pull_request:
     branches: [main]
   workflow_call:
@@ -39,7 +37,7 @@ jobs:
 
       - name: Upload Go coverage
         if: github.actor != 'dependabot[bot]'
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: go-coverage
           path: coverage.out
@@ -47,7 +45,7 @@ jobs:
 
       - name: Upload frontend coverage
         if: github.actor != 'dependabot[bot]'
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: frontend-coverage
           path: web/coverage/lcov.info
@@ -106,12 +104,12 @@ jobs:
           fetch-depth: 0
 
       - name: Download Go coverage
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@v8
         with:
           name: go-coverage
 
       - name: Download frontend coverage
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@v8
         with:
           name: frontend-coverage
           path: web/coverage
