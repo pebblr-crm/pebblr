@@ -632,7 +632,7 @@ func (h *ActivityHandler) CloneWeek(w http.ResponseWriter, r *http.Request) {
 
 	w.Header().Set(headerContentType, contentTypeJSON)
 	w.WriteHeader(http.StatusCreated)
-	_ = json.NewEncoder(w).Encode(result)
+	writeJSON(w, r, result)
 }
 
 // PatchStatus handles PATCH /api/v1/activities/{id}/status

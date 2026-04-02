@@ -17,13 +17,13 @@ func Middleware(authenticator Authenticator) func(http.Handler) http.Handler {
 		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 			token, ok := bearerToken(r)
 			if !ok {
-				http.Error(w, `{"error":{"code":"UNAUTHORIZED","message":"missing or invalid authorization header"}}`, http.StatusUnauthorized)
+				writeJSONError(w, http.StatusUnauthorized, "UNAUTHORIZED", "missing or invalid authorization header")
 				return
 			}
 
 			claims, err := authenticator.ValidateToken(r.Context(), token)
 			if err != nil {
-				http.Error(w, `{"error":{"code":"UNAUTHORIZED","message":"invalid token"}}`, http.StatusUnauthorized)
+				writeJSONError(w, http.StatusUnauthorized, "UNAUTHORIZED", "invalid token")
 				return
 			}
 
@@ -31,6 +31,14 @@ func Middleware(authenticator Authenticator) func(http.Handler) http.Handler {
 			next.ServeHTTP(w, r.WithContext(ctx))
 		})
 	}
+}
+
+// writeJSONError writes a structured JSON error response with the correct
+// Content-Type header. This avoids http.Error which sets text/plain.
+func writeJSONError(w http.ResponseWriter, status int, code, message string) {
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(status)
+	_, _ = w.Write([]byte(`{"error":{"code":"` + code + `","message":"` + message + `"}}`))
 }
 
 // WithClaims stores UserClaims in the context.
