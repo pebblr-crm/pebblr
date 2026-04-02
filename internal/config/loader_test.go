@@ -291,6 +291,6 @@ func loadFromString(t *testing.T, content string) (*TenantConfig, error) {
 	return Load(path)
 }
 
-func replaceInJSON(json, old, replacement string) string {
-	return strings.Replace(json, old, replacement, 1)
+func replaceInJSON(j, old, replacement string) string {
+	return strings.Replace(j, old, replacement, 1)
 }
