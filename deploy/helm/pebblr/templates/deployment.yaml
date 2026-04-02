@@ -48,6 +48,12 @@ spec:
             - name: secrets
               mountPath: {{ .Values.secrets.mountPath }}
               readOnly: true
+          startupProbe:
+            httpGet:
+              path: /healthz
+              port: http
+            failureThreshold: 30
+            periodSeconds: 2
           livenessProbe:
             {{- toYaml .Values.livenessProbe | nindent 12 }}
           readinessProbe:

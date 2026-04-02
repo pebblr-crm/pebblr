@@ -35,6 +35,11 @@ spec:
           envFrom:
             - secretRef:
                 name: postgres-credentials
+          livenessProbe:
+            exec:
+              command: ["pg_isready", "-U", "pebblr"]
+            initialDelaySeconds: 15
+            periodSeconds: 10
           readinessProbe:
             exec:
               command: ["pg_isready", "-U", "pebblr"]
