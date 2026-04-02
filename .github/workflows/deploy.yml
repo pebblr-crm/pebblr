@@ -54,7 +54,6 @@ jobs:
           context: .
           push: true
           build-args: |
-            VITE_STATIC_TOKEN=${{ secrets.VITE_STATIC_TOKEN }}
             VITE_GOOGLE_MAPS_API_KEY=${{ secrets.VITE_GOOGLE_MAPS_API_KEY }}
             VITE_DEMO_MODE=true
           tags: |
