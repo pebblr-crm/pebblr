@@ -49,6 +49,10 @@ type ActivityScope struct {
 	CreatorIDs []string
 	// TeamIDs restricts results to activities belonging to these team IDs.
 	TeamIDs []string
+	// JointVisitUID, when non-empty, includes activities where this user is the
+	// joint visitor (in addition to CreatorIDs). This ensures reps see activities
+	// they participate in as co-visitors, matching CanViewActivity semantics.
+	JointVisitUID string
 	// AllActivities bypasses all scoping (admin only).
 	AllActivities bool
 }
