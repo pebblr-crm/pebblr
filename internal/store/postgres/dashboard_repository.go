@@ -217,6 +217,30 @@ func (r *dashboardRepository) FrequencyStats(ctx context.Context, scope rbac.Act
 	return result, nil
 }
 
+// queryDueDates executes a query that selects due_date from activities and returns the dates.
+func (r *dashboardRepository) queryDueDates(ctx context.Context, selectClause string, qb *queryBuilder, errContext string) ([]time.Time, error) {
+	where := qb.where()
+	query := selectClause + ` FROM activities ` + where + ` ORDER BY due_date`
+	rows, err := r.pool.Query(ctx, query, qb.args...)
+	if err != nil {
+		return nil, fmt.Errorf("querying %s: %w", errContext, err)
+	}
+	defer rows.Close()
+
+	var result []time.Time
+	for rows.Next() {
+		var t time.Time
+		if err := rows.Scan(&t); err != nil {
+			return nil, fmt.Errorf("scanning %s: %w", errContext, err)
+		}
+		result = append(result, t)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, fmt.Errorf("iterating %s: %w", errContext, err)
+	}
+	return result, nil
+}
+
 // WeekendFieldActivities returns dates of field-category activities on weekends.
 func (r *dashboardRepository) WeekendFieldActivities(ctx context.Context, scope rbac.ActivityScope, fieldTypes []string, filter store.DashboardFilter) ([]store.WeekendActivity, error) {
 	qb := newQueryBuilder()
@@ -233,25 +257,15 @@ func (r *dashboardRepository) WeekendFieldActivities(ctx context.Context, scope 
 	}
 
 	qb.applyDashboardFilter("", filter)
-	where := qb.where()
 
-	query := `SELECT DISTINCT due_date FROM activities ` + where + ` ORDER BY due_date`
-	rows, err := r.pool.Query(ctx, query, qb.args...)
+	dates, err := r.queryDueDates(ctx, `SELECT DISTINCT due_date`, qb, "weekend field activities")
 	if err != nil {
-		return nil, fmt.Errorf("querying weekend field activities: %w", err)
+		return nil, err
 	}
-	defer rows.Close()
 
-	var result []store.WeekendActivity
-	for rows.Next() {
-		var wa store.WeekendActivity
-		if err := rows.Scan(&wa.DueDate); err != nil {
-			return nil, fmt.Errorf("scanning weekend activity: %w", err)
-		}
-		result = append(result, wa)
-	}
-	if err := rows.Err(); err != nil {
-		return nil, fmt.Errorf("iterating weekend activities: %w", err)
+	result := make([]store.WeekendActivity, len(dates))
+	for i, d := range dates {
+		result[i] = store.WeekendActivity{DueDate: d}
 	}
 	return result, nil
 }
@@ -268,29 +282,22 @@ func (r *dashboardRepository) RecoveryActivities(ctx context.Context, scope rbac
 	}
 
 	qb.applyDashboardFilter("", filter)
-	where := qb.where()
 
-	query := `SELECT due_date FROM activities ` + where + ` ORDER BY due_date`
-	rows, err := r.pool.Query(ctx, query, qb.args...)
-	if err != nil {
-		return nil, fmt.Errorf("querying recovery activities: %w", err)
-	}
-	defer rows.Close()
-
-	var result []time.Time
-	for rows.Next() {
-		var t time.Time
-		if err := rows.Scan(&t); err != nil {
-			return nil, fmt.Errorf("scanning recovery activity: %w", err)
-		}
-		result = append(result, t)
-	}
-	if err := rows.Err(); err != nil {
-		return nil, fmt.Errorf("iterating recovery activities: %w", err)
-	}
-	return result, nil
+	return r.queryDueDates(ctx, `SELECT due_date`, qb, "recovery activities")
 }
 
+
+// buildPlaceholders appends ids to args starting at argIdx and returns
+// comma-separated "$N" placeholders along with the updated args and next index.
+func buildPlaceholders(ids []string, args []any, argIdx int) (ph string, outArgs []any, nextIdx int) {
+	placeholders := make([]string, len(ids))
+	for i, id := range ids {
+		placeholders[i] = fmt.Sprintf("$%d", argIdx)
+		args = append(args, id)
+		argIdx++
+	}
+	return strings.Join(placeholders, ","), args, argIdx
+}
 
 // activityScopeConditionsAliased builds the RBAC scope WHERE clause for activities with optional table alias.
 func activityScopeConditionsAliased(alias string, scope rbac.ActivityScope, args []any, argIdx int) (sql string, outArgs []any, nextIdx int) {
@@ -307,23 +314,14 @@ func activityScopeConditionsAliased(alias string, scope rbac.ActivityScope, args
 
 	var parts []string
 	if len(scope.CreatorIDs) > 0 {
-		placeholders := make([]string, len(scope.CreatorIDs))
-		for i, id := range scope.CreatorIDs {
-			placeholders[i] = fmt.Sprintf("$%d", argIdx)
-			args = append(args, id)
-			argIdx++
-		}
-		ph := strings.Join(placeholders, ",")
+		var ph string
+		ph, args, argIdx = buildPlaceholders(scope.CreatorIDs, args, argIdx)
 		parts = append(parts, fmt.Sprintf("(%screator_id::TEXT = ANY(ARRAY[%s]) OR %sjoint_visit_user_id::TEXT = ANY(ARRAY[%s]))", prefix, ph, prefix, ph))
 	}
 	if len(scope.TeamIDs) > 0 {
-		placeholders := make([]string, len(scope.TeamIDs))
-		for i, id := range scope.TeamIDs {
-			placeholders[i] = fmt.Sprintf("$%d", argIdx)
-			args = append(args, id)
-			argIdx++
-		}
-		parts = append(parts, fmt.Sprintf("%steam_id::TEXT = ANY(ARRAY[%s])", prefix, strings.Join(placeholders, ",")))
+		var ph string
+		ph, args, argIdx = buildPlaceholders(scope.TeamIDs, args, argIdx)
+		parts = append(parts, fmt.Sprintf("%steam_id::TEXT = ANY(ARRAY[%s])", prefix, ph))
 	}
 	if len(parts) > 0 {
 		return "(" + strings.Join(parts, " OR ") + ")", args, argIdx
@@ -346,22 +344,14 @@ func targetScopeConditionsAliased(alias string, scope rbac.TargetScope, args []a
 
 	var parts []string
 	if len(scope.AssigneeIDs) > 0 {
-		placeholders := make([]string, len(scope.AssigneeIDs))
-		for i, id := range scope.AssigneeIDs {
-			placeholders[i] = fmt.Sprintf("$%d", argIdx)
-			args = append(args, id)
-			argIdx++
-		}
-		parts = append(parts, fmt.Sprintf("%sassignee_id::TEXT = ANY(ARRAY[%s])", prefix, strings.Join(placeholders, ",")))
+		var ph string
+		ph, args, argIdx = buildPlaceholders(scope.AssigneeIDs, args, argIdx)
+		parts = append(parts, fmt.Sprintf("%sassignee_id::TEXT = ANY(ARRAY[%s])", prefix, ph))
 	}
 	if len(scope.TeamIDs) > 0 {
-		placeholders := make([]string, len(scope.TeamIDs))
-		for i, id := range scope.TeamIDs {
-			placeholders[i] = fmt.Sprintf("$%d", argIdx)
-			args = append(args, id)
-			argIdx++
-		}
-		parts = append(parts, fmt.Sprintf("%steam_id::TEXT = ANY(ARRAY[%s])", prefix, strings.Join(placeholders, ",")))
+		var ph string
+		ph, args, argIdx = buildPlaceholders(scope.TeamIDs, args, argIdx)
+		parts = append(parts, fmt.Sprintf("%steam_id::TEXT = ANY(ARRAY[%s])", prefix, ph))
 	}
 	if len(parts) > 0 {
 		return "(" + strings.Join(parts, " OR ") + ")", args, argIdx

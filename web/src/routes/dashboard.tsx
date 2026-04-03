@@ -480,9 +480,10 @@ function MonthGrid({ monthDate, activities, onWeekClick, selectedRep, repName }:
                 const isToday = dateStr === today
                 const counts = dayCounts.get(dateStr)
 
+                const dayTextBase = isCurrentMonth ? 'text-slate-700' : 'text-slate-300'
                 const dayTextClass = isToday
                   ? 'text-white bg-teal-600 w-6 h-6 rounded-full flex items-center justify-center'
-                  : isCurrentMonth ? 'text-slate-700' : 'text-slate-300'
+                  : dayTextBase
 
                 return (
                   <div

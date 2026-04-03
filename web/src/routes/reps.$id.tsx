@@ -1,9 +1,10 @@
-import { useState, useMemo, useCallback } from 'react'
+import { useMemo } from 'react'
 import { createRoute, useParams } from '@tanstack/react-router'
 import { Route as rootRoute } from './__root'
 import { useActivities } from '@/hooks/useActivities'
 import { useTargets } from '@/hooks/useTargets'
 import { useActivityStats, useCoverage } from '@/hooks/useDashboard'
+import { useWeekNav } from '@/hooks/useWeekNav'
 import { WeekView } from '@/components/calendar/WeekView'
 import { MapContainer } from '@/components/map/MapContainer'
 import { TargetMarker } from '@/components/map/TargetMarker'
@@ -12,7 +13,6 @@ import { Badge } from '@/components/ui/Badge'
 import { Button } from '@/components/ui/Button'
 import { Spinner } from '@/components/ui/Spinner'
 import { QueryError } from '@/components/ui/QueryError'
-import { getMonday, addDays, formatDate } from '@/lib/dates'
 import { getLat, getLng, getClassification } from '@/lib/target-fields'
 import { ArrowLeft, ChevronLeft, ChevronRight, Info } from 'lucide-react'
 
@@ -24,11 +24,7 @@ export const Route = createRoute({
 
 function RepDrillDownPage() {
   const { id: repId } = useParams({ from: '/reps/$id' })
-  const [weekStart, setWeekStart] = useState(() => getMonday(new Date()))
-
-  const weekEnd = useMemo(() => addDays(weekStart, 4), [weekStart])
-  const dateFrom = formatDate(weekStart)
-  const dateTo = formatDate(weekEnd)
+  const { weekStart, weekEnd, dateFrom, dateTo, prevWeek, nextWeek } = useWeekNav()
 
   const { data: activityData, isLoading: actLoading, isError: actError, refetch: refetchAct } = useActivities({
     creatorId: repId,
@@ -46,9 +42,6 @@ function RepDrillDownPage() {
     () => targets.filter((t) => getLat(t.fields) != null && getLng(t.fields) != null),
     [targets],
   )
-
-  const prevWeek = useCallback(() => setWeekStart((w) => addDays(w, -7)), [])
-  const nextWeek = useCallback(() => setWeekStart((w) => addDays(w, 7)), [])
 
   const completedCount = stats?.byStatus?.realizat ?? 0
   const completionRate = stats?.total ? Math.round((completedCount / stats.total) * 100) : 0

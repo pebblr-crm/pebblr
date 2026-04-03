@@ -4,6 +4,7 @@ import { Route as rootRoute } from './__root'
 import { useTargets, useTargetVisitStatus } from '@/hooks/useTargets'
 import { useActivities, useCloneWeek, useBatchCreateActivities, usePatchActivity } from '@/hooks/useActivities'
 import { useActivityStats, useCoverage } from '@/hooks/useDashboard'
+import { useWeekNav } from '@/hooks/useWeekNav'
 import { WeekView } from '@/components/calendar/WeekView'
 import { MapContainer } from '@/components/map/MapContainer'
 import { TargetMarker } from '@/components/map/TargetMarker'
@@ -14,7 +15,7 @@ import { QueryError } from '@/components/ui/QueryError'
 import { Modal } from '@/components/ui/Modal'
 import { ActivityDetailModal } from '@/components/activities/ActivityDetailModal'
 import { useToast } from '@/components/ui/Toast'
-import { getMonday, addDays, formatDate } from '@/lib/dates'
+import { addDays, formatDate } from '@/lib/dates'
 import { priorityDot } from '@/lib/styles'
 import { getLat, getLng, getClassification } from '@/lib/target-fields'
 import { ChevronLeft, ChevronRight, Copy, CalendarDays, MapIcon, X, Info, CalendarPlus } from 'lucide-react'
@@ -25,10 +26,16 @@ export const Route = createRoute({
   component: PlannerPage,
 })
 
+function classificationBadge(p: string): string {
+  if (p === 'a') return 'bg-red-100 text-red-700'
+  if (p === 'b') return 'bg-amber-100 text-amber-700'
+  return 'bg-slate-100 text-slate-600'
+}
+
 /* ── Main page ── */
 
 function PlannerPage() {
-  const [weekStart, setWeekStart] = useState(() => getMonday(new Date()))
+  const { weekStart, weekEnd, dateFrom, dateTo, prevWeek, nextWeek, goToday } = useWeekNav()
   const [showMobileMap, setShowMobileMap] = useState(false)
   const [selectedTargetIds, setSelectedTargetIds] = useState<Set<string>>(new Set())
   const [targetSearch, setTargetSearch] = useState('')
@@ -46,10 +53,6 @@ function PlannerPage() {
 
   // Day assignments: dateStr → target IDs (pending creation)
   const [dayAssignments, setDayAssignments] = useState<Record<string, string[]>>({})
-
-  const weekEnd = useMemo(() => addDays(weekStart, 4), [weekStart])
-  const dateFrom = formatDate(weekStart)
-  const dateTo = formatDate(weekEnd)
 
   const { data: targetData, isLoading: targetsLoading, isError: targetsError, refetch: refetchTargets } = useTargets({ limit: 500 })
   const { data: activityData, isLoading: activitiesLoading, isError: activitiesError, refetch: refetchActivities } = useActivities({ dateFrom, dateTo, limit: 200 })
@@ -112,11 +115,6 @@ function PlannerPage() {
     () => Object.values(dayAssignments).reduce((sum, arr) => sum + arr.length, 0),
     [dayAssignments],
   )
-
-  // ── Navigation ──
-  const prevWeek = useCallback(() => setWeekStart((w) => addDays(w, -7)), [])
-  const nextWeek = useCallback(() => setWeekStart((w) => addDays(w, 7)), [])
-  const goToday = useCallback(() => setWeekStart(getMonday(new Date())), [])
 
   const handleCloneWeek = useCallback(() => {
     const target = addDays(weekStart, 7)
@@ -507,10 +505,7 @@ function PlannerPage() {
               const t = targetMap.get(id)
               if (!t) return null
               const p = getClassification(t.fields)
-              let badgeClass: string
-              if (p === 'a') badgeClass = 'bg-red-100 text-red-700'
-              else if (p === 'b') badgeClass = 'bg-amber-100 text-amber-700'
-              else badgeClass = 'bg-slate-100 text-slate-600'
+              const badgeClass = classificationBadge(p)
               return (
                 <li key={id} className="flex items-center gap-2 px-3 py-2">
                   <span className={`w-2 h-2 rounded-full shrink-0 ${priorityDot[p] ?? priorityDot.c}`} />

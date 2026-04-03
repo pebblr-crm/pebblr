@@ -3,6 +3,7 @@ package api_test
 import (
 	"context"
 	"encoding/json"
+	"fmt"
 	"net/http"
 	"net/http/httptest"
 	"testing"
@@ -230,5 +231,216 @@ func TestDashboardHandler_UserAndTeamFilter(t *testing.T) {
 
 	if rec.Code != http.StatusOK {
 		t.Fatalf(fmtStatusWant, rec.Code, http.StatusOK)
+	}
+}
+
+func TestDashboardHandler_RecoveryBalance_OK(t *testing.T) {
+	t.Parallel()
+	svc := &stubDashboardService{}
+	h := api.NewDashboardHandler(svc)
+	router := api.NewDashboardRouter(h)
+	handler := injectUser(testAdminUser(), router)
+
+	req := httptest.NewRequest(http.MethodGet, "/recovery?period=2026-03", http.NoBody)
+	rec := httptest.NewRecorder()
+	handler.ServeHTTP(rec, req)
+
+	if rec.Code != http.StatusOK {
+		t.Fatalf(fmtStatusWant, rec.Code, http.StatusOK)
+	}
+}
+
+func TestDashboardHandler_RecoveryBalance_InvalidPeriod(t *testing.T) {
+	t.Parallel()
+	svc := &stubDashboardService{}
+	h := api.NewDashboardHandler(svc)
+	router := api.NewDashboardRouter(h)
+	handler := injectUser(testAdminUser(), router)
+
+	req := httptest.NewRequest(http.MethodGet, "/recovery?period=bad", http.NoBody)
+	rec := httptest.NewRecorder()
+	handler.ServeHTTP(rec, req)
+
+	if rec.Code != http.StatusBadRequest {
+		t.Fatalf(fmtStatusWant, rec.Code, http.StatusBadRequest)
+	}
+}
+
+func TestDashboardHandler_RecoveryBalance_Unauthorized(t *testing.T) {
+	t.Parallel()
+	svc := &stubDashboardService{}
+	h := api.NewDashboardHandler(svc)
+	router := api.NewDashboardRouter(h)
+
+	req := httptest.NewRequest(http.MethodGet, "/recovery?period=2026-03", http.NoBody)
+	rec := httptest.NewRecorder()
+	router.ServeHTTP(rec, req)
+
+	if rec.Code != http.StatusUnauthorized {
+		t.Fatalf(fmtStatusWant, rec.Code, http.StatusUnauthorized)
+	}
+}
+
+func TestDashboardHandler_Coverage_InvalidPeriod(t *testing.T) {
+	t.Parallel()
+	svc := &stubDashboardService{}
+	h := api.NewDashboardHandler(svc)
+	router := api.NewDashboardRouter(h)
+	handler := injectUser(testAdminUser(), router)
+
+	req := httptest.NewRequest(http.MethodGet, "/coverage?period=bad", http.NoBody)
+	rec := httptest.NewRecorder()
+	handler.ServeHTTP(rec, req)
+
+	if rec.Code != http.StatusBadRequest {
+		t.Fatalf(fmtStatusWant, rec.Code, http.StatusBadRequest)
+	}
+}
+
+func TestDashboardHandler_Frequency_InvalidPeriod(t *testing.T) {
+	t.Parallel()
+	svc := &stubDashboardService{}
+	h := api.NewDashboardHandler(svc)
+	router := api.NewDashboardRouter(h)
+	handler := injectUser(testAdminUser(), router)
+
+	req := httptest.NewRequest(http.MethodGet, "/frequency?period=bad", http.NoBody)
+	rec := httptest.NewRecorder()
+	handler.ServeHTTP(rec, req)
+
+	if rec.Code != http.StatusBadRequest {
+		t.Fatalf(fmtStatusWant, rec.Code, http.StatusBadRequest)
+	}
+}
+
+func TestDashboardHandler_Coverage_Unauthorized(t *testing.T) {
+	t.Parallel()
+	svc := &stubDashboardService{}
+	h := api.NewDashboardHandler(svc)
+	router := api.NewDashboardRouter(h)
+
+	req := httptest.NewRequest(http.MethodGet, "/coverage?period=2026-03", http.NoBody)
+	rec := httptest.NewRecorder()
+	router.ServeHTTP(rec, req)
+
+	if rec.Code != http.StatusUnauthorized {
+		t.Fatalf(fmtStatusWant, rec.Code, http.StatusUnauthorized)
+	}
+}
+
+func TestDashboardHandler_Frequency_Unauthorized(t *testing.T) {
+	t.Parallel()
+	svc := &stubDashboardService{}
+	h := api.NewDashboardHandler(svc)
+	router := api.NewDashboardRouter(h)
+
+	req := httptest.NewRequest(http.MethodGet, "/frequency?period=2026-03", http.NoBody)
+	rec := httptest.NewRecorder()
+	router.ServeHTTP(rec, req)
+
+	if rec.Code != http.StatusUnauthorized {
+		t.Fatalf(fmtStatusWant, rec.Code, http.StatusUnauthorized)
+	}
+}
+
+func TestDashboardHandler_ActivityStats_ServiceError(t *testing.T) {
+	t.Parallel()
+	svc := &stubDashboardService{err: fmt.Errorf("db error")}
+	h := api.NewDashboardHandler(svc)
+	router := api.NewDashboardRouter(h)
+	handler := injectUser(testAdminUser(), router)
+
+	req := httptest.NewRequest(http.MethodGet, "/activities?period=2026-03", http.NoBody)
+	rec := httptest.NewRecorder()
+	handler.ServeHTTP(rec, req)
+
+	if rec.Code != http.StatusInternalServerError {
+		t.Fatalf(fmtStatusWant, rec.Code, http.StatusInternalServerError)
+	}
+}
+
+func TestDashboardHandler_Coverage_ServiceError(t *testing.T) {
+	t.Parallel()
+	svc := &stubDashboardService{err: fmt.Errorf("db error")}
+	h := api.NewDashboardHandler(svc)
+	router := api.NewDashboardRouter(h)
+	handler := injectUser(testAdminUser(), router)
+
+	req := httptest.NewRequest(http.MethodGet, "/coverage?period=2026-03", http.NoBody)
+	rec := httptest.NewRecorder()
+	handler.ServeHTTP(rec, req)
+
+	if rec.Code != http.StatusInternalServerError {
+		t.Fatalf(fmtStatusWant, rec.Code, http.StatusInternalServerError)
+	}
+}
+
+func TestDashboardHandler_Frequency_ServiceError(t *testing.T) {
+	t.Parallel()
+	svc := &stubDashboardService{err: fmt.Errorf("db error")}
+	h := api.NewDashboardHandler(svc)
+	router := api.NewDashboardRouter(h)
+	handler := injectUser(testAdminUser(), router)
+
+	req := httptest.NewRequest(http.MethodGet, "/frequency?period=2026-03", http.NoBody)
+	rec := httptest.NewRecorder()
+	handler.ServeHTTP(rec, req)
+
+	if rec.Code != http.StatusInternalServerError {
+		t.Fatalf(fmtStatusWant, rec.Code, http.StatusInternalServerError)
+	}
+}
+
+func TestDashboardHandler_RecoveryBalance_DefaultsToCurrentMonth(t *testing.T) {
+	t.Parallel()
+	svc := &stubDashboardService{}
+	h := api.NewDashboardHandler(svc)
+	router := api.NewDashboardRouter(h)
+	handler := injectUser(testAdminUser(), router)
+
+	req := httptest.NewRequest(http.MethodGet, "/recovery", http.NoBody)
+	rec := httptest.NewRecorder()
+	handler.ServeHTTP(rec, req)
+
+	if rec.Code != http.StatusOK {
+		t.Fatalf(fmtStatusWant, rec.Code, http.StatusOK)
+	}
+}
+
+func TestDashboardHandler_InvalidDateFrom(t *testing.T) {
+	t.Parallel()
+	svc := &stubDashboardService{}
+	h := api.NewDashboardHandler(svc)
+	router := api.NewDashboardRouter(h)
+	handler := injectUser(testAdminUser(), router)
+
+	req := httptest.NewRequest(http.MethodGet, "/activities?dateFrom=bad-date", http.NoBody)
+	rec := httptest.NewRecorder()
+	handler.ServeHTTP(rec, req)
+
+	if rec.Code != http.StatusBadRequest {
+		t.Fatalf(fmtStatusWant, rec.Code, http.StatusBadRequest)
+	}
+}
+
+func TestDashboardHandler_InvalidDateTo(t *testing.T) {
+	t.Parallel()
+	svc := &stubDashboardService{
+		activityStats: &service.ActivityStatsResponse{
+			ByStatus:   map[string]int{},
+			ByCategory: map[string]int{},
+			Total:      0,
+		},
+	}
+	h := api.NewDashboardHandler(svc)
+	router := api.NewDashboardRouter(h)
+	handler := injectUser(testAdminUser(), router)
+
+	req := httptest.NewRequest(http.MethodGet, "/activities?dateFrom=2026-01-01&dateTo=bad-date", http.NoBody)
+	rec := httptest.NewRecorder()
+	handler.ServeHTTP(rec, req)
+
+	if rec.Code != http.StatusBadRequest {
+		t.Fatalf(fmtStatusWant, rec.Code, http.StatusBadRequest)
 	}
 }
