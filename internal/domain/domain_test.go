@@ -104,6 +104,90 @@ func TestActivityPatchApplyToNilFields(t *testing.T) {
 	}
 }
 
+func TestActivityPatchApplyToAllFields(t *testing.T) {
+	t.Parallel()
+
+	newDate := time.Date(2025, 6, 15, 0, 0, 0, 0, time.UTC)
+	newStatus := "completed"
+	newDuration := "half_day"
+	newRouting := "week-2"
+	newTargetID := "target-99"
+	newJointVisit := "user-42"
+
+	dst := &domain.Activity{
+		Status:        "planned",
+		DueDate:       time.Date(2025, 1, 1, 0, 0, 0, 0, time.UTC),
+		Duration:      "full_day",
+		Routing:       "week-1",
+		TargetID:      "target-1",
+		JointVisitUID: "user-1",
+		Fields:        map[string]any{"existing": "keep", "removeme": "gone"},
+	}
+
+	patch := &domain.ActivityPatch{
+		Status:        &newStatus,
+		DueDate:       &newDate,
+		Duration:      &newDuration,
+		Routing:       &newRouting,
+		TargetID:      &newTargetID,
+		JointVisitUID: &newJointVisit,
+		FieldsPresent: true,
+		Fields:        map[string]any{"new": "val", "removeme": nil},
+	}
+
+	patch.ApplyTo(dst)
+
+	if dst.Status != newStatus {
+		t.Errorf("Status: got %q, want %q", dst.Status, newStatus)
+	}
+	if !dst.DueDate.Equal(newDate) {
+		t.Errorf("DueDate: got %v, want %v", dst.DueDate, newDate)
+	}
+	if dst.Duration != newDuration {
+		t.Errorf("Duration: got %q, want %q", dst.Duration, newDuration)
+	}
+	if dst.Routing != newRouting {
+		t.Errorf("Routing: got %q, want %q", dst.Routing, newRouting)
+	}
+	if dst.TargetID != newTargetID {
+		t.Errorf("TargetID: got %q, want %q", dst.TargetID, newTargetID)
+	}
+	if dst.JointVisitUID != newJointVisit {
+		t.Errorf("JointVisitUID: got %q, want %q", dst.JointVisitUID, newJointVisit)
+	}
+	// Existing field untouched by patch should remain.
+	if dst.Fields["existing"] != "keep" {
+		t.Errorf("existing field should be untouched, got %v", dst.Fields["existing"])
+	}
+	// New field should be added.
+	if dst.Fields["new"] != "val" {
+		t.Errorf("new field: got %v, want val", dst.Fields["new"])
+	}
+	// Nil-value field should be removed.
+	if _, ok := dst.Fields["removeme"]; ok {
+		t.Error("removeme field should have been deleted")
+	}
+}
+
+func TestActivityPatchApplyToNoOp(t *testing.T) {
+	t.Parallel()
+	// A completely empty patch should leave the activity unchanged.
+	dst := &domain.Activity{
+		Status:   "planned",
+		Duration: "full_day",
+		TargetID: "target-1",
+	}
+	patch := &domain.ActivityPatch{}
+	patch.ApplyTo(dst)
+
+	if dst.Status != "planned" {
+		t.Errorf("Status should be unchanged, got %q", dst.Status)
+	}
+	if dst.Duration != "full_day" {
+		t.Errorf("Duration should be unchanged, got %q", dst.Duration)
+	}
+}
+
 func TestValidateBoundary(t *testing.T) {
 	t.Parallel()
 

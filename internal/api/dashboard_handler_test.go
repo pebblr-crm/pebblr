@@ -3,7 +3,7 @@ package api_test
 import (
 	"context"
 	"encoding/json"
-	"fmt"
+	"errors"
 	"net/http"
 	"net/http/httptest"
 	"testing"
@@ -17,6 +17,9 @@ import (
 const (
 	fmtStatusWant    = "status = %d, want %d"
 	fmtDashDecodeErr = "decode: %v"
+	pathActivities   = "/activities?period=2026-03"
+	pathCoverage     = "/coverage?period=2026-03"
+	pathFrequency    = "/frequency?period=2026-03"
 )
 
 // --- stub dashboard service ---
@@ -57,7 +60,7 @@ func TestDashboardHandler_ActivityStats_OK(t *testing.T) {
 	router := api.NewDashboardRouter(h)
 	handler := injectUser(testAdminUser(), router)
 
-	req := httptest.NewRequest(http.MethodGet, "/activities?period=2026-03", http.NoBody)
+	req := httptest.NewRequest(http.MethodGet, pathActivities, http.NoBody)
 	rec := httptest.NewRecorder()
 	handler.ServeHTTP(rec, req)
 
@@ -118,7 +121,7 @@ func TestDashboardHandler_ActivityStats_Unauthorized(t *testing.T) {
 	h := api.NewDashboardHandler(svc)
 	router := api.NewDashboardRouter(h)
 
-	req := httptest.NewRequest(http.MethodGet, "/activities?period=2026-03", http.NoBody)
+	req := httptest.NewRequest(http.MethodGet, pathActivities, http.NoBody)
 	rec := httptest.NewRecorder()
 	router.ServeHTTP(rec, req)
 
@@ -140,7 +143,7 @@ func TestDashboardHandler_Coverage_OK(t *testing.T) {
 	router := api.NewDashboardRouter(h)
 	handler := injectUser(testAdminUser(), router)
 
-	req := httptest.NewRequest(http.MethodGet, "/coverage?period=2026-03", http.NoBody)
+	req := httptest.NewRequest(http.MethodGet, pathCoverage, http.NoBody)
 	rec := httptest.NewRecorder()
 	handler.ServeHTTP(rec, req)
 
@@ -170,7 +173,7 @@ func TestDashboardHandler_Frequency_OK(t *testing.T) {
 	router := api.NewDashboardRouter(h)
 	handler := injectUser(testAdminUser(), router)
 
-	req := httptest.NewRequest(http.MethodGet, "/frequency?period=2026-03", http.NoBody)
+	req := httptest.NewRequest(http.MethodGet, pathFrequency, http.NoBody)
 	rec := httptest.NewRecorder()
 	handler.ServeHTTP(rec, req)
 
@@ -319,7 +322,7 @@ func TestDashboardHandler_Coverage_Unauthorized(t *testing.T) {
 	h := api.NewDashboardHandler(svc)
 	router := api.NewDashboardRouter(h)
 
-	req := httptest.NewRequest(http.MethodGet, "/coverage?period=2026-03", http.NoBody)
+	req := httptest.NewRequest(http.MethodGet, pathCoverage, http.NoBody)
 	rec := httptest.NewRecorder()
 	router.ServeHTTP(rec, req)
 
@@ -334,7 +337,7 @@ func TestDashboardHandler_Frequency_Unauthorized(t *testing.T) {
 	h := api.NewDashboardHandler(svc)
 	router := api.NewDashboardRouter(h)
 
-	req := httptest.NewRequest(http.MethodGet, "/frequency?period=2026-03", http.NoBody)
+	req := httptest.NewRequest(http.MethodGet, pathFrequency, http.NoBody)
 	rec := httptest.NewRecorder()
 	router.ServeHTTP(rec, req)
 
@@ -345,12 +348,12 @@ func TestDashboardHandler_Frequency_Unauthorized(t *testing.T) {
 
 func TestDashboardHandler_ActivityStats_ServiceError(t *testing.T) {
 	t.Parallel()
-	svc := &stubDashboardService{err: fmt.Errorf("db error")}
+	svc := &stubDashboardService{err: errors.New(errDBMsg)}
 	h := api.NewDashboardHandler(svc)
 	router := api.NewDashboardRouter(h)
 	handler := injectUser(testAdminUser(), router)
 
-	req := httptest.NewRequest(http.MethodGet, "/activities?period=2026-03", http.NoBody)
+	req := httptest.NewRequest(http.MethodGet, pathActivities, http.NoBody)
 	rec := httptest.NewRecorder()
 	handler.ServeHTTP(rec, req)
 
@@ -361,12 +364,12 @@ func TestDashboardHandler_ActivityStats_ServiceError(t *testing.T) {
 
 func TestDashboardHandler_Coverage_ServiceError(t *testing.T) {
 	t.Parallel()
-	svc := &stubDashboardService{err: fmt.Errorf("db error")}
+	svc := &stubDashboardService{err: errors.New(errDBMsg)}
 	h := api.NewDashboardHandler(svc)
 	router := api.NewDashboardRouter(h)
 	handler := injectUser(testAdminUser(), router)
 
-	req := httptest.NewRequest(http.MethodGet, "/coverage?period=2026-03", http.NoBody)
+	req := httptest.NewRequest(http.MethodGet, pathCoverage, http.NoBody)
 	rec := httptest.NewRecorder()
 	handler.ServeHTTP(rec, req)
 
@@ -377,12 +380,12 @@ func TestDashboardHandler_Coverage_ServiceError(t *testing.T) {
 
 func TestDashboardHandler_Frequency_ServiceError(t *testing.T) {
 	t.Parallel()
-	svc := &stubDashboardService{err: fmt.Errorf("db error")}
+	svc := &stubDashboardService{err: errors.New(errDBMsg)}
 	h := api.NewDashboardHandler(svc)
 	router := api.NewDashboardRouter(h)
 	handler := injectUser(testAdminUser(), router)
 
-	req := httptest.NewRequest(http.MethodGet, "/frequency?period=2026-03", http.NoBody)
+	req := httptest.NewRequest(http.MethodGet, pathFrequency, http.NoBody)
 	rec := httptest.NewRecorder()
 	handler.ServeHTTP(rec, req)
 

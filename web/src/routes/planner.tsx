@@ -281,6 +281,10 @@ function PlannerPage() {
   const completedCount = stats?.byStatus?.realizat ?? 0
   const completionRate = stats?.total ? Math.round((completedCount / stats.total) * 100) : 0
   const coveragePct = coverage ? Math.round(coverage.percentage) : 0
+  const targetPlural = selectedTargetIds.size === 1 ? '' : 's'
+  const bulkButtonLabel = batchCreate.isPending
+    ? 'Creating...'
+    : `Schedule ${selectedTargetIds.size} Target${targetPlural}`
 
   return (
     <>
@@ -453,7 +457,7 @@ function PlannerPage() {
             </Button>
             <Button variant="primary" size="sm" onClick={handleBulkSchedule} disabled={batchCreate.isPending}>
               <CalendarPlus size={14} />
-              {batchCreate.isPending ? 'Creating...' : `Schedule ${selectedTargetIds.size} Target${selectedTargetIds.size === 1 ? '' : 's'}`}
+              {bulkButtonLabel}
             </Button>
           </div>
         </div>
