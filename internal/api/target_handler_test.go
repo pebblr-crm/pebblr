@@ -18,10 +18,13 @@ import (
 )
 
 const (
-	testDrName     = "Dr. Test"
-	fmtExpected403 = "expected 403, got %d: %s"
-	pathImport     = "/import"
-	pathTarget1    = "/target-1"
+	testDrName    = "Dr. Test"
+	testDrNew     = "Dr. New"
+	testDrUpdated = "Dr. Updated"
+	testDrImport  = "Dr. Import"
+	pathImport    = "/import"
+	pathTarget1   = "/target-1"
+	pathAssign    = "/assign"
 )
 
 // --- stub TargetService ---
@@ -110,11 +113,11 @@ func targetReq(t *testing.T, method, path string, body any) *httptest.ResponseRe
 	var buf bytes.Buffer
 	if body != nil {
 		if err := json.NewEncoder(&buf).Encode(body); err != nil {
-			t.Fatalf("encoding body: %v", err)
+			t.Fatalf(fmtEncodingBody, err)
 		}
 	}
 	req := httptest.NewRequest(method, path, &buf)
-	req.Header.Set("Content-Type", "application/json")
+	req.Header.Set(headerContentType, contentTypeJSON)
 	// Inject an admin user into the context for auth.
 	user := &domain.User{ID: testAdminID, Role: domain.RoleAdmin, TeamIDs: []string{testTeamID}}
 	ctx := rbac.WithUser(req.Context(), user)
@@ -129,11 +132,11 @@ func targetReqAsRep(t *testing.T, method, path string, body any) *httptest.Respo
 	var buf bytes.Buffer
 	if body != nil {
 		if err := json.NewEncoder(&buf).Encode(body); err != nil {
-			t.Fatalf("encoding body: %v", err)
+			t.Fatalf(fmtEncodingBody, err)
 		}
 	}
 	req := httptest.NewRequest(method, path, &buf)
-	req.Header.Set("Content-Type", "application/json")
+	req.Header.Set(headerContentType, contentTypeJSON)
 	user := &domain.User{ID: "rep-1", Role: domain.RoleRep, TeamIDs: []string{testTeamID}}
 	ctx := rbac.WithUser(req.Context(), user)
 	req = req.WithContext(ctx)
@@ -153,10 +156,10 @@ func TestTargetList_ReturnsOK(t *testing.T) {
 
 	var resp map[string]any
 	if err := json.Unmarshal(w.Body.Bytes(), &resp); err != nil {
-		t.Fatalf("decoding response: %v", err)
+		t.Fatalf(fmtDecodeErr, err)
 	}
 	if _, ok := resp["items"]; !ok {
-		t.Error("expected 'items' key in response")
+		t.Error(msgExpectedItems)
 	}
 }
 
@@ -166,12 +169,12 @@ func TestTargetCreate_AdminSucceeds(t *testing.T) {
 	t.Parallel()
 	body := map[string]any{
 		"targetType": "doctor",
-		"name":       "Dr. New",
+		"name":       testDrNew,
 		"fields":     map[string]any{},
 	}
 	w := targetReq(t, "POST", "/", body)
 	if w.Code != http.StatusCreated {
-		t.Fatalf("expected 201, got %d: %s", w.Code, w.Body.String())
+		t.Fatalf(fmtExpected201, w.Code, w.Body.String())
 	}
 }
 
@@ -179,7 +182,7 @@ func TestTargetCreate_RepForbidden(t *testing.T) {
 	t.Parallel()
 	body := map[string]any{
 		"targetType": "doctor",
-		"name":       "Dr. New",
+		"name":       testDrNew,
 		"fields":     map[string]any{},
 	}
 	w := targetReqAsRep(t, "POST", "/", body)
@@ -195,7 +198,7 @@ func TestTargetCreate_MissingName(t *testing.T) {
 	}
 	w := targetReq(t, "POST", "/", body)
 	if w.Code != http.StatusBadRequest {
-		t.Fatalf("expected 400, got %d: %s", w.Code, w.Body.String())
+		t.Fatalf(fmtExpected400, w.Code, w.Body.String())
 	}
 }
 
@@ -223,7 +226,7 @@ func TestTargetUpdate_AdminSucceeds(t *testing.T) {
 	t.Parallel()
 	body := map[string]any{
 		"targetType": "doctor",
-		"name":       "Dr. Updated",
+		"name":       testDrUpdated,
 		"fields":     map[string]any{},
 	}
 	w := targetReq(t, "PUT", pathTarget1, body)
@@ -236,7 +239,7 @@ func TestTargetUpdate_RepForbidden(t *testing.T) {
 	t.Parallel()
 	body := map[string]any{
 		"targetType": "doctor",
-		"name":       "Dr. Updated",
+		"name":       testDrUpdated,
 		"fields":     map[string]any{},
 	}
 	w := targetReqAsRep(t, "PUT", pathTarget1, body)
@@ -251,7 +254,7 @@ func TestTargetImport_AdminSucceeds(t *testing.T) {
 	t.Parallel()
 	body := map[string]any{
 		"targets": []map[string]any{
-			{"externalId": "ext-1", "targetType": "doctor", "name": "Dr. Import", "fields": map[string]any{}},
+			{"externalId": "ext-1", "targetType": "doctor", "name": testDrImport, "fields": map[string]any{}},
 			{"externalId": "ext-2", "targetType": "pharmacy", "name": "Central Pharmacy", "fields": map[string]any{}},
 		},
 	}
@@ -262,7 +265,7 @@ func TestTargetImport_AdminSucceeds(t *testing.T) {
 
 	var resp map[string]any
 	if err := json.Unmarshal(w.Body.Bytes(), &resp); err != nil {
-		t.Fatalf("decoding response: %v", err)
+		t.Fatalf(fmtDecodeErr, err)
 	}
 	if int(resp["created"].(float64)) != 2 {
 		t.Errorf("expected 2 created, got %v", resp["created"])
@@ -273,7 +276,7 @@ func TestTargetImport_RepForbidden(t *testing.T) {
 	t.Parallel()
 	body := map[string]any{
 		"targets": []map[string]any{
-			{"externalId": "ext-1", "targetType": "doctor", "name": "Dr. Import"},
+			{"externalId": "ext-1", "targetType": "doctor", "name": testDrImport},
 		},
 	}
 	w := targetReqAsRep(t, "POST", pathImport, body)
@@ -289,7 +292,7 @@ func TestTargetImport_EmptyTargets(t *testing.T) {
 	}
 	w := targetReq(t, "POST", pathImport, body)
 	if w.Code != http.StatusBadRequest {
-		t.Fatalf("expected 400, got %d: %s", w.Code, w.Body.String())
+		t.Fatalf(fmtExpected400, w.Code, w.Body.String())
 	}
 }
 
@@ -301,7 +304,7 @@ func TestTargetAssign_AdminSucceeds(t *testing.T) {
 		"assigneeId": "rep-1",
 		"teamId":     testTeamID,
 	}
-	w := targetReq(t, "PATCH", pathTarget1+"/assign", body)
+	w := targetReq(t, "PATCH", pathTarget1+pathAssign, body)
 	if w.Code != http.StatusOK {
 		t.Fatalf(fmtExpected200, w.Code, w.Body.String())
 	}
@@ -313,7 +316,7 @@ func TestTargetAssign_RepForbidden(t *testing.T) {
 		"assigneeId": "rep-2",
 		"teamId":     testTeamID,
 	}
-	w := targetReqAsRep(t, "PATCH", pathTarget1+"/assign", body)
+	w := targetReqAsRep(t, "PATCH", pathTarget1+pathAssign, body)
 	if w.Code != http.StatusForbidden {
 		t.Fatalf(fmtExpected403, w.Code, w.Body.String())
 	}
@@ -324,23 +327,23 @@ func TestTargetAssign_MissingAssigneeID(t *testing.T) {
 	body := map[string]any{
 		"teamId": testTeamID,
 	}
-	w := targetReq(t, "PATCH", pathTarget1+"/assign", body)
+	w := targetReq(t, "PATCH", pathTarget1+pathAssign, body)
 	if w.Code != http.StatusBadRequest {
-		t.Fatalf("expected 400, got %d: %s", w.Code, w.Body.String())
+		t.Fatalf(fmtExpected400, w.Code, w.Body.String())
 	}
 }
 
 func TestTargetAssign_InvalidBody(t *testing.T) {
 	t.Parallel()
-	req := httptest.NewRequest("PATCH", pathTarget1+"/assign", bytes.NewBufferString("not-json"))
-	req.Header.Set("Content-Type", "application/json")
+	req := httptest.NewRequest("PATCH", pathTarget1+pathAssign, bytes.NewBufferString(invalidJSON))
+	req.Header.Set(headerContentType, contentTypeJSON)
 	user := &domain.User{ID: testAdminID, Role: domain.RoleAdmin, TeamIDs: []string{testTeamID}}
 	ctx := rbac.WithUser(req.Context(), user)
 	req = req.WithContext(ctx)
 	w := httptest.NewRecorder()
 	targetRouter().ServeHTTP(w, req)
 	if w.Code != http.StatusBadRequest {
-		t.Fatalf("expected 400, got %d: %s", w.Code, w.Body.String())
+		t.Fatalf(fmtExpected400, w.Code, w.Body.String())
 	}
 }
 
@@ -354,10 +357,10 @@ func TestTargetVisitStatus_ReturnsOK(t *testing.T) {
 	}
 	var resp map[string]any
 	if err := json.Unmarshal(w.Body.Bytes(), &resp); err != nil {
-		t.Fatalf("decoding response: %v", err)
+		t.Fatalf(fmtDecodeErr, err)
 	}
 	if _, ok := resp["items"]; !ok {
-		t.Error("expected 'items' key in response")
+		t.Error(msgExpectedItems)
 	}
 }
 
@@ -371,10 +374,10 @@ func TestTargetFrequencyStatus_ReturnsOK(t *testing.T) {
 	}
 	var resp map[string]any
 	if err := json.Unmarshal(w.Body.Bytes(), &resp); err != nil {
-		t.Fatalf("decoding response: %v", err)
+		t.Fatalf(fmtDecodeErr, err)
 	}
 	if _, ok := resp["items"]; !ok {
-		t.Error("expected 'items' key in response")
+		t.Error(msgExpectedItems)
 	}
 }
 
@@ -382,7 +385,7 @@ func TestTargetFrequencyStatus_InvalidPeriod(t *testing.T) {
 	t.Parallel()
 	w := targetReq(t, "GET", "/frequency-status?period=bad", nil)
 	if w.Code != http.StatusBadRequest {
-		t.Fatalf("expected 400, got %d: %s", w.Code, w.Body.String())
+		t.Fatalf(fmtExpected400, w.Code, w.Body.String())
 	}
 }
 
@@ -416,29 +419,29 @@ func TestTargetList_PaginationLimitCap(t *testing.T) {
 
 func TestTargetCreate_InvalidBody(t *testing.T) {
 	t.Parallel()
-	req := httptest.NewRequest("POST", "/", bytes.NewBufferString("not-json"))
-	req.Header.Set("Content-Type", "application/json")
+	req := httptest.NewRequest("POST", "/", bytes.NewBufferString(invalidJSON))
+	req.Header.Set(headerContentType, contentTypeJSON)
 	user := &domain.User{ID: testAdminID, Role: domain.RoleAdmin, TeamIDs: []string{testTeamID}}
 	ctx := rbac.WithUser(req.Context(), user)
 	req = req.WithContext(ctx)
 	w := httptest.NewRecorder()
 	targetRouter().ServeHTTP(w, req)
 	if w.Code != http.StatusBadRequest {
-		t.Fatalf("expected 400, got %d: %s", w.Code, w.Body.String())
+		t.Fatalf(fmtExpected400, w.Code, w.Body.String())
 	}
 }
 
 func TestTargetUpdate_InvalidBody(t *testing.T) {
 	t.Parallel()
-	req := httptest.NewRequest("PUT", pathTarget1, bytes.NewBufferString("not-json"))
-	req.Header.Set("Content-Type", "application/json")
+	req := httptest.NewRequest("PUT", pathTarget1, bytes.NewBufferString(invalidJSON))
+	req.Header.Set(headerContentType, contentTypeJSON)
 	user := &domain.User{ID: testAdminID, Role: domain.RoleAdmin, TeamIDs: []string{testTeamID}}
 	ctx := rbac.WithUser(req.Context(), user)
 	req = req.WithContext(ctx)
 	w := httptest.NewRecorder()
 	targetRouter().ServeHTTP(w, req)
 	if w.Code != http.StatusBadRequest {
-		t.Fatalf("expected 400, got %d: %s", w.Code, w.Body.String())
+		t.Fatalf(fmtExpected400, w.Code, w.Body.String())
 	}
 }
 
@@ -449,21 +452,21 @@ func TestTargetUpdate_MissingName(t *testing.T) {
 	}
 	w := targetReq(t, "PUT", pathTarget1, body)
 	if w.Code != http.StatusBadRequest {
-		t.Fatalf("expected 400, got %d: %s", w.Code, w.Body.String())
+		t.Fatalf(fmtExpected400, w.Code, w.Body.String())
 	}
 }
 
 func TestTargetImport_InvalidBody(t *testing.T) {
 	t.Parallel()
-	req := httptest.NewRequest("POST", pathImport, bytes.NewBufferString("not-json"))
-	req.Header.Set("Content-Type", "application/json")
+	req := httptest.NewRequest("POST", pathImport, bytes.NewBufferString(invalidJSON))
+	req.Header.Set(headerContentType, contentTypeJSON)
 	user := &domain.User{ID: testAdminID, Role: domain.RoleAdmin, TeamIDs: []string{testTeamID}}
 	ctx := rbac.WithUser(req.Context(), user)
 	req = req.WithContext(ctx)
 	w := httptest.NewRecorder()
 	targetRouter().ServeHTTP(w, req)
 	if w.Code != http.StatusBadRequest {
-		t.Fatalf("expected 400, got %d: %s", w.Code, w.Body.String())
+		t.Fatalf(fmtExpected400, w.Code, w.Body.String())
 	}
 }
 
@@ -475,19 +478,19 @@ func TestTargetList_NoAuth(t *testing.T) {
 	w := httptest.NewRecorder()
 	targetRouter().ServeHTTP(w, req)
 	if w.Code != http.StatusUnauthorized {
-		t.Fatalf("expected 401, got %d: %s", w.Code, w.Body.String())
+		t.Fatalf(fmtExpected401, w.Code, w.Body.String())
 	}
 }
 
 func TestTargetCreate_NoAuth(t *testing.T) {
 	t.Parallel()
-	body, _ := json.Marshal(map[string]any{"name": "Dr. New", "targetType": "doctor"})
+	body, _ := json.Marshal(map[string]any{"name": testDrNew, "targetType": "doctor"})
 	req := httptest.NewRequest("POST", "/", bytes.NewReader(body))
-	req.Header.Set("Content-Type", "application/json")
+	req.Header.Set(headerContentType, contentTypeJSON)
 	w := httptest.NewRecorder()
 	targetRouter().ServeHTTP(w, req)
 	if w.Code != http.StatusUnauthorized {
-		t.Fatalf("expected 401, got %d: %s", w.Code, w.Body.String())
+		t.Fatalf(fmtExpected401, w.Code, w.Body.String())
 	}
 }
 
@@ -497,7 +500,7 @@ func TestTargetVisitStatus_NoAuth(t *testing.T) {
 	w := httptest.NewRecorder()
 	targetRouter().ServeHTTP(w, req)
 	if w.Code != http.StatusUnauthorized {
-		t.Fatalf("expected 401, got %d: %s", w.Code, w.Body.String())
+		t.Fatalf(fmtExpected401, w.Code, w.Body.String())
 	}
 }
 
@@ -507,7 +510,7 @@ func TestTargetFrequencyStatus_NoAuth(t *testing.T) {
 	w := httptest.NewRecorder()
 	targetRouter().ServeHTTP(w, req)
 	if w.Code != http.StatusUnauthorized {
-		t.Fatalf("expected 401, got %d: %s", w.Code, w.Body.String())
+		t.Fatalf(fmtExpected401, w.Code, w.Body.String())
 	}
 }
 
@@ -515,7 +518,7 @@ func TestTargetImport_NilFields(t *testing.T) {
 	t.Parallel()
 	body := map[string]any{
 		"targets": []map[string]any{
-			{"externalId": "ext-1", "targetType": "doctor", "name": "Dr. Import"},
+			{"externalId": "ext-1", "targetType": "doctor", "name": testDrImport},
 		},
 	}
 	w := targetReq(t, "POST", pathImport, body)
@@ -532,7 +535,7 @@ func TestTargetCreate_NilFields(t *testing.T) {
 	}
 	w := targetReq(t, "POST", "/", body)
 	if w.Code != http.StatusCreated {
-		t.Fatalf("expected 201, got %d: %s", w.Code, w.Body.String())
+		t.Fatalf(fmtExpected201, w.Code, w.Body.String())
 	}
 }
 
@@ -540,7 +543,7 @@ func TestTargetUpdate_NilFields(t *testing.T) {
 	t.Parallel()
 	body := map[string]any{
 		"targetType": "doctor",
-		"name":       "Dr. Updated",
+		"name":       testDrUpdated,
 	}
 	w := targetReq(t, "PUT", pathTarget1, body)
 	if w.Code != http.StatusOK {

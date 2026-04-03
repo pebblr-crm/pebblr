@@ -25,11 +25,24 @@ const (
 	fmtExpected200    = "expected 200, got %d: %s"
 	fmtDecodeErr      = "decoding response: %v"
 	fmtExpected400    = "expected 400, got %d: %s"
+	fmtExpected401    = "expected 401, got %d: %s"
+	fmtExpected403    = "expected 403, got %d: %s"
+	fmtExpected201    = "expected 201, got %d: %s"
 	pathActivity1     = "/activity-1"
 	pathSubmitted     = "/submitted"
 	pathStatus        = "/status"
+	pathSubmit        = "/submit"
+	pathBatch         = "/batch"
+	pathCloneWeek     = "/clone-week"
 	fmtExpected409    = "expected 409, got %d: %s"
+	fmtEncodingBody   = "encoding body: %v"
+	invalidJSON       = "not-json"
 	testDate          = "2026-03-24"
+	testDate1         = "2026-03-23"
+	testDate2         = "2026-03-24"
+	testDate3         = "2026-03-16"
+	errDBMsg          = "db error"
+	msgExpectedItems  = "expected 'items' key in response"
 )
 
 // --- stub ActivityService ---
@@ -184,7 +197,7 @@ func activityReq(t *testing.T, method, path string, body any) *httptest.Response
 	var buf bytes.Buffer
 	if body != nil {
 		if err := json.NewEncoder(&buf).Encode(body); err != nil {
-			t.Fatalf("encoding body: %v", err)
+			t.Fatalf(fmtEncodingBody, err)
 		}
 	}
 	req := httptest.NewRequest(method, path, &buf)
@@ -202,7 +215,7 @@ func activityReqAsRep(t *testing.T, method, path string, body any) *httptest.Res
 	var buf bytes.Buffer
 	if body != nil {
 		if err := json.NewEncoder(&buf).Encode(body); err != nil {
-			t.Fatalf("encoding body: %v", err)
+			t.Fatalf(fmtEncodingBody, err)
 		}
 	}
 	req := httptest.NewRequest(method, path, &buf)
@@ -228,7 +241,7 @@ func TestActivityList_ReturnsOK(t *testing.T) {
 		t.Fatalf(fmtDecodeErr, err)
 	}
 	if _, ok := resp["items"]; !ok {
-		t.Error("expected 'items' key in response")
+		t.Error(msgExpectedItems)
 	}
 }
 
@@ -246,13 +259,13 @@ func TestActivityCreate_Succeeds(t *testing.T) {
 	t.Parallel()
 	body := map[string]any{
 		"activityType": "visit",
-		"dueDate":      "2026-03-23",
+		"dueDate":      testDate1,
 		"duration":     "full_day",
 		"fields":       map[string]any{},
 	}
 	w := activityReq(t, "POST", "/", body)
 	if w.Code != http.StatusCreated {
-		t.Fatalf("expected 201, got %d: %s", w.Code, w.Body.String())
+		t.Fatalf(fmtExpected201, w.Code, w.Body.String())
 	}
 	var resp map[string]any
 	if err := json.Unmarshal(w.Body.Bytes(), &resp); err != nil {
@@ -266,7 +279,7 @@ func TestActivityCreate_Succeeds(t *testing.T) {
 func TestActivityCreate_MissingType(t *testing.T) {
 	t.Parallel()
 	body := map[string]any{
-		"dueDate": "2026-03-23",
+		"dueDate": testDate1,
 	}
 	w := activityReq(t, "POST", "/", body)
 	if w.Code != http.StatusBadRequest {
@@ -341,7 +354,7 @@ func TestActivityUpdate_RepForbidden(t *testing.T) {
 	}
 	w := activityReqAsRep(t, "PUT", pathActivity1, body)
 	if w.Code != http.StatusForbidden {
-		t.Fatalf("expected 403, got %d: %s", w.Code, w.Body.String())
+		t.Fatalf(fmtExpected403, w.Code, w.Body.String())
 	}
 }
 
@@ -381,7 +394,7 @@ func TestActivityDelete_SubmittedConflict(t *testing.T) {
 
 func TestActivitySubmit_Succeeds(t *testing.T) {
 	t.Parallel()
-	w := activityReq(t, "POST", pathActivity1 + "/submit", nil)
+	w := activityReq(t, "POST", pathActivity1 + pathSubmit, nil)
 	if w.Code != http.StatusOK {
 		t.Fatalf(fmtExpected200, w.Code, w.Body.String())
 	}
@@ -397,7 +410,7 @@ func TestActivitySubmit_Succeeds(t *testing.T) {
 
 func TestActivitySubmit_AlreadySubmitted(t *testing.T) {
 	t.Parallel()
-	w := activityReq(t, "POST", pathSubmitted + "/submit", nil)
+	w := activityReq(t, "POST", pathSubmitted + pathSubmit, nil)
 	if w.Code != http.StatusConflict {
 		t.Fatalf(fmtExpected409, w.Code, w.Body.String())
 	}
@@ -509,7 +522,7 @@ func TestActivityPatch_RepForbidden(t *testing.T) {
 	body := map[string]any{"status": "realizat"}
 	w := activityReqAsRep(t, "PATCH", pathActivity1, body)
 	if w.Code != http.StatusForbidden {
-		t.Fatalf("expected 403, got %d: %s", w.Code, w.Body.String())
+		t.Fatalf(fmtExpected403, w.Code, w.Body.String())
 	}
 }
 
@@ -533,7 +546,7 @@ func TestActivityPatch_NotFound(t *testing.T) {
 
 func TestActivityPatch_InvalidBody(t *testing.T) {
 	t.Parallel()
-	req := httptest.NewRequest("PATCH", pathActivity1, bytes.NewBufferString("not-json"))
+	req := httptest.NewRequest("PATCH", pathActivity1, bytes.NewBufferString(invalidJSON))
 	req.Header.Set(headerContentType, contentTypeJSON)
 	user := &domain.User{ID: testAdminID, Role: domain.RoleAdmin, TeamIDs: []string{testTeamID}}
 	ctx := rbac.WithUser(req.Context(), user)
@@ -551,13 +564,13 @@ func TestActivityBatchCreate_Success(t *testing.T) {
 	t.Parallel()
 	body := map[string]any{
 		"items": []map[string]any{
-			{"targetId": "t-1", "dueDate": "2026-03-24"},
+			{"targetId": "t-1", "dueDate": testDate2},
 			{"targetId": "t-2", "dueDate": "2026-03-25"},
 		},
 	}
-	w := activityReq(t, "POST", "/batch", body)
+	w := activityReq(t, "POST", pathBatch, body)
 	if w.Code != http.StatusCreated {
-		t.Fatalf("expected 201, got %d: %s", w.Code, w.Body.String())
+		t.Fatalf(fmtExpected201, w.Code, w.Body.String())
 	}
 	var resp map[string]any
 	if err := json.Unmarshal(w.Body.Bytes(), &resp); err != nil {
@@ -572,7 +585,7 @@ func TestActivityBatchCreate_Success(t *testing.T) {
 func TestActivityBatchCreate_EmptyItems(t *testing.T) {
 	t.Parallel()
 	body := map[string]any{"items": []map[string]any{}}
-	w := activityReq(t, "POST", "/batch", body)
+	w := activityReq(t, "POST", pathBatch, body)
 	if w.Code != http.StatusBadRequest {
 		t.Fatalf(fmtExpected400, w.Code, w.Body.String())
 	}
@@ -580,7 +593,7 @@ func TestActivityBatchCreate_EmptyItems(t *testing.T) {
 
 func TestActivityBatchCreate_InvalidBody(t *testing.T) {
 	t.Parallel()
-	req := httptest.NewRequest("POST", "/batch", bytes.NewBufferString("not-json"))
+	req := httptest.NewRequest("POST", pathBatch, bytes.NewBufferString(invalidJSON))
 	req.Header.Set(headerContentType, contentTypeJSON)
 	user := &domain.User{ID: testAdminID, Role: domain.RoleAdmin, TeamIDs: []string{testTeamID}}
 	ctx := rbac.WithUser(req.Context(), user)
@@ -599,7 +612,7 @@ func TestActivityBatchCreate_InvalidDateInItem(t *testing.T) {
 			{"targetId": "t-1", "dueDate": "bad-date"},
 		},
 	}
-	w := activityReq(t, "POST", "/batch", body)
+	w := activityReq(t, "POST", pathBatch, body)
 	// All items failed -> 400
 	if w.Code != http.StatusBadRequest {
 		t.Fatalf(fmtExpected400, w.Code, w.Body.String())
@@ -619,11 +632,11 @@ func TestActivityBatchCreate_MixedResults_MultiStatus(t *testing.T) {
 	// One valid, one with bad date -> multi status
 	body := map[string]any{
 		"items": []map[string]any{
-			{"targetId": "t-1", "dueDate": "2026-03-24"},
+			{"targetId": "t-1", "dueDate": testDate2},
 			{"targetId": "t-2", "dueDate": "bad-date"},
 		},
 	}
-	w := activityReq(t, "POST", "/batch", body)
+	w := activityReq(t, "POST", pathBatch, body)
 	if w.Code != http.StatusMultiStatus {
 		t.Fatalf("expected 207, got %d: %s", w.Code, w.Body.String())
 	}
@@ -633,12 +646,12 @@ func TestActivityBatchCreate_WithFields(t *testing.T) {
 	t.Parallel()
 	body := map[string]any{
 		"items": []map[string]any{
-			{"targetId": "t-1", "dueDate": "2026-03-24", "fields": map[string]any{"notes": "test"}},
+			{"targetId": "t-1", "dueDate": testDate2, "fields": map[string]any{"notes": "test"}},
 		},
 	}
-	w := activityReq(t, "POST", "/batch", body)
+	w := activityReq(t, "POST", pathBatch, body)
 	if w.Code != http.StatusCreated {
-		t.Fatalf("expected 201, got %d: %s", w.Code, w.Body.String())
+		t.Fatalf(fmtExpected201, w.Code, w.Body.String())
 	}
 }
 
@@ -646,15 +659,15 @@ func TestActivityBatchCreate_NoAuth(t *testing.T) {
 	t.Parallel()
 	body, _ := json.Marshal(map[string]any{
 		"items": []map[string]any{
-			{"targetId": "t-1", "dueDate": "2026-03-24"},
+			{"targetId": "t-1", "dueDate": testDate2},
 		},
 	})
-	req := httptest.NewRequest("POST", "/batch", bytes.NewReader(body))
+	req := httptest.NewRequest("POST", pathBatch, bytes.NewReader(body))
 	req.Header.Set(headerContentType, contentTypeJSON)
 	w := httptest.NewRecorder()
 	activityRouter().ServeHTTP(w, req)
 	if w.Code != http.StatusUnauthorized {
-		t.Fatalf("expected 401, got %d: %s", w.Code, w.Body.String())
+		t.Fatalf(fmtExpected401, w.Code, w.Body.String())
 	}
 }
 
@@ -663,12 +676,12 @@ func TestActivityBatchCreate_NoAuth(t *testing.T) {
 func TestActivityCloneWeek_Success(t *testing.T) {
 	t.Parallel()
 	body := map[string]any{
-		"sourceWeekStart": "2026-03-16",
-		"targetWeekStart": "2026-03-23",
+		"sourceWeekStart": testDate3,
+		"targetWeekStart": testDate1,
 	}
-	w := activityReq(t, "POST", "/clone-week", body)
+	w := activityReq(t, "POST", pathCloneWeek, body)
 	if w.Code != http.StatusCreated {
-		t.Fatalf("expected 201, got %d: %s", w.Code, w.Body.String())
+		t.Fatalf(fmtExpected201, w.Code, w.Body.String())
 	}
 	var resp map[string]any
 	if err := json.Unmarshal(w.Body.Bytes(), &resp); err != nil {
@@ -681,7 +694,7 @@ func TestActivityCloneWeek_Success(t *testing.T) {
 
 func TestActivityCloneWeek_InvalidBody(t *testing.T) {
 	t.Parallel()
-	req := httptest.NewRequest("POST", "/clone-week", bytes.NewBufferString("not-json"))
+	req := httptest.NewRequest("POST", pathCloneWeek, bytes.NewBufferString(invalidJSON))
 	req.Header.Set(headerContentType, contentTypeJSON)
 	user := &domain.User{ID: testAdminID, Role: domain.RoleAdmin, TeamIDs: []string{testTeamID}}
 	ctx := rbac.WithUser(req.Context(), user)
@@ -697,9 +710,9 @@ func TestActivityCloneWeek_InvalidSourceDate(t *testing.T) {
 	t.Parallel()
 	body := map[string]any{
 		"sourceWeekStart": "bad",
-		"targetWeekStart": "2026-03-23",
+		"targetWeekStart": testDate1,
 	}
-	w := activityReq(t, "POST", "/clone-week", body)
+	w := activityReq(t, "POST", pathCloneWeek, body)
 	if w.Code != http.StatusBadRequest {
 		t.Fatalf(fmtExpected400, w.Code, w.Body.String())
 	}
@@ -708,10 +721,10 @@ func TestActivityCloneWeek_InvalidSourceDate(t *testing.T) {
 func TestActivityCloneWeek_InvalidTargetDate(t *testing.T) {
 	t.Parallel()
 	body := map[string]any{
-		"sourceWeekStart": "2026-03-16",
+		"sourceWeekStart": testDate3,
 		"targetWeekStart": "bad",
 	}
-	w := activityReq(t, "POST", "/clone-week", body)
+	w := activityReq(t, "POST", pathCloneWeek, body)
 	if w.Code != http.StatusBadRequest {
 		t.Fatalf(fmtExpected400, w.Code, w.Body.String())
 	}
@@ -720,15 +733,15 @@ func TestActivityCloneWeek_InvalidTargetDate(t *testing.T) {
 func TestActivityCloneWeek_NoAuth(t *testing.T) {
 	t.Parallel()
 	body, _ := json.Marshal(map[string]any{
-		"sourceWeekStart": "2026-03-16",
-		"targetWeekStart": "2026-03-23",
+		"sourceWeekStart": testDate3,
+		"targetWeekStart": testDate1,
 	})
-	req := httptest.NewRequest("POST", "/clone-week", bytes.NewReader(body))
+	req := httptest.NewRequest("POST", pathCloneWeek, bytes.NewReader(body))
 	req.Header.Set(headerContentType, contentTypeJSON)
 	w := httptest.NewRecorder()
 	activityRouter().ServeHTTP(w, req)
 	if w.Code != http.StatusUnauthorized {
-		t.Fatalf("expected 401, got %d: %s", w.Code, w.Body.String())
+		t.Fatalf(fmtExpected401, w.Code, w.Body.String())
 	}
 }
 
@@ -736,7 +749,7 @@ func TestActivityCloneWeek_NoAuth(t *testing.T) {
 
 func TestActivityCreate_InvalidBody(t *testing.T) {
 	t.Parallel()
-	req := httptest.NewRequest("POST", "/", bytes.NewBufferString("not-json"))
+	req := httptest.NewRequest("POST", "/", bytes.NewBufferString(invalidJSON))
 	req.Header.Set(headerContentType, contentTypeJSON)
 	user := &domain.User{ID: testAdminID, Role: domain.RoleAdmin, TeamIDs: []string{testTeamID}}
 	ctx := rbac.WithUser(req.Context(), user)
@@ -750,7 +763,7 @@ func TestActivityCreate_InvalidBody(t *testing.T) {
 
 func TestActivityUpdate_InvalidBody(t *testing.T) {
 	t.Parallel()
-	req := httptest.NewRequest("PUT", pathActivity1, bytes.NewBufferString("not-json"))
+	req := httptest.NewRequest("PUT", pathActivity1, bytes.NewBufferString(invalidJSON))
 	req.Header.Set(headerContentType, contentTypeJSON)
 	user := &domain.User{ID: testAdminID, Role: domain.RoleAdmin, TeamIDs: []string{testTeamID}}
 	ctx := rbac.WithUser(req.Context(), user)
@@ -764,7 +777,7 @@ func TestActivityUpdate_InvalidBody(t *testing.T) {
 
 func TestActivityPatchStatus_InvalidBody(t *testing.T) {
 	t.Parallel()
-	req := httptest.NewRequest("PATCH", pathActivity1+pathStatus, bytes.NewBufferString("not-json"))
+	req := httptest.NewRequest("PATCH", pathActivity1+pathStatus, bytes.NewBufferString(invalidJSON))
 	req.Header.Set(headerContentType, contentTypeJSON)
 	user := &domain.User{ID: testAdminID, Role: domain.RoleAdmin, TeamIDs: []string{testTeamID}}
 	ctx := rbac.WithUser(req.Context(), user)
@@ -780,7 +793,7 @@ func TestActivityDelete_RepForbidden(t *testing.T) {
 	t.Parallel()
 	w := activityReqAsRep(t, "DELETE", pathActivity1, nil)
 	if w.Code != http.StatusForbidden {
-		t.Fatalf("expected 403, got %d: %s", w.Code, w.Body.String())
+		t.Fatalf(fmtExpected403, w.Code, w.Body.String())
 	}
 }
 
@@ -823,7 +836,7 @@ func TestActivityList_NoAuth(t *testing.T) {
 	w := httptest.NewRecorder()
 	activityRouter().ServeHTTP(w, req)
 	if w.Code != http.StatusUnauthorized {
-		t.Fatalf("expected 401, got %d: %s", w.Code, w.Body.String())
+		t.Fatalf(fmtExpected401, w.Code, w.Body.String())
 	}
 }
 
@@ -965,12 +978,12 @@ func TestActivityCreate_WithJointVisitUID(t *testing.T) {
 	t.Parallel()
 	body := map[string]any{
 		"activityType": "visit",
-		"dueDate":      "2026-03-23",
+		"dueDate":      testDate1,
 		"fields":       map[string]any{"joint_visit_user_id": "user-2"},
 	}
 	w := activityReq(t, "POST", "/", body)
 	if w.Code != http.StatusCreated {
-		t.Fatalf("expected 201, got %d: %s", w.Code, w.Body.String())
+		t.Fatalf(fmtExpected201, w.Code, w.Body.String())
 	}
 }
 
@@ -978,11 +991,11 @@ func TestActivityCreate_NilFields(t *testing.T) {
 	t.Parallel()
 	body := map[string]any{
 		"activityType": "visit",
-		"dueDate":      "2026-03-23",
+		"dueDate":      testDate1,
 	}
 	w := activityReq(t, "POST", "/", body)
 	if w.Code != http.StatusCreated {
-		t.Fatalf("expected 201, got %d: %s", w.Code, w.Body.String())
+		t.Fatalf(fmtExpected201, w.Code, w.Body.String())
 	}
 }
 
@@ -994,31 +1007,31 @@ func TestActivityGet_NoAuth(t *testing.T) {
 	w := httptest.NewRecorder()
 	activityRouter().ServeHTTP(w, req)
 	if w.Code != http.StatusUnauthorized {
-		t.Fatalf("expected 401, got %d: %s", w.Code, w.Body.String())
+		t.Fatalf(fmtExpected401, w.Code, w.Body.String())
 	}
 }
 
 func TestActivityCreate_NoAuth(t *testing.T) {
 	t.Parallel()
-	body, _ := json.Marshal(map[string]any{"activityType": "visit", "dueDate": "2026-03-23"})
+	body, _ := json.Marshal(map[string]any{"activityType": "visit", "dueDate": testDate1})
 	req := httptest.NewRequest("POST", "/", bytes.NewReader(body))
 	req.Header.Set(headerContentType, contentTypeJSON)
 	w := httptest.NewRecorder()
 	activityRouter().ServeHTTP(w, req)
 	if w.Code != http.StatusUnauthorized {
-		t.Fatalf("expected 401, got %d: %s", w.Code, w.Body.String())
+		t.Fatalf(fmtExpected401, w.Code, w.Body.String())
 	}
 }
 
 func TestActivityUpdate_NoAuth(t *testing.T) {
 	t.Parallel()
-	body, _ := json.Marshal(map[string]any{"activityType": "visit", "dueDate": "2026-03-23"})
+	body, _ := json.Marshal(map[string]any{"activityType": "visit", "dueDate": testDate1})
 	req := httptest.NewRequest("PUT", pathActivity1, bytes.NewReader(body))
 	req.Header.Set(headerContentType, contentTypeJSON)
 	w := httptest.NewRecorder()
 	activityRouter().ServeHTTP(w, req)
 	if w.Code != http.StatusUnauthorized {
-		t.Fatalf("expected 401, got %d: %s", w.Code, w.Body.String())
+		t.Fatalf(fmtExpected401, w.Code, w.Body.String())
 	}
 }
 
@@ -1028,7 +1041,7 @@ func TestActivityDelete_NoAuth(t *testing.T) {
 	w := httptest.NewRecorder()
 	activityRouter().ServeHTTP(w, req)
 	if w.Code != http.StatusUnauthorized {
-		t.Fatalf("expected 401, got %d: %s", w.Code, w.Body.String())
+		t.Fatalf(fmtExpected401, w.Code, w.Body.String())
 	}
 }
 
@@ -1038,7 +1051,7 @@ func TestActivitySubmit_NoAuth(t *testing.T) {
 	w := httptest.NewRecorder()
 	activityRouter().ServeHTTP(w, req)
 	if w.Code != http.StatusUnauthorized {
-		t.Fatalf("expected 401, got %d: %s", w.Code, w.Body.String())
+		t.Fatalf(fmtExpected401, w.Code, w.Body.String())
 	}
 }
 
@@ -1049,7 +1062,7 @@ func activityReqWithSvc(t *testing.T, svc api.ActivityServicer, method, path str
 	var buf bytes.Buffer
 	if body != nil {
 		if err := json.NewEncoder(&buf).Encode(body); err != nil {
-			t.Fatalf("encoding body: %v", err)
+			t.Fatalf(fmtEncodingBody, err)
 		}
 	}
 	req := httptest.NewRequest(method, path, &buf)
@@ -1065,7 +1078,7 @@ func activityReqWithSvc(t *testing.T, svc api.ActivityServicer, method, path str
 func TestActivityCreate_MaxActivitiesError(t *testing.T) {
 	t.Parallel()
 	svc := &stubActivitySvc{createErr: service.ErrMaxActivities}
-	body := map[string]any{"activityType": "visit", "dueDate": "2026-03-23"}
+	body := map[string]any{"activityType": "visit", "dueDate": testDate1}
 	w := activityReqWithSvc(t, svc, "POST", "/", body)
 	if w.Code != http.StatusConflict {
 		t.Fatalf(fmtExpected409, w.Code, w.Body.String())
@@ -1075,7 +1088,7 @@ func TestActivityCreate_MaxActivitiesError(t *testing.T) {
 func TestActivityCreate_BlockedDayError(t *testing.T) {
 	t.Parallel()
 	svc := &stubActivitySvc{createErr: service.ErrBlockedDay}
-	body := map[string]any{"activityType": "visit", "dueDate": "2026-03-23"}
+	body := map[string]any{"activityType": "visit", "dueDate": testDate1}
 	w := activityReqWithSvc(t, svc, "POST", "/", body)
 	if w.Code != http.StatusConflict {
 		t.Fatalf(fmtExpected409, w.Code, w.Body.String())
@@ -1085,7 +1098,7 @@ func TestActivityCreate_BlockedDayError(t *testing.T) {
 func TestActivityCreate_TargetRequiredError(t *testing.T) {
 	t.Parallel()
 	svc := &stubActivitySvc{createErr: service.ErrTargetRequired}
-	body := map[string]any{"activityType": "visit", "dueDate": "2026-03-23"}
+	body := map[string]any{"activityType": "visit", "dueDate": testDate1}
 	w := activityReqWithSvc(t, svc, "POST", "/", body)
 	if w.Code != http.StatusBadRequest {
 		t.Fatalf(fmtExpected400, w.Code, w.Body.String())
@@ -1095,7 +1108,7 @@ func TestActivityCreate_TargetRequiredError(t *testing.T) {
 func TestActivityCreate_InvalidJointVisitorError(t *testing.T) {
 	t.Parallel()
 	svc := &stubActivitySvc{createErr: service.ErrInvalidJointVisitor}
-	body := map[string]any{"activityType": "visit", "dueDate": "2026-03-23"}
+	body := map[string]any{"activityType": "visit", "dueDate": testDate1}
 	w := activityReqWithSvc(t, svc, "POST", "/", body)
 	if w.Code != http.StatusBadRequest {
 		t.Fatalf(fmtExpected400, w.Code, w.Body.String())
@@ -1105,17 +1118,17 @@ func TestActivityCreate_InvalidJointVisitorError(t *testing.T) {
 func TestActivityCreate_TargetNotAccessibleError(t *testing.T) {
 	t.Parallel()
 	svc := &stubActivitySvc{createErr: service.ErrTargetNotAccessible}
-	body := map[string]any{"activityType": "visit", "dueDate": "2026-03-23"}
+	body := map[string]any{"activityType": "visit", "dueDate": testDate1}
 	w := activityReqWithSvc(t, svc, "POST", "/", body)
 	if w.Code != http.StatusForbidden {
-		t.Fatalf("expected 403, got %d: %s", w.Code, w.Body.String())
+		t.Fatalf(fmtExpected403, w.Code, w.Body.String())
 	}
 }
 
 func TestActivityCreate_StatusNotSubmittableError(t *testing.T) {
 	t.Parallel()
 	svc := &stubActivitySvc{createErr: service.ErrStatusNotSubmittable}
-	body := map[string]any{"activityType": "visit", "dueDate": "2026-03-23"}
+	body := map[string]any{"activityType": "visit", "dueDate": testDate1}
 	w := activityReqWithSvc(t, svc, "POST", "/", body)
 	if w.Code != http.StatusConflict {
 		t.Fatalf(fmtExpected409, w.Code, w.Body.String())
@@ -1125,7 +1138,7 @@ func TestActivityCreate_StatusNotSubmittableError(t *testing.T) {
 func TestActivityCreate_NoRecoveryBalanceError(t *testing.T) {
 	t.Parallel()
 	svc := &stubActivitySvc{createErr: service.ErrNoRecoveryBalance}
-	body := map[string]any{"activityType": "visit", "dueDate": "2026-03-23"}
+	body := map[string]any{"activityType": "visit", "dueDate": testDate1}
 	w := activityReqWithSvc(t, svc, "POST", "/", body)
 	if w.Code != http.StatusConflict {
 		t.Fatalf(fmtExpected409, w.Code, w.Body.String())
@@ -1135,7 +1148,7 @@ func TestActivityCreate_NoRecoveryBalanceError(t *testing.T) {
 func TestActivityCreate_DuplicateActivityError(t *testing.T) {
 	t.Parallel()
 	svc := &stubActivitySvc{createErr: service.ErrDuplicateActivity}
-	body := map[string]any{"activityType": "visit", "dueDate": "2026-03-23"}
+	body := map[string]any{"activityType": "visit", "dueDate": testDate1}
 	w := activityReqWithSvc(t, svc, "POST", "/", body)
 	if w.Code != http.StatusConflict {
 		t.Fatalf(fmtExpected409, w.Code, w.Body.String())
@@ -1145,7 +1158,7 @@ func TestActivityCreate_DuplicateActivityError(t *testing.T) {
 func TestActivityCreate_InvalidInputError(t *testing.T) {
 	t.Parallel()
 	svc := &stubActivitySvc{createErr: service.ErrInvalidInput}
-	body := map[string]any{"activityType": "visit", "dueDate": "2026-03-23"}
+	body := map[string]any{"activityType": "visit", "dueDate": testDate1}
 	w := activityReqWithSvc(t, svc, "POST", "/", body)
 	if w.Code != http.StatusBadRequest {
 		t.Fatalf(fmtExpected400, w.Code, w.Body.String())
@@ -1155,7 +1168,7 @@ func TestActivityCreate_InvalidInputError(t *testing.T) {
 func TestActivityCreate_UnexpectedError(t *testing.T) {
 	t.Parallel()
 	svc := &stubActivitySvc{createErr: errors.New("unexpected")}
-	body := map[string]any{"activityType": "visit", "dueDate": "2026-03-23"}
+	body := map[string]any{"activityType": "visit", "dueDate": testDate1}
 	w := activityReqWithSvc(t, svc, "POST", "/", body)
 	if w.Code != http.StatusInternalServerError {
 		t.Fatalf("expected 500, got %d: %s", w.Code, w.Body.String())
@@ -1165,7 +1178,7 @@ func TestActivityCreate_UnexpectedError(t *testing.T) {
 func TestActivityCreate_ValidationError(t *testing.T) {
 	t.Parallel()
 	svc := &stubActivitySvc{createErr: &service.ValidationErrors{Errors: []config.FieldError{{Field: "f", Message: "bad"}}}}
-	body := map[string]any{"activityType": "visit", "dueDate": "2026-03-23"}
+	body := map[string]any{"activityType": "visit", "dueDate": testDate1}
 	w := activityReqWithSvc(t, svc, "POST", "/", body)
 	if w.Code != http.StatusUnprocessableEntity {
 		t.Fatalf("expected 422, got %d: %s", w.Code, w.Body.String())
@@ -1174,7 +1187,7 @@ func TestActivityCreate_ValidationError(t *testing.T) {
 
 func TestActivityList_ServiceError(t *testing.T) {
 	t.Parallel()
-	svc := &stubActivitySvc{listErr: errors.New("db error")}
+	svc := &stubActivitySvc{listErr: errors.New(errDBMsg)}
 	w := activityReqWithSvc(t, svc, "GET", "/", nil)
 	if w.Code != http.StatusInternalServerError {
 		t.Fatalf("expected 500, got %d: %s", w.Code, w.Body.String())
@@ -1186,7 +1199,7 @@ func TestActivityGet_ServiceError(t *testing.T) {
 	svc := &stubActivitySvc{getErr: service.ErrForbidden}
 	w := activityReqWithSvc(t, svc, "GET", pathActivity1, nil)
 	if w.Code != http.StatusForbidden {
-		t.Fatalf("expected 403, got %d: %s", w.Code, w.Body.String())
+		t.Fatalf(fmtExpected403, w.Code, w.Body.String())
 	}
 }
 
@@ -1194,12 +1207,12 @@ func TestActivityCloneWeek_ServiceError(t *testing.T) {
 	t.Parallel()
 	svc := &stubActivitySvc{cloneErr: service.ErrForbidden}
 	body := map[string]any{
-		"sourceWeekStart": "2026-03-16",
-		"targetWeekStart": "2026-03-23",
+		"sourceWeekStart": testDate3,
+		"targetWeekStart": testDate1,
 	}
-	w := activityReqWithSvc(t, svc, "POST", "/clone-week", body)
+	w := activityReqWithSvc(t, svc, "POST", pathCloneWeek, body)
 	if w.Code != http.StatusForbidden {
-		t.Fatalf("expected 403, got %d: %s", w.Code, w.Body.String())
+		t.Fatalf(fmtExpected403, w.Code, w.Body.String())
 	}
 }
 
@@ -1208,10 +1221,10 @@ func TestActivityBatchCreate_ServiceError(t *testing.T) {
 	svc := &stubActivitySvc{createErr: service.ErrForbidden}
 	body := map[string]any{
 		"items": []map[string]any{
-			{"targetId": "t-1", "dueDate": "2026-03-24"},
+			{"targetId": "t-1", "dueDate": testDate2},
 		},
 	}
-	w := activityReqWithSvc(t, svc, "POST", "/batch", body)
+	w := activityReqWithSvc(t, svc, "POST", pathBatch, body)
 	// All items errored -> 400
 	if w.Code != http.StatusBadRequest {
 		t.Fatalf(fmtExpected400, w.Code, w.Body.String())
@@ -1237,10 +1250,10 @@ func TestActivityBatchCreate_MixedServiceErrors(t *testing.T) {
 	svc := &stubActivitySvc{createErr: service.ErrDuplicateActivity}
 	body := map[string]any{
 		"items": []map[string]any{
-			{"targetId": "t-1", "dueDate": "2026-03-24"},
+			{"targetId": "t-1", "dueDate": testDate2},
 		},
 	}
-	w := activityReqWithSvc(t, svc, "POST", "/batch", body)
+	w := activityReqWithSvc(t, svc, "POST", pathBatch, body)
 	if w.Code != http.StatusBadRequest {
 		t.Fatalf(fmtExpected400, w.Code, w.Body.String())
 	}
@@ -1263,6 +1276,6 @@ func TestActivityPatchStatus_NoAuth(t *testing.T) {
 	w := httptest.NewRecorder()
 	activityRouter().ServeHTTP(w, req)
 	if w.Code != http.StatusUnauthorized {
-		t.Fatalf("expected 401, got %d: %s", w.Code, w.Body.String())
+		t.Fatalf(fmtExpected401, w.Code, w.Body.String())
 	}
 }

@@ -15,7 +15,10 @@ import (
 	"github.com/pebblr/pebblr/internal/store"
 )
 
-const testTeamID = "team-1"
+const (
+	testTeamID           = "team-1"
+	fmtExpected401NoBody = "expected 401, got %d"
+)
 
 // --- stub TerritoryService ---
 
@@ -100,7 +103,7 @@ func TestTerritoryList_ReturnsOK(t *testing.T) {
 	newTestTerritoryRouter(testAdminUser()).ServeHTTP(w, req)
 
 	if w.Code != http.StatusOK {
-		t.Errorf("expected 200, got %d: %s", w.Code, w.Body.String())
+		t.Errorf(fmtExpected200, w.Code, w.Body.String())
 	}
 	var resp map[string]any
 	if err := json.NewDecoder(w.Body).Decode(&resp); err != nil {
@@ -122,7 +125,7 @@ func TestTerritoryList_NoUser_Returns401(t *testing.T) {
 	newTestTerritoryRouter(nil).ServeHTTP(w, req)
 
 	if w.Code != http.StatusUnauthorized {
-		t.Errorf("expected 401, got %d", w.Code)
+		t.Errorf(fmtExpected401NoBody, w.Code)
 	}
 }
 
@@ -133,13 +136,13 @@ func TestTerritoryGet_Found(t *testing.T) {
 	newTestTerritoryRouter(testAdminUser()).ServeHTTP(w, req)
 
 	if w.Code != http.StatusOK {
-		t.Errorf("expected 200, got %d: %s", w.Code, w.Body.String())
+		t.Errorf(fmtExpected200, w.Code, w.Body.String())
 	}
 }
 
 func TestTerritoryGet_NotFound(t *testing.T) {
 	t.Parallel()
-	req := httptest.NewRequest(http.MethodGet, "/missing", http.NoBody)
+	req := httptest.NewRequest(http.MethodGet, pathMissing, http.NoBody)
 	w := httptest.NewRecorder()
 	newTestTerritoryRouter(testAdminUser()).ServeHTTP(w, req)
 
@@ -175,7 +178,7 @@ func TestTerritoryCreate_Rep_Returns403(t *testing.T) {
 	newTestTerritoryRouter(testRepUser()).ServeHTTP(w, req)
 
 	if w.Code != http.StatusForbidden {
-		t.Errorf("expected 403, got %d: %s", w.Code, w.Body.String())
+		t.Errorf(fmtExpected403, w.Code, w.Body.String())
 	}
 }
 
@@ -192,7 +195,7 @@ func TestTerritoryDelete_Admin_Returns204(t *testing.T) {
 
 func TestTerritoryDelete_NotFound(t *testing.T) {
 	t.Parallel()
-	req := httptest.NewRequest(http.MethodDelete, "/missing", http.NoBody)
+	req := httptest.NewRequest(http.MethodDelete, pathMissing, http.NoBody)
 	w := httptest.NewRecorder()
 	newTestTerritoryRouter(testAdminUser()).ServeHTTP(w, req)
 
@@ -208,7 +211,7 @@ func TestTerritoryDelete_Rep_Returns403(t *testing.T) {
 	newTestTerritoryRouter(testRepUser()).ServeHTTP(w, req)
 
 	if w.Code != http.StatusForbidden {
-		t.Errorf("expected 403, got %d: %s", w.Code, w.Body.String())
+		t.Errorf(fmtExpected403, w.Code, w.Body.String())
 	}
 }
 
@@ -224,7 +227,7 @@ func TestTerritoryUpdate_Admin_ReturnsOK(t *testing.T) {
 	newTestTerritoryRouter(testAdminUser()).ServeHTTP(w, req)
 
 	if w.Code != http.StatusOK {
-		t.Errorf("expected 200, got %d: %s", w.Code, w.Body.String())
+		t.Errorf(fmtExpected200, w.Code, w.Body.String())
 	}
 }
 
@@ -239,7 +242,7 @@ func TestTerritoryUpdate_Rep_Returns403(t *testing.T) {
 	newTestTerritoryRouter(testRepUser()).ServeHTTP(w, req)
 
 	if w.Code != http.StatusForbidden {
-		t.Errorf("expected 403, got %d: %s", w.Code, w.Body.String())
+		t.Errorf(fmtExpected403, w.Code, w.Body.String())
 	}
 }
 
@@ -249,7 +252,7 @@ func TestTerritoryUpdate_NotFound(t *testing.T) {
 		"name":   "Test",
 		"teamId": testTeamID,
 	})
-	req := httptest.NewRequest(http.MethodPut, "/missing", bytes.NewReader(body))
+	req := httptest.NewRequest(http.MethodPut, pathMissing, bytes.NewReader(body))
 	w := httptest.NewRecorder()
 	newTestTerritoryRouter(testAdminUser()).ServeHTTP(w, req)
 
@@ -260,7 +263,7 @@ func TestTerritoryUpdate_NotFound(t *testing.T) {
 
 func TestTerritoryCreate_InvalidBody(t *testing.T) {
 	t.Parallel()
-	req := httptest.NewRequest(http.MethodPost, "/", bytes.NewBufferString("not-json"))
+	req := httptest.NewRequest(http.MethodPost, "/", bytes.NewBufferString(invalidJSON))
 	w := httptest.NewRecorder()
 	newTestTerritoryRouter(testAdminUser()).ServeHTTP(w, req)
 
@@ -271,7 +274,7 @@ func TestTerritoryCreate_InvalidBody(t *testing.T) {
 
 func TestTerritoryUpdate_InvalidBody(t *testing.T) {
 	t.Parallel()
-	req := httptest.NewRequest(http.MethodPut, "/t-1", bytes.NewBufferString("not-json"))
+	req := httptest.NewRequest(http.MethodPut, "/t-1", bytes.NewBufferString(invalidJSON))
 	w := httptest.NewRecorder()
 	newTestTerritoryRouter(testAdminUser()).ServeHTTP(w, req)
 
@@ -287,7 +290,7 @@ func TestTerritoryGet_NoAuth(t *testing.T) {
 	newTestTerritoryRouter(nil).ServeHTTP(w, req)
 
 	if w.Code != http.StatusUnauthorized {
-		t.Errorf("expected 401, got %d", w.Code)
+		t.Errorf(fmtExpected401NoBody, w.Code)
 	}
 }
 
@@ -299,7 +302,7 @@ func TestTerritoryCreate_NoAuth(t *testing.T) {
 	newTestTerritoryRouter(nil).ServeHTTP(w, req)
 
 	if w.Code != http.StatusUnauthorized {
-		t.Errorf("expected 401, got %d", w.Code)
+		t.Errorf(fmtExpected401NoBody, w.Code)
 	}
 }
 
@@ -311,7 +314,7 @@ func TestTerritoryUpdate_NoAuth(t *testing.T) {
 	newTestTerritoryRouter(nil).ServeHTTP(w, req)
 
 	if w.Code != http.StatusUnauthorized {
-		t.Errorf("expected 401, got %d", w.Code)
+		t.Errorf(fmtExpected401NoBody, w.Code)
 	}
 }
 
@@ -322,6 +325,6 @@ func TestTerritoryDelete_NoAuth(t *testing.T) {
 	newTestTerritoryRouter(nil).ServeHTTP(w, req)
 
 	if w.Code != http.StatusUnauthorized {
-		t.Errorf("expected 401, got %d", w.Code)
+		t.Errorf(fmtExpected401NoBody, w.Code)
 	}
 }

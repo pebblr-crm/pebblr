@@ -11,7 +11,13 @@ import (
 )
 
 const (
-	querySelectCount = "SELECT COUNT"
+	querySelectCount   = "SELECT COUNT"
+	querySelectUserByID = "SELECT .+ FROM users WHERE id"
+	querySelectUsers   = "SELECT u.id.+FROM users u"
+	testUserID         = "user-1"
+	testUserName       = "Test User"
+	testUserEmail      = "user@test.com"
+	testTeamIDRepo     = "team-1"
 )
 
 func TestUserGetByID_NotFound(t *testing.T) {
@@ -19,7 +25,7 @@ func TestUserGetByID_NotFound(t *testing.T) {
 	mock := newMockPool(t)
 	repo := &userRepository{pool: mock}
 
-	mock.ExpectQuery("SELECT .+ FROM users WHERE id").
+	mock.ExpectQuery(querySelectUserByID).
 		WithArgs("missing").
 		WillReturnRows(mock.NewRows([]string{
 			"id", "external_id", "email", "name", "role", "avatar", "online_status",
@@ -39,15 +45,15 @@ func TestUserListPaginated_Success(t *testing.T) {
 	mock.ExpectQuery(querySelectCount).
 		WillReturnRows(mock.NewRows([]string{"count"}).AddRow(25))
 
-	mock.ExpectQuery("SELECT u.id.+FROM users u").
+	mock.ExpectQuery(querySelectUsers).
 		WithArgs(20, 0).
 		WillReturnRows(mock.NewRows([]string{
 			"id", "external_id", "email", "name", "role", "avatar", "online_status", "team_ids",
-		}).AddRow("user-1", "ext-1", "user@test.com", "Test User", "rep", "", "offline", []string{"team-1"}))
+		}).AddRow(testUserID, "ext-1", testUserEmail, testUserName, "rep", "", "offline", []string{testTeamIDRepo}))
 
 	page, err := repo.ListPaginated(context.Background(), 1, 20)
 	if err != nil {
-		t.Fatalf("unexpected error: %v", err)
+		t.Fatalf(fmtUnexpectedErr, err)
 	}
 	if page.Total != 25 {
 		t.Errorf("expected total 25, got %d", page.Total)
@@ -68,7 +74,7 @@ func TestUserListPaginated_Defaults(t *testing.T) {
 	mock.ExpectQuery(querySelectCount).
 		WillReturnRows(mock.NewRows([]string{"count"}).AddRow(0))
 
-	mock.ExpectQuery("SELECT u.id.+FROM users u").
+	mock.ExpectQuery(querySelectUsers).
 		WithArgs(20, 0).
 		WillReturnRows(mock.NewRows([]string{
 			"id", "external_id", "email", "name", "role", "avatar", "online_status", "team_ids",
@@ -76,7 +82,7 @@ func TestUserListPaginated_Defaults(t *testing.T) {
 
 	page, err := repo.ListPaginated(context.Background(), -1, 500)
 	if err != nil {
-		t.Fatalf("unexpected error: %v", err)
+		t.Fatalf(fmtUnexpectedErr, err)
 	}
 	if page.Page != 1 {
 		t.Errorf("expected page 1, got %d", page.Page)
@@ -92,11 +98,11 @@ func TestUserListPaginated_CountError(t *testing.T) {
 	repo := &userRepository{pool: mock}
 
 	mock.ExpectQuery(querySelectCount).
-		WillReturnError(fmt.Errorf("db error"))
+		WillReturnError(errors.New(errDBMsg))
 
 	_, err := repo.ListPaginated(context.Background(), 1, 20)
 	if err == nil {
-		t.Fatal("expected error, got nil")
+		t.Fatal(msgExpectedErr)
 	}
 }
 
@@ -105,20 +111,20 @@ func TestUserGetByID_Success(t *testing.T) {
 	mock := newMockPool(t)
 	repo := &userRepository{pool: mock}
 
-	mock.ExpectQuery("SELECT .+ FROM users WHERE id").
-		WithArgs("user-1").
+	mock.ExpectQuery(querySelectUserByID).
+		WithArgs(testUserID).
 		WillReturnRows(mock.NewRows([]string{
 			"id", "external_id", "email", "name", "role", "avatar", "online_status",
-		}).AddRow("user-1", "ext-1", "user@test.com", "Test User", "rep", "", "offline"))
+		}).AddRow(testUserID, "ext-1", testUserEmail, testUserName, "rep", "", "offline"))
 
-	user, err := repo.GetByID(context.Background(), "user-1")
+	user, err := repo.GetByID(context.Background(), testUserID)
 	if err != nil {
-		t.Fatalf("unexpected error: %v", err)
+		t.Fatalf(fmtUnexpectedErr, err)
 	}
-	if user.ID != "user-1" {
+	if user.ID != testUserID {
 		t.Errorf("expected user ID user-1, got %s", user.ID)
 	}
-	if user.Email != "user@test.com" {
+	if user.Email != testUserEmail {
 		t.Errorf("expected email user@test.com, got %s", user.Email)
 	}
 }
@@ -128,13 +134,13 @@ func TestUserGetByID_ScanError(t *testing.T) {
 	mock := newMockPool(t)
 	repo := &userRepository{pool: mock}
 
-	mock.ExpectQuery("SELECT .+ FROM users WHERE id").
-		WithArgs("user-1").
+	mock.ExpectQuery(querySelectUserByID).
+		WithArgs(testUserID).
 		WillReturnError(fmt.Errorf("connection error"))
 
-	_, err := repo.GetByID(context.Background(), "user-1")
+	_, err := repo.GetByID(context.Background(), testUserID)
 	if err == nil {
-		t.Fatal("expected error, got nil")
+		t.Fatal(msgExpectedErr)
 	}
 }
 
@@ -147,11 +153,11 @@ func TestUserGetByExternalID_Success(t *testing.T) {
 		WithArgs("ext-1").
 		WillReturnRows(mock.NewRows([]string{
 			"id", "external_id", "email", "name", "role", "avatar", "online_status",
-		}).AddRow("user-1", "ext-1", "user@test.com", "Test User", "rep", "", "offline"))
+		}).AddRow(testUserID, "ext-1", testUserEmail, testUserName, "rep", "", "offline"))
 
 	user, err := repo.GetByExternalID(context.Background(), "ext-1")
 	if err != nil {
-		t.Fatalf("unexpected error: %v", err)
+		t.Fatalf(fmtUnexpectedErr, err)
 	}
 	if user.ExternalID != "ext-1" {
 		t.Errorf("expected external ID ext-1, got %s", user.ExternalID)
@@ -180,16 +186,16 @@ func TestUserList_Success(t *testing.T) {
 	mock := newMockPool(t)
 	repo := &userRepository{pool: mock}
 
-	mock.ExpectQuery("SELECT u.id.+FROM users u").
+	mock.ExpectQuery(querySelectUsers).
 		WillReturnRows(mock.NewRows([]string{
 			"id", "external_id", "email", "name", "role", "avatar", "online_status", "team_ids",
 		}).
-			AddRow("user-1", "ext-1", "user1@test.com", "User One", "rep", "", "offline", []string{"team-1"}).
-			AddRow("user-2", "ext-2", "user2@test.com", "User Two", "admin", "", "online", []string{"team-1", "team-2"}))
+			AddRow(testUserID, "ext-1", "user1@test.com", "User One", "rep", "", "offline", []string{testTeamIDRepo}).
+			AddRow("user-2", "ext-2", "user2@test.com", "User Two", "admin", "", "online", []string{testTeamIDRepo, "team-2"}))
 
 	users, err := repo.List(context.Background())
 	if err != nil {
-		t.Fatalf("unexpected error: %v", err)
+		t.Fatalf(fmtUnexpectedErr, err)
 	}
 	if len(users) != 2 {
 		t.Errorf("expected 2 users, got %d", len(users))
@@ -201,12 +207,12 @@ func TestUserList_QueryError(t *testing.T) {
 	mock := newMockPool(t)
 	repo := &userRepository{pool: mock}
 
-	mock.ExpectQuery("SELECT u.id.+FROM users u").
-		WillReturnError(fmt.Errorf("db error"))
+	mock.ExpectQuery(querySelectUsers).
+		WillReturnError(errors.New(errDBMsg))
 
 	_, err := repo.List(context.Background())
 	if err == nil {
-		t.Fatal("expected error, got nil")
+		t.Fatal(msgExpectedErr)
 	}
 }
 
@@ -216,12 +222,12 @@ func TestUserList_ScanError(t *testing.T) {
 	repo := &userRepository{pool: mock}
 
 	// Return a row with wrong column count to trigger scan error
-	mock.ExpectQuery("SELECT u.id.+FROM users u").
-		WillReturnRows(mock.NewRows([]string{"id"}).AddRow("user-1"))
+	mock.ExpectQuery(querySelectUsers).
+		WillReturnRows(mock.NewRows([]string{"id"}).AddRow(testUserID))
 
 	_, err := repo.List(context.Background())
 	if err == nil {
-		t.Fatal("expected error, got nil")
+		t.Fatal(msgExpectedErr)
 	}
 }
 
@@ -231,24 +237,24 @@ func TestUserUpsert_Success(t *testing.T) {
 	repo := &userRepository{pool: mock}
 
 	mock.ExpectQuery("INSERT INTO users").
-		WithArgs("ext-1", "user@test.com", "Test User", "rep", "", "offline").
+		WithArgs("ext-1", testUserEmail, testUserName, "rep", "", "offline").
 		WillReturnRows(mock.NewRows([]string{
 			"id", "external_id", "email", "name", "role", "avatar", "online_status",
-		}).AddRow("user-1", "ext-1", "user@test.com", "Test User", "rep", "", "offline"))
+		}).AddRow(testUserID, "ext-1", testUserEmail, testUserName, "rep", "", "offline"))
 
 	user := &domain.User{
 		ExternalID:   "ext-1",
-		Email:        "user@test.com",
-		Name:         "Test User",
+		Email:        testUserEmail,
+		Name:         testUserName,
 		Role:         "rep",
 		Avatar:       "",
 		OnlineStatus: "offline",
 	}
 	result, err := repo.Upsert(context.Background(), user)
 	if err != nil {
-		t.Fatalf("unexpected error: %v", err)
+		t.Fatalf(fmtUnexpectedErr, err)
 	}
-	if result.ID != "user-1" {
+	if result.ID != testUserID {
 		t.Errorf("expected user ID user-1, got %s", result.ID)
 	}
 }
@@ -259,20 +265,20 @@ func TestUserUpsert_Error(t *testing.T) {
 	repo := &userRepository{pool: mock}
 
 	mock.ExpectQuery("INSERT INTO users").
-		WithArgs("ext-1", "user@test.com", "Test User", "rep", "", "offline").
+		WithArgs("ext-1", testUserEmail, testUserName, "rep", "", "offline").
 		WillReturnError(fmt.Errorf("unique constraint violation"))
 
 	user := &domain.User{
 		ExternalID:   "ext-1",
-		Email:        "user@test.com",
-		Name:         "Test User",
+		Email:        testUserEmail,
+		Name:         testUserName,
 		Role:         "rep",
 		Avatar:       "",
 		OnlineStatus: "offline",
 	}
 	_, err := repo.Upsert(context.Background(), user)
 	if err == nil {
-		t.Fatal("expected error, got nil")
+		t.Fatal(msgExpectedErr)
 	}
 }
 
@@ -284,13 +290,13 @@ func TestUserListPaginated_QueryError(t *testing.T) {
 	mock.ExpectQuery(querySelectCount).
 		WillReturnRows(mock.NewRows([]string{"count"}).AddRow(5))
 
-	mock.ExpectQuery("SELECT u.id.+FROM users u").
+	mock.ExpectQuery(querySelectUsers).
 		WithArgs(20, 0).
-		WillReturnError(fmt.Errorf("db error"))
+		WillReturnError(errors.New(errDBMsg))
 
 	_, err := repo.ListPaginated(context.Background(), 1, 20)
 	if err == nil {
-		t.Fatal("expected error, got nil")
+		t.Fatal(msgExpectedErr)
 	}
 }
 
@@ -302,12 +308,12 @@ func TestUserListPaginated_ScanError(t *testing.T) {
 	mock.ExpectQuery(querySelectCount).
 		WillReturnRows(mock.NewRows([]string{"count"}).AddRow(5))
 
-	mock.ExpectQuery("SELECT u.id.+FROM users u").
+	mock.ExpectQuery(querySelectUsers).
 		WithArgs(20, 0).
-		WillReturnRows(mock.NewRows([]string{"id"}).AddRow("user-1"))
+		WillReturnRows(mock.NewRows([]string{"id"}).AddRow(testUserID))
 
 	_, err := repo.ListPaginated(context.Background(), 1, 20)
 	if err == nil {
-		t.Fatal("expected error, got nil")
+		t.Fatal(msgExpectedErr)
 	}
 }
