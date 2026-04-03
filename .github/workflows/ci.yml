@@ -26,8 +26,19 @@ jobs:
       - name: Install frontend dependencies
         run: cd web && bun install --frozen-lockfile
 
+      - name: Install gotestsum
+        run: go install gotest.tools/gotestsum@latest
+
       - name: Run Go tests with coverage
-        run: go test -coverprofile=coverage.out ./...
+        run: gotestsum --junitfile go-test-results.xml -- -coverprofile=coverage.out ./...
+
+      - name: Go Test Report
+        uses: dorny/test-reporter@v2
+        if: always()
+        with:
+          name: Go Test Report
+          path: go-test-results.xml
+          reporter: java-junit
 
       - name: Run frontend tests with coverage
         run: cd web && bun run test -- --coverage
