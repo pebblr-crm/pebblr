@@ -232,7 +232,7 @@ describe('CreateActivityModal', () => {
 
   it('shows recovery balance info for recovery activity type', () => {
     const configWithRecovery = makeConfig()
-    ;(configWithRecovery.activities as Record<string, unknown[]>).types = [
+    ;(configWithRecovery.activities as unknown as Record<string, unknown[]>).types = [
       ...(configWithRecovery.activities as { types: unknown[] }).types,
       { key: 'recovery', label: 'Recovery', category: 'non_field', fields: [], submit_required: [] },
     ]
@@ -252,7 +252,7 @@ describe('CreateActivityModal', () => {
 
   it('disables Create when recovery balance is 0', () => {
     const configWithRecovery = makeConfig()
-    ;(configWithRecovery.activities as Record<string, unknown[]>).types = [
+    ;(configWithRecovery.activities as unknown as Record<string, unknown[]>).types = [
       ...(configWithRecovery.activities as { types: unknown[] }).types,
       { key: 'recovery', label: 'Recovery', category: 'non_field', fields: [], submit_required: [] },
     ]

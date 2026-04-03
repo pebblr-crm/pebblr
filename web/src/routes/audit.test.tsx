@@ -1,4 +1,4 @@
-import { render, screen, fireEvent, waitFor } from '@testing-library/react'
+import { render, screen, fireEvent } from '@testing-library/react'
 import { vi, describe, it, expect, beforeEach, beforeAll } from 'vitest'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 
