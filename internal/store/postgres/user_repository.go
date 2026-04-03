@@ -47,18 +47,8 @@ func (r *userRepository) GetByExternalID(ctx context.Context, externalID string)
 	return scanUser(row)
 }
 
-func (r *userRepository) List(ctx context.Context) ([]*domain.User, error) {
-	rows, err := r.pool.Query(ctx,
-		`SELECT u.id, u.external_id, u.email, u.name, u.role, u.avatar, u.online_status,
-		        COALESCE(array_agg(tm.team_id::TEXT) FILTER (WHERE tm.team_id IS NOT NULL), '{}')
-		 FROM users u
-		 LEFT JOIN team_members tm ON u.id = tm.user_id
-		 GROUP BY u.id
-		 ORDER BY u.name`,
-	)
-	if err != nil {
-		return nil, fmt.Errorf("querying users: %w", err)
-	}
+// scanUsersWithTeams collects user rows that include an aggregated team_ids column.
+func scanUsersWithTeams(rows pgx.Rows) ([]*domain.User, error) {
 	defer rows.Close()
 
 	var users []*domain.User
@@ -74,6 +64,21 @@ func (r *userRepository) List(ctx context.Context) ([]*domain.User, error) {
 		return nil, fmt.Errorf("iterating users: %w", err)
 	}
 	return users, nil
+}
+
+func (r *userRepository) List(ctx context.Context) ([]*domain.User, error) {
+	rows, err := r.pool.Query(ctx,
+		`SELECT u.id, u.external_id, u.email, u.name, u.role, u.avatar, u.online_status,
+		        COALESCE(array_agg(tm.team_id::TEXT) FILTER (WHERE tm.team_id IS NOT NULL), '{}')
+		 FROM users u
+		 LEFT JOIN team_members tm ON u.id = tm.user_id
+		 GROUP BY u.id
+		 ORDER BY u.name`,
+	)
+	if err != nil {
+		return nil, fmt.Errorf("querying users: %w", err)
+	}
+	return scanUsersWithTeams(rows)
 }
 
 func (r *userRepository) ListPaginated(ctx context.Context, page, limit int) (*store.UserPage, error) {
@@ -103,19 +108,9 @@ func (r *userRepository) ListPaginated(ctx context.Context, page, limit int) (*s
 	if err != nil {
 		return nil, fmt.Errorf("querying users: %w", err)
 	}
-	defer rows.Close()
-
-	var users []*domain.User
-	for rows.Next() {
-		var u domain.User
-		err := rows.Scan(&u.ID, &u.ExternalID, &u.Email, &u.Name, &u.Role, &u.Avatar, &u.OnlineStatus, &u.TeamIDs)
-		if err != nil {
-			return nil, fmt.Errorf(errScanUser, err)
-		}
-		users = append(users, &u)
-	}
-	if err := rows.Err(); err != nil {
-		return nil, fmt.Errorf("iterating users: %w", err)
+	users, err := scanUsersWithTeams(rows)
+	if err != nil {
+		return nil, err
 	}
 
 	return &store.UserPage{Users: users, Total: total, Page: page, Limit: limit}, nil

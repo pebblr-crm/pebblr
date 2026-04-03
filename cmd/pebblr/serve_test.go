@@ -164,5 +164,42 @@ var _ = Describe("buildAuthenticator", func() {
 			Expect(a).NotTo(BeNil())
 			Expect(demoHandler).NotTo(BeNil())
 		})
+
+		It("creates a demo authenticator without signing key file", func() {
+			// No signing key file — should still work (generates random key)
+			a, demoHandler, err := buildAuthenticator(ctx, logger, "demo", tmpDir, nil)
+			Expect(err).NotTo(HaveOccurred())
+			Expect(a).NotTo(BeNil())
+			Expect(demoHandler).NotTo(BeNil())
+		})
+
+		It("returns an error when azuread client ID file is missing", func() {
+			// Provide tenant ID but not client ID
+			Expect(os.WriteFile(filepath.Join(tmpDir, "azuread-tenant-id"), []byte("tenant-123"), 0o600)).To(Succeed())
+
+			_, _, err := buildAuthenticator(ctx, logger, "azuread", tmpDir, nil)
+			Expect(err).To(HaveOccurred())
+			Expect(err.Error()).To(ContainSubstring("reading Azure AD client ID"))
+		})
+	})
+})
+
+var _ = Describe("runMigrations", func() {
+	It("returns an error when DSN file is missing", func() {
+		err := runMigrations(discardLogger())
+		Expect(err).To(HaveOccurred())
+		Expect(err.Error()).To(ContainSubstring("reading dsn"))
+	})
+})
+
+var _ = Describe("readOptionalSecret edge cases", func() {
+	It("returns an error for a directory path", func() {
+		tmpDir, err := os.MkdirTemp("", "pebblr-test-*")
+		Expect(err).NotTo(HaveOccurred())
+		defer os.RemoveAll(tmpDir) //nolint:errcheck // cleanup
+
+		// Trying to read a directory as a file should fail (not IsNotExist)
+		_, err = readOptionalSecret(tmpDir)
+		Expect(err).To(HaveOccurred())
 	})
 })

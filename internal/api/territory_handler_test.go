@@ -200,3 +200,128 @@ func TestTerritoryDelete_NotFound(t *testing.T) {
 		t.Errorf("expected 404, got %d", w.Code)
 	}
 }
+
+func TestTerritoryDelete_Rep_Returns403(t *testing.T) {
+	t.Parallel()
+	req := httptest.NewRequest(http.MethodDelete, "/t-1", http.NoBody)
+	w := httptest.NewRecorder()
+	newTestTerritoryRouter(testRepUser()).ServeHTTP(w, req)
+
+	if w.Code != http.StatusForbidden {
+		t.Errorf("expected 403, got %d: %s", w.Code, w.Body.String())
+	}
+}
+
+func TestTerritoryUpdate_Admin_ReturnsOK(t *testing.T) {
+	t.Parallel()
+	body, _ := json.Marshal(map[string]any{
+		"name":   "Bucharest North Updated",
+		"teamId": testTeamID,
+		"region": "Bucharest",
+	})
+	req := httptest.NewRequest(http.MethodPut, "/t-1", bytes.NewReader(body))
+	w := httptest.NewRecorder()
+	newTestTerritoryRouter(testAdminUser()).ServeHTTP(w, req)
+
+	if w.Code != http.StatusOK {
+		t.Errorf("expected 200, got %d: %s", w.Code, w.Body.String())
+	}
+}
+
+func TestTerritoryUpdate_Rep_Returns403(t *testing.T) {
+	t.Parallel()
+	body, _ := json.Marshal(map[string]any{
+		"name":   "Test",
+		"teamId": testTeamID,
+	})
+	req := httptest.NewRequest(http.MethodPut, "/t-1", bytes.NewReader(body))
+	w := httptest.NewRecorder()
+	newTestTerritoryRouter(testRepUser()).ServeHTTP(w, req)
+
+	if w.Code != http.StatusForbidden {
+		t.Errorf("expected 403, got %d: %s", w.Code, w.Body.String())
+	}
+}
+
+func TestTerritoryUpdate_NotFound(t *testing.T) {
+	t.Parallel()
+	body, _ := json.Marshal(map[string]any{
+		"name":   "Test",
+		"teamId": testTeamID,
+	})
+	req := httptest.NewRequest(http.MethodPut, "/missing", bytes.NewReader(body))
+	w := httptest.NewRecorder()
+	newTestTerritoryRouter(testAdminUser()).ServeHTTP(w, req)
+
+	if w.Code != http.StatusNotFound {
+		t.Errorf("expected 404, got %d: %s", w.Code, w.Body.String())
+	}
+}
+
+func TestTerritoryCreate_InvalidBody(t *testing.T) {
+	t.Parallel()
+	req := httptest.NewRequest(http.MethodPost, "/", bytes.NewBufferString("not-json"))
+	w := httptest.NewRecorder()
+	newTestTerritoryRouter(testAdminUser()).ServeHTTP(w, req)
+
+	if w.Code != http.StatusBadRequest {
+		t.Errorf("expected 400, got %d: %s", w.Code, w.Body.String())
+	}
+}
+
+func TestTerritoryUpdate_InvalidBody(t *testing.T) {
+	t.Parallel()
+	req := httptest.NewRequest(http.MethodPut, "/t-1", bytes.NewBufferString("not-json"))
+	w := httptest.NewRecorder()
+	newTestTerritoryRouter(testAdminUser()).ServeHTTP(w, req)
+
+	if w.Code != http.StatusBadRequest {
+		t.Errorf("expected 400, got %d: %s", w.Code, w.Body.String())
+	}
+}
+
+func TestTerritoryGet_NoAuth(t *testing.T) {
+	t.Parallel()
+	req := httptest.NewRequest(http.MethodGet, "/t-1", http.NoBody)
+	w := httptest.NewRecorder()
+	newTestTerritoryRouter(nil).ServeHTTP(w, req)
+
+	if w.Code != http.StatusUnauthorized {
+		t.Errorf("expected 401, got %d", w.Code)
+	}
+}
+
+func TestTerritoryCreate_NoAuth(t *testing.T) {
+	t.Parallel()
+	body, _ := json.Marshal(map[string]any{"name": "Test"})
+	req := httptest.NewRequest(http.MethodPost, "/", bytes.NewReader(body))
+	w := httptest.NewRecorder()
+	newTestTerritoryRouter(nil).ServeHTTP(w, req)
+
+	if w.Code != http.StatusUnauthorized {
+		t.Errorf("expected 401, got %d", w.Code)
+	}
+}
+
+func TestTerritoryUpdate_NoAuth(t *testing.T) {
+	t.Parallel()
+	body, _ := json.Marshal(map[string]any{"name": "Test"})
+	req := httptest.NewRequest(http.MethodPut, "/t-1", bytes.NewReader(body))
+	w := httptest.NewRecorder()
+	newTestTerritoryRouter(nil).ServeHTTP(w, req)
+
+	if w.Code != http.StatusUnauthorized {
+		t.Errorf("expected 401, got %d", w.Code)
+	}
+}
+
+func TestTerritoryDelete_NoAuth(t *testing.T) {
+	t.Parallel()
+	req := httptest.NewRequest(http.MethodDelete, "/t-1", http.NoBody)
+	w := httptest.NewRecorder()
+	newTestTerritoryRouter(nil).ServeHTTP(w, req)
+
+	if w.Code != http.StatusUnauthorized {
+		t.Errorf("expected 401, got %d", w.Code)
+	}
+}
