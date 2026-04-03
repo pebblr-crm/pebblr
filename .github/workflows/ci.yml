@@ -33,7 +33,7 @@ jobs:
         run: gotestsum --junitfile go-test-results.xml -- -coverprofile=coverage.out ./...
 
       - name: Go Test Report
-        uses: dorny/test-reporter@v2
+        uses: dorny/test-reporter@v3
         if: always()
         with:
           name: Go Test Report
