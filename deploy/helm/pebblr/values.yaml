@@ -68,6 +68,11 @@ secrets:
   jwtSecretKey: jwt-secret
   # Only needed when auth.provider=demo
   demoSigningKeyKey: ""
+  # Inline secret values — used only when externalSecrets.enabled=false.
+  # When ESO is enabled these are ignored (secrets come from KeyVault).
+  dbPassword: ""
+  jwtSecret: ""
+  demoSigningKey: ""
 
 # Database connection (non-secret parts)
 database:
