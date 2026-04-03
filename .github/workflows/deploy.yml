@@ -87,6 +87,7 @@ jobs:
             --set image.tag=${{ needs.build-and-push.outputs.image-tag }} \
             --set image.pullPolicy=Always \
             --namespace ${{ env.NAMESPACE }} \
+            --create-namespace \
             --wait --timeout 120s
 
       - name: Verify deployment
