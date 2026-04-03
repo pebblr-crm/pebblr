@@ -11,12 +11,16 @@ import (
 	"github.com/pebblr/pebblr/internal/auth"
 )
 
-const pathHealth = "/api/v1/health"
+const (
+	pathHealth      = "/api/v1/health"
+	testToken       = "test-token"
+	bearerTestToken = "Bearer test-token"
+)
 
 func testRouter() http.Handler {
 	return api.NewRouter(api.RouterConfig{
 		Logger:        slog.New(slog.NewTextHandler(os.Stdout, nil)),
-		Authenticator: auth.NewStaticAuthenticator("test-token"),
+		Authenticator: auth.NewStaticAuthenticator(testToken),
 	})
 }
 
@@ -38,7 +42,7 @@ func TestAuthenticatedHealthEndpoint(t *testing.T) {
 	router := testRouter()
 
 	req := httptest.NewRequest(http.MethodGet, pathHealth, http.NoBody)
-	req.Header.Set("Authorization", "Bearer test-token")
+	req.Header.Set("Authorization", bearerTestToken)
 	w := httptest.NewRecorder()
 	router.ServeHTTP(w, req)
 
@@ -92,7 +96,7 @@ func TestMeEndpointReturnsUser(t *testing.T) {
 	router := testRouter()
 
 	req := httptest.NewRequest(http.MethodGet, "/api/v1/me", http.NoBody)
-	req.Header.Set("Authorization", "Bearer test-token")
+	req.Header.Set("Authorization", bearerTestToken)
 	w := httptest.NewRecorder()
 	router.ServeHTTP(w, req)
 
@@ -108,7 +112,7 @@ func TestNotImplementedStubs(t *testing.T) {
 	// Router with no handlers — all routes should return 501
 	router := api.NewRouter(api.RouterConfig{
 		Logger:        slog.New(slog.NewTextHandler(os.Stdout, nil)),
-		Authenticator: auth.NewStaticAuthenticator("test-token"),
+		Authenticator: auth.NewStaticAuthenticator(testToken),
 	})
 
 	paths := []string{
@@ -127,7 +131,7 @@ func TestNotImplementedStubs(t *testing.T) {
 		t.Run(p, func(t *testing.T) {
 			t.Parallel()
 			req := httptest.NewRequest(http.MethodGet, p, http.NoBody)
-			req.Header.Set("Authorization", "Bearer test-token")
+			req.Header.Set("Authorization", bearerTestToken)
 			w := httptest.NewRecorder()
 			router.ServeHTTP(w, req)
 
@@ -154,7 +158,7 @@ func TestSPAFallback(t *testing.T) {
 
 	router := api.NewRouter(api.RouterConfig{
 		Logger:        slog.New(slog.NewTextHandler(os.Stdout, nil)),
-		Authenticator: auth.NewStaticAuthenticator("test-token"),
+		Authenticator: auth.NewStaticAuthenticator(testToken),
 		WebDistPath:   dir,
 	})
 
