@@ -4,6 +4,10 @@
 externalSecrets:
   enabled: false
 
+secrets:
+  dbPassword: pebblr-local
+  jwtSecret: local-jwt-secret-not-for-production
+
 serviceAccount:
   annotations: {}
 
