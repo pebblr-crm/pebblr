@@ -36,6 +36,13 @@ export const priorityLabel: Record<string, string> = {
   c: 'Priority C',
 }
 
+/** Maps classification (a/b/c) to badge styling classes (compact, no border). */
+export const classificationBadge: Record<string, string> = {
+  a: 'bg-red-100 text-red-700',
+  b: 'bg-amber-100 text-amber-700',
+  c: 'bg-slate-100 text-slate-600',
+}
+
 /** Maps status transition keys to button color classes. */
 export const transitionColors: Record<string, string> = {
   realizat: 'bg-emerald-600 text-white hover:bg-emerald-700',
