@@ -16,7 +16,7 @@ RUN CGO_ENABLED=0 GOOS=linux go build -ldflags="-w -s" -o /bin/pebblr ./cmd/pebb
     CGO_ENABLED=0 GOOS=linux go build -ldflags="-w -s" -o /bin/migrate ./cmd/migrate
 
 # ── Stage 2: Frontend builder ────────────────────────────────────────────────
-FROM oven/bun:1.2.5-alpine AS web-builder
+FROM oven/bun:1.3.11-alpine AS web-builder
 
 WORKDIR /app/web
 COPY web/package.json web/bun.lock* ./
