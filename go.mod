@@ -10,7 +10,7 @@ require (
 	github.com/onsi/gomega v1.40.0
 	github.com/pashagolub/pgxmock/v4 v4.9.0
 	github.com/santhosh-tekuri/jsonschema/v6 v6.0.2
-	golang.org/x/text v0.36.0
+	golang.org/x/text v0.37.0
 )
 
 require (
