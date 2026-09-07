@@ -34,7 +34,7 @@ ENV VITE_DEMO_MODE=${VITE_DEMO_MODE}
 RUN bun run build
 
 # ── Stage 3: Runtime ──────────────────────────────────────────────────────────
-FROM alpine:3.23
+FROM alpine:3.24
 
 RUN addgroup -S pebblr && adduser -S pebblr -G pebblr
 
