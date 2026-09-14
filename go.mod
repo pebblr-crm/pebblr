@@ -1,10 +1,10 @@
 module github.com/pebblr/pebblr
 
-go 1.25.0
+go 1.25.11
 
 require (
 	github.com/go-chi/chi/v5 v5.2.5
-	github.com/golang-migrate/migrate/v4 v4.19.1
+	github.com/golang-migrate/migrate/v4 v4.20.1
 	github.com/jackc/pgx/v5 v5.10.0
 	github.com/onsi/ginkgo/v2 v2.32.2
 	github.com/onsi/gomega v1.43.0
